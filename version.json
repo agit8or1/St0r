@@ -1,14 +1,14 @@
 {
-  "version": "3.2.1",
+  "version": "3.2.2",
   "releaseDate": "2025-11-20",
   "changelog": [
-    "Fixed installer UrBackup Server download failure (now uses PPA)",
-    "Fixed deployment package extraction error",
+    "Fixed missing installations table (resolves About page crashes)",
+    "Fixed version tracking 500 errors",
+    "Fixed vite.svg 404 error",
+    "Fixed installer UrBackup Server download (now uses PPA)",
     "File Browser - Browse and download files from any backup",
     "File Restore - Restore multiple files directly to client",
     "Bare Metal Restore - ISO downloads and instructions",
-    "Fixed backup history showing 0 backups",
-    "Real-time backup progress with transfer speed and ETA",
-    "Storage visualization with pie charts"
+    "Real-time backup progress with transfer speed and ETA"
   ]
 }
