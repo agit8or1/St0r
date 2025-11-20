@@ -5,6 +5,23 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2025-11-20
+
+### Fixed
+- **Critical**: Fixed installer UrBackup Server download failure
+  - Changed from broken download URL to Ubuntu PPA installation method
+  - Now uses `ppa:uroni/urbackup` for reliable installation
+  - Added OS detection for Ubuntu/Debian systems
+- **Critical**: Fixed deployment package structure
+  - Package now extracts to correct `urbackup-gui/` directory
+  - Resolved "Package extraction failed" error
+  - Deployment package now includes proper directory hierarchy
+- Updated installer to use correct deployment package URL (v3.2.1)
+
+### Changed
+- Improved installer error messages for unsupported distributions
+- Enhanced deployment package structure for remote installations
+
 ## [3.2.0] - 2025-11-20
 
 ### Added

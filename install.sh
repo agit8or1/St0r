@@ -5,7 +5,7 @@
 set -e
 
 # Version
-INSTALLER_VERSION="3.2.0"
+INSTALLER_VERSION="3.2.1"
 INSTALLER_DATE="2025-11-20"
 
 echo "============================================"
@@ -336,7 +336,7 @@ if [ "$INSTALL_STOR" = true ]; then
 
     # Determine installation method
     SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    DOWNLOAD_URL="https://stor.agit8or.net/downloads/stor-v3.2.0-deployment.tar.gz"
+    DOWNLOAD_URL="https://stor.agit8or.net/downloads/stor-v3.2.1-deployment.tar.gz"
     IS_SOURCE_INSTALL=false
 
     # Check if we're running from source directory (local install) or need to download
