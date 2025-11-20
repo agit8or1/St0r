@@ -1,0 +1,20 @@
+[Unit]
+Description=UrBackup GUI Backend
+After=network.target mariadb.service
+Wants=mariadb.service
+
+[Service]
+Type=simple
+User=administrator
+WorkingDirectory=/opt/urbackup-gui/backend
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/urbackup-gui/backend/.env
+ExecStart=/usr/bin/node /opt/urbackup-gui/backend/dist/server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=urbackup-gui
+
+[Install]
+WantedBy=multi-user.target
