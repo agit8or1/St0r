@@ -25,7 +25,7 @@ import { Loading } from '../components/Loading';
 import { BackupSchedule } from '../components/BackupSchedule';
 import { api } from '../services/api';
 import type { Client, Backup } from '../types';
-import { formatBytes, formatTimeAgo, formatTimestamp } from '../utils/format';
+import { formatBytes, formatTimeAgo, formatTimestamp, formatDuration } from '../utils/format';
 
 export function ClientDetail() {
   const { clientName } = useParams<{ clientName: string }>();
@@ -578,7 +578,7 @@ export function ClientDetail() {
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {Math.round(backup.duration / 60)}min
+                      {backup.duration && !isNaN(backup.duration) ? formatDuration(backup.duration) : 'N/A'}
                     </p>
                   </div>
                 </div>

@@ -188,7 +188,8 @@ export function Settings() {
       });
 
       if (!response.ok) {
-        throw new Error('Invalid verification code');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Invalid verification code');
       }
 
       const data = await response.json();

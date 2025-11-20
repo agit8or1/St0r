@@ -8,12 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.2.4] - 2025-11-20
 
 ### Fixed
+- **Critical**: Fixed 2FA setup and verification
+  - Increased database column `totp_secret` size from 32 to 100 characters
+  - Fixed user ID field name mismatch (`.id` → `.userId`)
+  - Fixed 2FA issuer name to display "St0r GUI" instead of "UrBackup GUI"
+- Fixed NaNmin display in backup durations (now shows "N/A" for missing data)
+- Improved 2FA error handling with detailed logging
 - **Website Screenshots**: Replaced incorrect placeholder screenshots with actual St0r interface
   - Screenshot 2 now correctly shows Client Management with File & Image backup status indicators
   - All screenshots now display proper St0r backup management interface
   - Removed unrelated AI Filter and Email Washing Machine screenshots
 
+### Added
+- **2FA Login Enforcement**: Users with 2FA enabled are now prompted for code during login
+  - Beautiful UI prompt with shield icon
+  - Auto-focus on 2FA input
+  - Back button to return to login if needed
+
 ### Changed
+- Enhanced 2FA verification flow with better error messages
+- Login page now handles 2FA requirement gracefully
 - Updated project website with carousel/lightbox screenshot viewer (similar to Depl0y project page)
 - Improved screenshot captions to better describe file and image level backup features
 - Enhanced website presentation at https://agit8or.net/projects/stor.html
