@@ -5,6 +5,22 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.2] - 2025-11-20
+
+### Fixed
+- **Critical**: Added missing `installations` table to database schema
+  - Fixes 500 errors on version tracking endpoints
+  - Resolves About page blank/crash issues
+  - Installer now creates all required database tables
+- Fixed vite.svg 404 error (removed reference from index.html)
+- Fixed version.json not being included in deployment package
+- About page now handles API failures gracefully
+
+### Changed
+- Updated database schema to include installations tracking table
+- Improved installer to ensure all database tables are created
+- Enhanced error handling in version API endpoints
+
 ## [3.2.1] - 2025-11-20
 
 ### Fixed
