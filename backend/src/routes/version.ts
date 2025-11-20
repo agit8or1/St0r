@@ -78,21 +78,30 @@ router.get('/stats', async (req: Request, res: Response) => {
 // Get latest available version from update package
 router.get('/latest', async (req: Request, res: Response): Promise<void> => {
   try {
-    const updatePackage = '/opt/urbackup-gui/frontend/dist/downloads/urbackup-gui.tar.gz';
+    // Try to read version.json from downloads directory
+    const versionJsonPath = '/opt/urbackup-gui/frontend/dist/downloads/version.json';
 
-    // Check if update package exists
-    if (!existsSync(updatePackage)) {
-      res.status(404).json({ error: 'No update package available' });
+    if (existsSync(versionJsonPath)) {
+      const latestVersion = JSON.parse(readFileSync(versionJsonPath, 'utf-8'));
+      res.json(latestVersion);
       return;
     }
 
-    // Extract version.json from tarball
-    const { stdout } = await execAsync(`tar -xzOf "${updatePackage}" urbackup-gui/version.json`);
-    const latestVersion = JSON.parse(stdout);
+    // Fallback: read VERSION file and construct response
+    const versionFilePath = '/opt/urbackup-gui/VERSION';
+    if (existsSync(versionFilePath)) {
+      const version = readFileSync(versionFilePath, 'utf-8').trim();
+      res.json({
+        version: version,
+        releaseDate: new Date().toISOString().split('T')[0],
+        downloadUrl: `https://stor.agit8or.net/downloads/stor-v${version}-deployment.tar.gz`
+      });
+      return;
+    }
 
-    res.json(latestVersion);
+    res.status(404).json({ error: 'No version information available' });
   } catch (error) {
-    logger.error('Failed to read latest version from update package:', error);
+    logger.error('Failed to read latest version:', error);
     res.status(500).json({ error: 'Failed to read latest version' });
   }
 });

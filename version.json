@@ -1,13 +1,14 @@
 {
-  "version": "3.0.0",
-  "releaseDate": "2025-11-15",
+  "version": "3.2.1",
+  "releaseDate": "2025-11-20",
   "changelog": [
-    "BREAKING: Removed multi-server management - st0r now only manages the local UrBackup server",
-    "BREAKING: Direct SQLite database access for improved performance and reliability",
-    "Removed all database repair scripts and utilities",
-    "Removed server management interface - simplified to single-server architecture",
-    "Updated documentation to reflect Linux-only, local installation model",
-    "Improved performance with direct database reads",
-    "Streamlined codebase by removing API package dependency"
+    "Fixed installer UrBackup Server download failure (now uses PPA)",
+    "Fixed deployment package extraction error",
+    "File Browser - Browse and download files from any backup",
+    "File Restore - Restore multiple files directly to client",
+    "Bare Metal Restore - ISO downloads and instructions",
+    "Fixed backup history showing 0 backups",
+    "Real-time backup progress with transfer speed and ETA",
+    "Storage visualization with pie charts"
   ]
 }
