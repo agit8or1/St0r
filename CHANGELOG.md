@@ -5,6 +5,19 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.4] - 2025-11-20
+
+### Fixed
+- **Website Screenshots**: Replaced incorrect placeholder screenshots with actual St0r interface
+  - Screenshot 2 now correctly shows Client Management with File & Image backup status indicators
+  - All screenshots now display proper St0r backup management interface
+  - Removed unrelated AI Filter and Email Washing Machine screenshots
+
+### Changed
+- Updated project website with carousel/lightbox screenshot viewer (similar to Depl0y project page)
+- Improved screenshot captions to better describe file and image level backup features
+- Enhanced website presentation at https://agit8or.net/projects/stor.html
+
 ## [3.2.3] - 2025-11-20
 
 ### Fixed
