@@ -57,6 +57,6 @@ sudo cp -r dist/* /opt/urbackup-gui/frontend/dist/
 
 ## Version Info
 
-Current version: **3.2.2**
+Current version: **3.2.3**
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release notes.

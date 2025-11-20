@@ -1,5 +1,5 @@
 {
-  "version": "3.2.2",
+  "version": "3.2.3",
   "releaseDate": "2025-11-20",
   "changelog": [
     "Fixed missing installations table (resolves About page crashes)",

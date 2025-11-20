@@ -295,11 +295,11 @@ export function About() {
                       www.agit8or.net
                     </a>
                   </div>
-                  {activeInstalls !== null && (
+                  {activeInstalls !== null && activeInstalls !== undefined && (
                     <div className="pt-4 border-t border-primary-200 dark:border-primary-700 mt-4">
                       <p className="text-base text-gray-700 dark:text-gray-300 mb-1">
                         <span className="font-semibold text-primary-600 dark:text-primary-400">
-                          {activeInstalls.toLocaleString()}
+                          {typeof activeInstalls === 'number' ? activeInstalls.toLocaleString() : '0'}
                         </span> active St0r installations
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">

@@ -5,6 +5,22 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.3] - 2025-11-20
+
+### Fixed
+- About page no longer crashes when API calls fail
+- Added null/undefined checks for activeInstalls display
+- Fixed favicon.ico 404 error (added floppy disk emoji favicon)
+- About page now gracefully handles expired JWT tokens
+
+### Added
+- Database migration script for existing installations (`database/migrations/add_installations_table.sql`)
+- Emoji favicon (💾 floppy disk) for browser tab
+
+### Changed
+- Improved error handling in About page component
+- Better defensive programming for API responses
+
 ## [3.2.2] - 2025-11-20
 
 ### Fixed
