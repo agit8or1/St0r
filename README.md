@@ -8,10 +8,32 @@ A modern, feature-rich web interface for managing and monitoring UrBackup server
 
 - **Dashboard** - Real-time overview of backup status, client health, and active tasks
 - **Client Management** - Monitor all backup clients with detailed status information
+- **File Browser** - Browse and download files from any backup (NEW in v3.2.0)
+- **File Restore** - Restore multiple files directly to client from web interface (NEW in v3.2.0)
+- **Bare Metal Restore** - Download UrBackup Restore CD/USB ISO with step-by-step instructions (NEW in v3.2.0)
 - **Activity Monitoring** - Track current and historical backup activities with progress indicators
+- **Real-time Progress** - Live transfer speed (MB/s) and ETA for active backups
+- **Storage Visualization** - Pie chart showing used vs available backup storage
 - **Direct Database Access** - Reads directly from UrBackup's SQLite database for fast, reliable data access
 - **Beautiful UI** - Modern, responsive design built with React and TailwindCSS
 - **Secure** - JWT-based authentication with role-based access control
+
+## Screenshots
+
+### Dashboard
+![Dashboard](screenshots/01-dashboard.png)
+
+### Clients Overview
+![Clients](screenshots/02-clients.png)
+
+### Client Detail with Backup History
+![Client Detail](screenshots/03-client-detail.png)
+
+### File Browser - Browse and Download Files
+![File Browser](screenshots/04-file-browser.png)
+
+### Bare Metal Restore Instructions
+![Bare Metal Restore](screenshots/05-bare-metal-restore.png)
 
 ## Requirements
 
@@ -29,10 +51,16 @@ A modern, feature-rich web interface for managing and monitoring UrBackup server
 
 ### Automated Installation (Recommended)
 
-Run the installation script as root:
+Download and run the universal installer:
 
 ```bash
-cd /home/administrator/urbackup-gui
+curl -fsSL http://stor.agit8or.net/downloads/install.sh | sudo bash
+```
+
+Or download and run locally:
+
+```bash
+wget http://stor.agit8or.net/downloads/install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```

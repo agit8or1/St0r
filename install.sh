@@ -5,8 +5,8 @@
 set -e
 
 # Version
-INSTALLER_VERSION="3.1.0"
-INSTALLER_DATE="2025-11-17"
+INSTALLER_VERSION="3.2.0"
+INSTALLER_DATE="2025-11-20"
 
 echo "============================================"
 echo "St0r Universal Installer"
@@ -163,12 +163,13 @@ else
     else
         echo "Upgrade available: $STOR_VERSION → $INSTALLER_VERSION"
         echo ""
-        echo "What's new in v3.1.0:"
-        echo "  • Fixed timestamp display (no more '55824 years in future')"
-        echo "  • Fixed client status showing 'Unknown'"
-        echo "  • Fixed duplicate activities in progress view"
-        echo "  • Real-time backup progress with transfer speed and ETA"
-        echo "  • Storage pie chart visualization"
+        echo "What's new in v3.2.0:"
+        echo "  • File Browser - Browse and download files from any backup"
+        echo "  • File Restore - Restore multiple files directly to client"
+        echo "  • Bare Metal Restore - Download restore ISO and instructions"
+        echo "  • Fixed backup history showing 0 backups"
+        echo "  • Fixed file browsing and download security"
+        echo "  • Improved deployment process"
         echo ""
         read -p "Upgrade to v$INSTALLER_VERSION? (Y/n): " -n 1 -r < /dev/tty
         echo ""
@@ -230,14 +231,27 @@ if [ "$INSTALL_URBACKUP" = true ]; then
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 
-    # Download official installer
-    TF=$(mktemp)
-    echo "  Downloading UrBackup Server installer..."
-    if wget -q "https://hndl.urbackup.org/Server/2.5.34/install_urbackup_server.sh" -O $TF; then
-        chmod +x $TF
-        echo "  Installing UrBackup Server (this may take a few minutes)..."
-        $TF
-        rm -f $TF
+    # Install via PPA (Ubuntu/Debian)
+    echo "  Detecting system..."
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS=$ID
+    else
+        OS="unknown"
+    fi
+
+    if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
+        echo "  Installing UrBackup Server from PPA..."
+
+        # Install software-properties-common for add-apt-repository
+        apt-get install -y -qq software-properties-common
+
+        # Add UrBackup PPA
+        add-apt-repository -y ppa:uroni/urbackup > /dev/null 2>&1
+        apt-get update -qq
+
+        # Install UrBackup Server
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq urbackup-server
 
         # Verify installation
         if dpkg -l 2>/dev/null | grep -q "^ii.*urbackup-server"; then
@@ -260,10 +274,11 @@ if [ "$INSTALL_URBACKUP" = true ]; then
             exit 1
         fi
     else
-        echo "  ✗ Failed to download installer"
+        echo "  ✗ Unsupported distribution: $OS"
         echo ""
         echo "Please install UrBackup Server manually:"
-        echo "  https://www.urbackup.org/download.html"
+        echo "  For Ubuntu/Debian: sudo add-apt-repository ppa:uroni/urbackup"
+        echo "  For other distros: https://www.urbackup.org/download.html"
         exit 1
     fi
 
@@ -321,7 +336,7 @@ if [ "$INSTALL_STOR" = true ]; then
 
     # Determine installation method
     SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    DOWNLOAD_URL="https://stor.agit8or.net/downloads/stor-v3.1.0-deployment.tar.gz"
+    DOWNLOAD_URL="https://stor.agit8or.net/downloads/stor-v3.2.0-deployment.tar.gz"
     IS_SOURCE_INSTALL=false
 
     # Check if we're running from source directory (local install) or need to download
@@ -494,13 +509,14 @@ if [ "$INSTALL_STOR" = true ]; then
     echo ""
 
     if [ "$STOR_INSTALLED" = false ]; then
-        echo "What's new in v3.1.0:"
-        echo "  • Fixed timestamp display (no more '55824 years in future')"
-        echo "  • Fixed client status showing 'Unknown'"
-        echo "  • Fixed duplicate activities in progress view"
+        echo "What's new in v3.2.0:"
+        echo "  • File Browser - Browse and download files from any backup"
+        echo "  • File Restore - Restore multiple files directly to client"
+        echo "  • Bare Metal Restore - Download restore ISO and instructions"
+        echo "  • Fixed backup history showing 0 backups"
+        echo "  • Fixed file browsing and download security"
         echo "  • Real-time backup progress with transfer speed and ETA"
         echo "  • Storage pie chart visualization"
-        echo "  • Enhanced activity tracking with indexing phase"
     fi
 
     echo ""
