@@ -147,10 +147,62 @@ async function startServer() {
       logger.info(`Server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
+
+    // Start automatic stale job cleanup (runs every hour)
+    startAutomaticStaleJobCleanup();
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
+
+// Automatic stale job cleanup
+async function startAutomaticStaleJobCleanup() {
+  const { UrBackupService } = await import('./services/urbackup.js');
+
+  // Run cleanup every hour
+  const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
+
+  logger.info('[AutoCleanup] Starting automatic stale job cleanup (runs every hour)');
+
+  // Run initial cleanup after 5 minutes
+  setTimeout(async () => {
+    try {
+      logger.info('[AutoCleanup] Running initial stale job cleanup...');
+      const service = new UrBackupService();
+      const result = await service.clearStaleJobs();
+      logger.info(`[AutoCleanup] Cleared ${result.staleJobsStopped}/${result.staleJobsFound} stale jobs`);
+    } catch (error) {
+      logger.error('[AutoCleanup] Failed to run initial cleanup:', error);
+    }
+  }, 5 * 60 * 1000);
+
+  // Then run every hour
+  setInterval(async () => {
+    try {
+      logger.info('[AutoCleanup] Running scheduled stale job cleanup...');
+      const service = new UrBackupService();
+      const result = await service.clearStaleJobs();
+      if (result.staleJobsFound > 0) {
+        logger.info(`[AutoCleanup] Cleared ${result.staleJobsStopped}/${result.staleJobsFound} stale jobs`);
+      } else {
+        logger.info('[AutoCleanup] No stale jobs found');
+      }
+    } catch (error) {
+      logger.error('[AutoCleanup] Failed to run scheduled cleanup:', error);
+    }
+  }, CLEANUP_INTERVAL);
+}
+
+// Handle shutdown gracefully
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully...');
+  process.exit(0);
+});
 
 startServer();

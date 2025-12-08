@@ -180,6 +180,14 @@ class ApiService {
     });
   }
 
+  async clearStaleJobs(serverId?: number): Promise<{ staleJobsFound: number; staleJobsStopped: number }> {
+    const response = await this.api.post<{ staleJobsFound: number; staleJobsStopped: number }>(
+      '/urbackup/activities/clear-stale',
+      { serverId }
+    );
+    return response.data;
+  }
+
   async getUsage(serverId?: number): Promise<Usage> {
     const response = await this.api.get<Usage>('/urbackup/usage', {
       params: serverId ? { serverId } : undefined,

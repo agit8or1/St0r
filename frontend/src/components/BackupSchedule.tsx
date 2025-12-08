@@ -168,7 +168,17 @@ export function BackupSchedule({ clientId, clientName }: BackupScheduleProps) {
       }
     } catch (err: any) {
       console.error('Failed to load settings:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to load backup schedule settings';
+      // Ensure error message is always a string, not an object
+      let errorMessage = 'Failed to load backup schedule settings';
+      if (err.response?.data?.error) {
+        errorMessage = typeof err.response.data.error === 'string'
+          ? err.response.data.error
+          : JSON.stringify(err.response.data.error);
+      } else if (err.message) {
+        errorMessage = typeof err.message === 'string'
+          ? err.message
+          : String(err.message);
+      }
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -197,7 +207,18 @@ export function BackupSchedule({ clientId, clientName }: BackupScheduleProps) {
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
       console.error('Failed to save settings:', err);
-      setError(err.response?.data?.error || 'Failed to save backup schedule');
+      // Ensure error message is always a string, not an object
+      let errorMessage = 'Failed to save backup schedule';
+      if (err.response?.data?.error) {
+        errorMessage = typeof err.response.data.error === 'string'
+          ? err.response.data.error
+          : JSON.stringify(err.response.data.error);
+      } else if (err.message) {
+        errorMessage = typeof err.message === 'string'
+          ? err.message
+          : String(err.message);
+      }
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }

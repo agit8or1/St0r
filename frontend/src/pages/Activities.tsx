@@ -35,6 +35,7 @@ export function Activities() {
   const [showFailedDetails, setShowFailedDetails] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRangeFilter>('all');
+  const [clearingStaleJobs, setClearingStaleJobs] = useState(false);
 
   useEffect(() => {
     loadActivities();
@@ -72,6 +73,25 @@ export function Activities() {
       setClients(data || []);
     } catch (err) {
       console.error('Failed to load clients:', err);
+    }
+  };
+
+  const handleClearStaleJobs = async () => {
+    if (!confirm('Clear all stale/stuck jobs? This will stop any jobs with negative or invalid progress.')) {
+      return;
+    }
+
+    setClearingStaleJobs(true);
+    try {
+      const result = await api.clearStaleJobs();
+      alert(`Cleared ${result.staleJobsStopped} stale job(s) out of ${result.staleJobsFound} found.`);
+      // Reload activities to show updated list
+      await loadActivities();
+    } catch (err) {
+      console.error('Failed to clear stale jobs:', err);
+      alert('Failed to clear stale jobs. Please try again.');
+    } finally {
+      setClearingStaleJobs(false);
     }
   };
 
@@ -238,17 +258,28 @@ export function Activities() {
               Real-time monitoring of backup operations
             </p>
           </div>
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              autoRefresh
-                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin' : ''}`} />
-            {autoRefresh ? 'Auto Refresh' : 'Paused'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleClearStaleJobs}
+              disabled={clearingStaleJobs}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Stop and remove stale/stuck jobs"
+            >
+              <XCircle className={`h-4 w-4 ${clearingStaleJobs ? 'animate-spin' : ''}`} />
+              {clearingStaleJobs ? 'Clearing...' : 'Clear Stale Jobs'}
+            </button>
+            <button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                autoRefresh
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin' : ''}`} />
+              {autoRefresh ? 'Auto Refresh' : 'Paused'}
+            </button>
+          </div>
         </div>
 
         {/* Quick Stats */}
@@ -311,7 +342,7 @@ export function Activities() {
               <div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Completed</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {lastActivities.length}
+                  {filteredLastActivities.length}
                 </p>
               </div>
             </div>
@@ -550,7 +581,9 @@ export function Activities() {
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-500">Data</p>
                             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              {formatBytes(doneBytes)} / {formatBytes(totalBytes)}
+                              {totalBytes > 0
+                                ? `${formatBytes(doneBytes)} / ${formatBytes(totalBytes)}`
+                                : formatBytes(doneBytes) || 'Calculating...'}
                             </p>
                           </div>
                         </div>

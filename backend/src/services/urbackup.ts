@@ -535,7 +535,23 @@ export class UrBackupService {
             }
           }
 
-          return mergedActivities;
+          // Filter out stale/invalid activities before returning
+          const validActivities = mergedActivities.filter(activity => {
+            // Remove activities with negative progress (indicates stale/error state)
+            if (activity.pcdone < 0) {
+              logger.info(`[getCurrentActivities] Filtering out stale activity: ${activity.name} (pcdone: ${activity.pcdone})`);
+              return false;
+            }
+            // Remove activities marked as complete
+            if (activity.complete === 1) {
+              logger.info(`[getCurrentActivities] Filtering out completed activity: ${activity.name}`);
+              return false;
+            }
+            return true;
+          });
+
+          logger.info(`[getCurrentActivities] Returning ${validActivities.length} valid activities (filtered ${mergedActivities.length - validActivities.length} stale)`);
+          return validActivities;
         }
       } catch (apiError) {
         // If API call fails, just return database results
@@ -543,7 +559,20 @@ export class UrBackupService {
       }
 
       // Parse log for current file transfer progress and attach to running backups
-      const enhancedActivities = dbActivities.map(activity => {
+      // Also filter out stale/invalid activities from database
+      const filteredDbActivities = dbActivities.filter(activity => {
+        if (activity.pcdone < 0) {
+          logger.info(`[getCurrentActivities] Filtering out stale DB activity: ${activity.name} (pcdone: ${activity.pcdone})`);
+          return false;
+        }
+        if (activity.complete === 1) {
+          logger.info(`[getCurrentActivities] Filtering out completed DB activity: ${activity.name}`);
+          return false;
+        }
+        return true;
+      });
+
+      const enhancedActivities = filteredDbActivities.map(activity => {
         // Only parse log for running backups (complete=0 means backup is running)
         if (activity.complete === 0) {
           const transferProgress = this.parseCurrentTransferProgress(activity.clientid);
@@ -709,6 +738,69 @@ export class UrBackupService {
       return await this.apiCall('stop_backup', { id: activityId });
     } catch (error) {
       logger.error('Failed to stop activity:', error);
+      throw error;
+    }
+  }
+
+  async clearStaleJobs() {
+    try {
+      logger.info('[clearStaleJobs] Starting stale job cleanup...');
+
+      // Get current activities from database and API
+      const dbActivities: any[] = await this.dbService.getCurrentActivities();
+
+      // Get progress from API
+      let staleJobs: any[] = [];
+
+      try {
+        const progressResult = await this.apiCall('progress', {});
+        const progressData: any[] = progressResult?.progress || [];
+
+        // Find stale jobs (negative progress or no activity)
+        staleJobs = progressData.filter(progress => {
+          if (progress.pcdone < 0) {
+            logger.info(`[clearStaleJobs] Found stale job: ${progress.name} (ID: ${progress.id}, pcdone: ${progress.pcdone})`);
+            return true;
+          }
+          return false;
+        });
+
+        logger.info(`[clearStaleJobs] Found ${staleJobs.length} stale jobs to stop`);
+
+        // Stop each stale job
+        const results: Array<{id: any; name: any; success: boolean; error?: string}> = [];
+        for (const job of staleJobs) {
+          try {
+            logger.info(`[clearStaleJobs] Stopping stale job: ${job.name} (ID: ${job.id})`);
+            const result = await this.stopActivity(job.id.toString());
+            results.push({
+              id: job.id,
+              name: job.name,
+              success: true
+            });
+          } catch (error) {
+            logger.error(`[clearStaleJobs] Failed to stop job ${job.id}:`, error);
+            results.push({
+              id: job.id,
+              name: job.name,
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        }
+
+        return {
+          staleJobsFound: staleJobs.length,
+          staleJobsStopped: results.filter(r => r.success).length,
+          results
+        };
+
+      } catch (apiError) {
+        logger.error('[clearStaleJobs] Failed to get progress from API:', apiError);
+        throw new Error('Failed to get current activities from UrBackup API');
+      }
+    } catch (error) {
+      logger.error('[clearStaleJobs] Failed to clear stale jobs:', error);
       throw error;
     }
   }

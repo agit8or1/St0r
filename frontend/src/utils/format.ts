@@ -1,6 +1,10 @@
 import { formatDistanceToNow, format } from 'date-fns';
 
 export function formatBytes(bytes: number): string {
+  // Handle invalid or unknown sizes
+  if (bytes === null || bytes === undefined || isNaN(bytes) || bytes < 0) {
+    return 'Unknown';
+  }
   if (bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];

@@ -5,6 +5,36 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.5] - 2025-12-08
+
+### Fixed
+- **Critical**: Fixed stale/stuck jobs showing in Running Backups section
+  - Jobs with -1% progress (failed/crashed) are now automatically filtered out
+  - Jobs marked as complete no longer appear in running activities
+  - Real-time filtering prevents stale jobs from displaying in UI
+- Fixed Activities page "Completed" counter to respect date range filters
+  - Counter now shows accurate count based on selected filter (Today, Last 7 Days, Last 30 Days, All Time)
+- Fixed `[object Object]` errors in Client Backup Schedule settings
+  - Improved error message handling to always display readable strings
+  - Added proper type checking for error objects before display
+
+### Added
+- **Automatic Stale Job Cleanup**: Background process runs every hour
+  - Initial cleanup runs 5 minutes after server start
+  - Automatically stops and removes jobs with negative progress
+  - Prevents accumulation of zombie/stale backup jobs
+  - Logged activity visible in server logs
+- **Manual "Clear Stale Jobs" Button**: Added to Activities page
+  - Orange button in page header for on-demand cleanup
+  - Shows confirmation dialog before clearing
+  - Displays count of jobs found and cleared
+  - Immediately refreshes activities list after cleanup
+
+### Changed
+- Enhanced Activities page with better stale job management
+- Improved error handling across all frontend components
+- Better logging for stale job detection and cleanup operations
+
 ## [3.2.4] - 2025-11-20
 
 ### Fixed

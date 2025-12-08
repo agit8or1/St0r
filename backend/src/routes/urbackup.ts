@@ -10,6 +10,7 @@ import {
   getBackups,
   startBackup,
   stopActivity,
+  clearStaleJobs,
   getUsage,
   addClient,
   removeClient,
@@ -39,6 +40,7 @@ router.get('/activities', getActivities);
 router.get('/activities/current', getCurrentActivities);
 router.post('/backups/start', startBackup);
 router.post('/activities/:activityId/stop', stopActivity);
+router.post('/activities/clear-stale', clearStaleJobs);
 router.get('/usage', getUsage);
 
 // Proxy endpoint to UrBackup progress API (bypasses our auth issues)

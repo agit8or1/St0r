@@ -311,6 +311,23 @@ export async function stopActivity(req: AuthRequest, res: Response): Promise<voi
   }
 }
 
+export async function clearStaleJobs(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const service = await getService();
+
+    if (!service) {
+      res.status(404).json({ error: 'Server not found' });
+      return;
+    }
+
+    const result = await service.clearStaleJobs();
+    res.json(result);
+  } catch (error) {
+    logger.error('Failed to clear stale jobs:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to clear stale jobs' });
+  }
+}
+
 export async function getUsage(req: AuthRequest, res: Response): Promise<void> {
   try {
     const service = await getService();
