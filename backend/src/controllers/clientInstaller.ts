@@ -28,8 +28,9 @@ function getServerAddress(): string {
     }
   }
 
-  // Last resort fallback
-  return '192.168.22.228';
+  // Could not detect — require explicit configuration
+  logger.warn('Could not auto-detect server IP. Set URBACKUP_SERVER_FQDN in .env');
+  return 'URBACKUP_SERVER_FQDN_NOT_SET';
 }
 
 // Get server information for client configuration
