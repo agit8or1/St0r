@@ -84,15 +84,7 @@ export function UpdateNotification() {
   };
 
   const handleUpdate = () => {
-    // Navigate to documentation page using React Router
-    navigate('/docs');
-    // Scroll to installation section after navigation
-    setTimeout(() => {
-      const element = document.getElementById('installation');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
+    navigate('/about');
   };
 
   if (!updateAvailable || dismissed || sessionStorage.getItem('updateDismissed')) {
