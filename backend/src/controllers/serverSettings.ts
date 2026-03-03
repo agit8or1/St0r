@@ -25,13 +25,17 @@ const DEFAULT_URBACKUP_SETTINGS: Record<string, any> = {
   max_active_clients: 20,
   global_soft_fs_quota: 0,
 
-  // Network settings
+  // Network / internet settings
   internet_server_port: '55415',
+  internet_mode_enabled: false,
+  internet_server: '',
+  internet_image_backups: false,
 
   // Options
   autoshutdown: false,
   allow_restore: true,
   no_images: false,
+  no_file_backups: false,
 
   // File backup defaults
   max_file_full: 4,

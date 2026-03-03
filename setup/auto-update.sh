@@ -164,6 +164,9 @@ chmod +x "$INSTALL_DIR/setup/auto-update.sh"
 cp -f "$INSTALL_DIR/setup/auto-update.sh" "$INSTALL_DIR/auto-update.sh"
 chmod +x "$INSTALL_DIR/auto-update.sh"
 
+# Version manifest (used by /api/version to report the installed version)
+cp -f "$TEMP_DIR/src/version.json" "$INSTALL_DIR/version.json"
+
 # ── 6. Build backend ──────────────────────────────────────────────────────
 echo "$(timestamp) Installing backend dependencies..."
 cd "$INSTALL_DIR/backend"

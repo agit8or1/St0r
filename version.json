@@ -1,14 +1,14 @@
 {
-  "version": "3.2.13",
+  "version": "3.2.15",
   "releaseDate": "2026-03-03",
   "changelog": [
-    "UI: renamed 'Clients' to 'Endpoints' throughout the interface",
-    "Feature: inline customer assignment dropdown on each endpoint card",
-    "Fix: update notification banner reappears for each new version (was permanently hidden after one dismissal)",
-    "Fix: auto-update rollback on failure — restores backup and restarts service automatically",
-    "Fix: 'Reload Now' no longer re-opens the update progress modal after completing",
-    "Fix: update progress modal shows red error banner on failure",
-    "Fix: GitHub API rate limit — retry with backoff, optional GITHUB_TOKEN support",
-    "Fix: Vite allowedHosts auto-populated from URBACKUP_SERVER_FQDN setting"
+    "Fix: Settings FQDN/port now save correctly (ENV_FILE resolved relative to module, not hardcoded /opt path)",
+    "Fix: Server settings save no longer returns 500 when UrBackup API is unreachable",
+    "Fix: Update notification reappears on hard refresh (state-only dismissal, no localStorage)",
+    "Fix: Update notification persists across page navigation (App-level instance)",
+    "Fix: auto-update now syncs version.json so /api/version reports correct installed version",
+    "Fix: Production systemd service installed and enabled",
+    "Fix: npm audit — all high/critical vulnerabilities resolved via overrides (minimatch, tar)",
+    "Fix: GitHub API includes GITHUB_TOKEN for higher rate limits on update checks"
   ]
 }

@@ -18,6 +18,9 @@
     "react-router-dom": "^6.20.1",
     "recharts": "^2.10.3"
   },
+  "overrides": {
+    "minimatch": ">=9.0.5"
+  },
   "devDependencies": {
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",

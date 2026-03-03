@@ -40,6 +40,10 @@
     "sqlite3": "^5.1.7",
     "winston": "^3.11.0"
   },
+  "overrides": {
+    "minimatch": ">=9.0.5",
+    "tar": ">=7.5.8"
+  },
   "devDependencies": {
     "@types/axios": "^0.9.36",
     "@types/bcrypt": "^5.0.2",
