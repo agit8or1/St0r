@@ -117,6 +117,7 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
     // Update .env file
     if (urbackupServerHost !== undefined) {
       updates.URBACKUP_SERVER_HOST = urbackupServerHost;
+      updates.URBACKUP_SERVER_FQDN = urbackupServerHost; // keep in sync
     }
     if (urbackupServerFqdn !== undefined) {
       updates.URBACKUP_SERVER_FQDN = urbackupServerFqdn;
@@ -127,6 +128,7 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
     // Update process.env for immediate effect
     if (urbackupServerHost !== undefined) {
       process.env.URBACKUP_SERVER_HOST = urbackupServerHost;
+      process.env.URBACKUP_SERVER_FQDN = urbackupServerHost; // keep in sync
     }
     process.env.URBACKUP_SERVER_PORT = urbackupServerPort;
     if (urbackupServerFqdn !== undefined) {

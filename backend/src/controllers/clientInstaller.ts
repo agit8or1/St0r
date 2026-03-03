@@ -11,8 +11,8 @@ const router = Router();
 
 // Helper function to get server address (FQDN or IP)
 function getServerAddress(): string {
-  // Check for FQDN in environment variable first
-  const fqdn = process.env.URBACKUP_SERVER_FQDN;
+  // Check for FQDN in environment variable first (either key)
+  const fqdn = process.env.URBACKUP_SERVER_FQDN || process.env.URBACKUP_SERVER_HOST;
   if (fqdn) {
     return fqdn;
   }

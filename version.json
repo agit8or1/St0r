@@ -1,14 +1,9 @@
 {
-  "version": "3.2.15",
+  "version": "3.2.16",
   "releaseDate": "2026-03-03",
   "changelog": [
-    "Fix: Settings FQDN/port now save correctly (ENV_FILE resolved relative to module, not hardcoded /opt path)",
-    "Fix: Server settings save no longer returns 500 when UrBackup API is unreachable",
-    "Fix: Update notification reappears on hard refresh (state-only dismissal, no localStorage)",
-    "Fix: Update notification persists across page navigation (App-level instance)",
-    "Fix: auto-update now syncs version.json so /api/version reports correct installed version",
-    "Fix: Production systemd service installed and enabled",
-    "Fix: npm audit — all high/critical vulnerabilities resolved via overrides (minimatch, tar)",
-    "Fix: GitHub API includes GITHUB_TOKEN for higher rate limits on update checks"
+    "Fix: Installer 'Pre-configured for' now shows FQDN instead of IP (reads URBACKUP_SERVER_HOST as fallback)",
+    "Fix: Settings save (PUT /api/settings) no longer 500 — .env ownership corrected for service user",
+    "Fix: URBACKUP_SERVER_FQDN and URBACKUP_SERVER_HOST kept in sync on settings save"
   ]
 }
