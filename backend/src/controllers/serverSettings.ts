@@ -5,10 +5,15 @@ import { UrBackupService } from '../services/urbackup.js';
 import { logger } from '../utils/logger.js';
 import { readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 
 const dbService = new UrBackupDbService();
 const urbackupService = new UrBackupService();
-const ENV_FILE = '/opt/urbackup-gui/backend/.env';
+
+// Resolve .env relative to this file so it works in both dev (src/controllers/)
+// and production (dist/controllers/) without hardcoding the install path.
+const ENV_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../../.env');
 
 /**
  * Default UrBackup settings (used when settings are not in database)
