@@ -1,11 +1,10 @@
 {
-  "version": "3.2.19",
+  "version": "3.2.20",
   "releaseDate": "2026-03-03",
   "changelog": [
-    "Fix: Update progress modal now shows 'Service Restarting...' while service is down during update",
-    "Fix: About page Update Now / Force Reinstall buttons use inline confirm (no browser-blocked dialog)",
-    "Fix: Update notification shows error if update trigger fails instead of silently opening empty modal",
-    "Fix: Windows installer now embeds correct server URL (internet_server set in UrBackup DB)",
-    "Fix: UrBackup API login handles no-password mode"
+    "Fix: UrBackup API login — no-password mode now uses correct GET login (was sending wrong POST causing auth failures every 15min)",
+    "Fix: Update progress modal shows 'Service Restarting...' while backend is down during update",
+    "Fix: About page Update Now / Force Reinstall use inline confirm instead of browser-blocked window.confirm",
+    "Fix: Update notification shows error if update POST fails instead of silently navigating to empty modal"
   ]
 }
