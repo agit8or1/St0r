@@ -4,6 +4,14 @@
 # Runs as root via systemd-run. Output is captured to the log file
 # by the caller (systemd StandardOutput/StandardError properties).
 
+# ── Self-exec from /tmp so overwriting this file mid-run doesn't corrupt us ──
+if [[ "$0" != /tmp/st0r-update-* ]]; then
+  _self=$(mktemp /tmp/st0r-update-XXXXXX.sh)
+  cp "$0" "$_self"
+  chmod +x "$_self"
+  exec "$_self" "$@"
+fi
+
 set -euo pipefail
 
 INSTALL_DIR="/opt/urbackup-gui"
