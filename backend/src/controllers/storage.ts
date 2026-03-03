@@ -2,10 +2,10 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import { UrBackupDbService } from '../services/urbackupDb.js';
 import { logger } from '../utils/logger.js';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const dbService = new UrBackupDbService();
 
 /**
@@ -16,9 +16,10 @@ export async function getTotalStorage(req: AuthRequest, res: Response): Promise<
     // Get UrBackup backup path from environment or use default
     const backupPath = process.env.URBACKUP_BACKUP_PATH || '/var/urbackup';
 
-    // Get disk usage for the backup path
-    const { stdout } = await execAsync(`df -B1 ${backupPath} | tail -1`);
-    const parts = stdout.trim().split(/\s+/);
+    // Get disk usage for the backup path — execFile avoids shell injection
+    const { stdout } = await execFileAsync('df', ['-B1', backupPath]);
+    const lines = stdout.trim().split('\n');
+    const parts = lines[lines.length - 1].split(/\s+/);
 
     const totalSize = parseInt(parts[1]) || 0;
     const usedSize = parseInt(parts[2]) || 0;

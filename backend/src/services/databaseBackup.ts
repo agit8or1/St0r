@@ -1,11 +1,12 @@
-import { exec } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
-import { readdir, stat, unlink, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
+import { readdir, stat, unlink, mkdir, writeFile } from 'fs/promises';
+import { existsSync, createWriteStream } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'os';
 import { logger } from '../utils/logger.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export class DatabaseBackupService {
   private backupDir = '/opt/urbackup-gui/backups';
@@ -55,12 +56,47 @@ export class DatabaseBackupService {
 
       logger.info(`Creating MySQL database backup: ${backupFileName}`);
 
-      // Use mysqldump for backup
-      const passwordArg = config.password ? `-p${config.password}` : '';
-      const backupCommand = `mysqldump -h ${config.host} -u ${config.user} ${passwordArg} ${config.database} > "${backupPath}"`;
+      // Write credentials to a temp config file (mode 0600) so the password
+      // never appears in process arguments or the shell command string.
+      const tmpConfig = join(tmpdir(), `mysqldump-${Date.now()}.cnf`);
+      await writeFile(
+        tmpConfig,
+        `[mysqldump]\npassword=${config.password}\n`,
+        { mode: 0o600 }
+      );
 
       try {
-        await execAsync(backupCommand);
+        // Use spawn (no shell) — each argument is a discrete value, not
+        // interpreted by a shell, so injection is not possible.
+        await new Promise<void>((resolve, reject) => {
+          const child = spawn(
+            'mysqldump',
+            [
+              `--defaults-extra-file=${tmpConfig}`,
+              '-h', config.host,
+              '-u', config.user,
+              config.database,
+            ],
+            { stdio: ['ignore', 'pipe', 'pipe'] }
+          );
+
+          const out = createWriteStream(backupPath);
+          child.stdout.pipe(out);
+
+          const stderrChunks: Buffer[] = [];
+          child.stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
+
+          child.on('error', reject);
+          child.on('close', (code) => {
+            if (code === 0) {
+              resolve();
+            } else {
+              const msg = Buffer.concat(stderrChunks).toString().trim();
+              reject(new Error(`mysqldump exited ${code}: ${msg}`));
+            }
+          });
+        });
+
         logger.info(`Database backup created successfully: ${backupPath}`);
 
         // Verify backup file was created and has content
@@ -69,9 +105,8 @@ export class DatabaseBackupService {
           throw new Error('Backup file is empty');
         }
 
-        // Compress the backup
-        const gzipCommand = `gzip -f "${backupPath}"`;
-        await execAsync(gzipCommand);
+        // Compress the backup — execFile, no shell
+        await execFileAsync('gzip', ['-f', backupPath]);
         const compressedPath = `${backupPath}.gz`;
 
         logger.info(`Database backup compressed: ${compressedPath}`);
@@ -89,6 +124,9 @@ export class DatabaseBackupService {
           success: false,
           error: `Backup command failed: ${execError.message}`
         };
+      } finally {
+        // Always remove the temp credentials file
+        await unlink(tmpConfig).catch(() => {});
       }
     } catch (error: any) {
       logger.error('Failed to create database backup:', error);
