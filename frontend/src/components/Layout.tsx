@@ -40,7 +40,7 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/clients', label: 'Clients', icon: HardDrive },
+    { path: '/clients', label: 'Endpoints', icon: HardDrive },
     { path: '/bare-metal-restore', label: 'Bare Metal Restore', icon: Usb },
     { path: '/activities', label: 'Activities', icon: Activity },
     { path: '/logs', label: 'Logs', icon: FileText },

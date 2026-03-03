@@ -46,7 +46,7 @@ export function UpdateNotification() {
       // Fetch latest available version
       const latestResponse = await fetch('/api/version/latest');
       if (!latestResponse.ok) {
-        // No update package available - we're on the latest
+        // No release found on GitHub — we're on the latest
         setUpdateAvailable(false);
         return;
       }
@@ -79,8 +79,10 @@ export function UpdateNotification() {
 
   const handleDismiss = () => {
     setDismissed(true);
-    // Store dismissal in sessionStorage so it persists for this session
-    sessionStorage.setItem('updateDismissed', 'true');
+    // Remember which version was dismissed so the banner reappears for newer versions
+    if (latestVersion) {
+      localStorage.setItem('dismissedUpdateVersion', latestVersion.version);
+    }
   };
 
   const handleUpdate = async () => {
@@ -99,7 +101,8 @@ export function UpdateNotification() {
     navigate('/about?autoUpdate=true');
   };
 
-  if (!updateAvailable || dismissed || sessionStorage.getItem('updateDismissed')) {
+  const dismissedVersion = localStorage.getItem('dismissedUpdateVersion');
+  if (!updateAvailable || dismissed || dismissedVersion === latestVersion?.version) {
     return null;
   }
 
@@ -123,6 +126,9 @@ export function UpdateNotification() {
             </div>
             <p className="text-sm text-white/90 mb-3">
               Version <span className="font-semibold">{latestVersion?.version}</span> is now available
+              {currentVersion && (
+                <span className="text-white/70"> (current: {currentVersion})</span>
+              )}
             </p>
 
             {latestVersion?.changelog && latestVersion.changelog.length > 0 && (

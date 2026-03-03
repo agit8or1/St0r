@@ -160,14 +160,14 @@ export function ClientSettings() {
               className="mb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Client
+              Back to Endpoint
             </button>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
               <SettingsIcon className="h-8 w-8" />
-              Client Settings - {clientName}
+              Endpoint Settings - {clientName}
             </h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Configure backup settings for this client
+              Configure backup settings for this endpoint
             </p>
           </div>
           <button

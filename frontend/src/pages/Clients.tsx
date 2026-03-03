@@ -25,6 +25,7 @@ export function Clients() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [groupByCustomer, setGroupByCustomer] = useState(true);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [savingCustomer, setSavingCustomer] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -147,6 +148,46 @@ export function Clients() {
     return groups;
   }, [filteredAndSortedClients, groupByCustomer, clientCustomers]);
 
+  const handleAssignCustomer = async (client: Client, newCustomerId: number | null) => {
+    const existing = clientCustomers.get(client.name);
+    if (existing?.customer_id === newCustomerId) return;
+
+    setSavingCustomer(prev => new Set(prev).add(client.name));
+    try {
+      if (existing) {
+        await api.removeClientFromCustomer(existing.customer_id, existing.id);
+      }
+      if (newCustomerId !== null) {
+        const newMapping = await api.addClientToCustomer(newCustomerId, {
+          server_id: 1,
+          client_name: client.name,
+          client_id: client.id,
+        });
+        const customer = customers.find(c => c.id === newCustomerId);
+        setClientCustomers(prev => new Map(prev).set(client.name, {
+          ...newMapping,
+          customer_id: newCustomerId,
+          customer_name: customer?.name,
+          customer_company: customer?.company,
+        }));
+      } else {
+        setClientCustomers(prev => {
+          const next = new Map(prev);
+          next.delete(client.name);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to assign customer:', err);
+    } finally {
+      setSavingCustomer(prev => {
+        const next = new Set(prev);
+        next.delete(client.name);
+        return next;
+      });
+    }
+  };
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -185,17 +226,28 @@ export function Clients() {
                   {client.name}
                 </h3>
               </div>
-              {mapping && (
-                <div className="flex items-center gap-1 mt-1 text-sm text-primary-600 dark:text-primary-400">
-                  <Users className="h-3 w-3" />
-                  <span>{mapping.customer_name}</span>
-                  {mapping.customer_company && (
-                    <span className="text-gray-500 dark:text-gray-400">
-                      ({mapping.customer_company})
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-1 mt-1" onClick={e => e.stopPropagation()}>
+                <Users className="h-3 w-3 text-primary-500 dark:text-primary-400 flex-shrink-0" />
+                <select
+                  value={mapping?.customer_id != null ? String(mapping.customer_id) : ''}
+                  disabled={savingCustomer.has(client.name)}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    await handleAssignCustomer(client, val ? Number(val) : null);
+                  }}
+                  className="text-sm bg-transparent border-none text-primary-600 dark:text-primary-400 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-400 rounded px-1 disabled:opacity-50 max-w-[160px] truncate"
+                >
+                  <option value="">— Unassigned —</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={String(c.id)}>
+                      {c.name}{c.company ? ` (${c.company})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {savingCustomer.has(client.name) && (
+                  <span className="text-xs text-gray-400">saving…</span>
+                )}
+              </div>
               <div className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
                 <p>Status: {getClientStatusText(client.status)}</p>
                 {client.ip && <p>IP: {client.ip}</p>}
@@ -248,9 +300,9 @@ export function Clients() {
       <div className="space-y-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Clients</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Endpoints</h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Manage and monitor your backup clients
+              Manage and monitor your backup endpoints
             </p>
           </div>
           <button
@@ -258,7 +310,7 @@ export function Clients() {
             className="btn bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
           >
             <Settings className="h-4 w-4" />
-            Manage Clients
+            Manage Endpoints
           </button>
         </div>
 
@@ -378,7 +430,7 @@ export function Clients() {
         ) : filteredAndSortedClients.length === 0 ? (
           <div className="card text-center py-12">
             <HardDrive className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-4 text-gray-600 dark:text-gray-400">No clients found</p>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">No endpoints found</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -391,7 +443,7 @@ export function Clients() {
                       {groupName}
                     </h2>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      ({groupClients.length} {groupClients.length === 1 ? 'client' : 'clients'})
+                      ({groupClients.length} {groupClients.length === 1 ? 'endpoint' : 'endpoints'})
                     </span>
                   </div>
                 )}
