@@ -1,10 +1,11 @@
 {
-  "version": "3.2.17",
+  "version": "3.2.18",
   "releaseDate": "2026-03-03",
   "changelog": [
-    "Fix: Installer 'Pre-configured for' now shows FQDN instead of IP (reads URBACKUP_SERVER_HOST as fallback)",
-    "Fix: Settings save (PUT /api/settings) no longer 500 — .env ownership corrected for service user",
-    "Fix: URBACKUP_SERVER_FQDN and URBACKUP_SERVER_HOST kept in sync on settings save",
-    "Fix: Update Now button — replaced window.confirm (browser-blocked) with inline confirmation UI"
+    "Fix: Windows installer now embeds correct server URL (internet_server pushed to UrBackup DB on FQDN save)",
+    "Fix: UrBackup API login handles no-password mode (no salt response)",
+    "Fix: Update Now button uses inline confirmation instead of browser-blocked window.confirm",
+    "Fix: Installer Pre-configured URL now shows FQDN instead of IP address",
+    "Fix: PUT /api/settings no longer 500 — .env file ownership corrected"
   ]
 }
