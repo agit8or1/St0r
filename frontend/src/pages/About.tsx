@@ -120,13 +120,18 @@ export function About() {
           setUpdateProgress(100);
           setUpdateStep('Update complete!');
           setUpdateInProgress(false);
-          clearInterval(pollInterval); // Stop polling
+          clearInterval(pollInterval);
           setTimeout(() => {
-            // Force a hard reload with cache busting
-            const url = new URL(window.location.href);
-            url.searchParams.set('_refresh', Date.now().toString());
-            window.location.href = url.toString();
+            // Reload to clean URL — strip autoUpdate param so modal doesn't reopen
+            window.location.href = window.location.origin + window.location.pathname + '?_refresh=' + Date.now();
           }, 3000);
+        }
+
+        // If update failed, stop polling and surface the error
+        if (!data.inProgress && log.includes('FAILED')) {
+          setUpdateInProgress(false);
+          setUpdateStep('Update failed');
+          clearInterval(pollInterval);
         }
       } catch (error) {
         console.error('Failed to fetch update log:', error);
@@ -706,6 +711,22 @@ export function About() {
                   </div>
                 </div>
               )}
+
+              {!updateInProgress && updateLog.includes('FAILED') && (
+                <div className="mt-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-400 dark:border-red-600 rounded-lg shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-red-900 dark:text-red-100 font-bold text-lg">
+                        Update Failed
+                      </p>
+                      <p className="text-red-700 dark:text-red-300 text-sm mt-1">
+                        The previous version has been automatically restored. Check the log above for details.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
@@ -715,7 +736,7 @@ export function About() {
                   Update completed in {Math.floor((Date.now() - (lastChecked?.getTime() || Date.now())) / 1000)}s
                 </p>
                 <button
-                  onClick={() => window.location.href = window.location.href}
+                  onClick={() => { window.location.href = window.location.origin + window.location.pathname + '?_refresh=' + Date.now(); }}
                   className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   <RefreshCw className="h-4 w-4" />

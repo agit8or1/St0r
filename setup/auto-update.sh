@@ -41,6 +41,27 @@ trap cleanup EXIT
 
 timestamp() { date '+%Y-%m-%d %H:%M:%S'; }
 
+# ── Automatic rollback on any failure ─────────────────────────────────────────
+rollback() {
+  local err=$?
+  trap - ERR  # Prevent recursive rollback calls
+  echo ""
+  echo "$(timestamp) ════════════════════════════════════════════════"
+  echo "$(timestamp) UPDATE FAILED (exit code $err) — rolling back"
+  echo "$(timestamp) ════════════════════════════════════════════════"
+  if [ -d "$BACKUP_DIR" ]; then
+    echo "$(timestamp) Restoring from backup $BACKUP_DIR ..."
+    rsync -a --delete "$BACKUP_DIR/" "$INSTALL_DIR/"
+    echo "$(timestamp) Restore complete"
+  else
+    echo "$(timestamp) No backup found — cannot restore automatically"
+  fi
+  echo "$(timestamp) Restarting urbackup-gui service..."
+  systemctl start urbackup-gui || true
+  echo "FAILED"
+}
+trap rollback ERR
+
 # Clear previous log so the progress modal starts fresh
 truncate -s 0 /var/log/urbackup-gui-update.log 2>/dev/null || true
 
@@ -107,7 +128,10 @@ npm install 2>&1
 echo "$(timestamp) Dependencies installed successfully"
 
 echo "$(timestamp) Building backend..."
+# Clean previous compiled output to avoid stale files causing tsc errors
+rm -rf dist
 npm run build 2>&1
+echo "$(timestamp) Backend build successful"
 
 # Prune devDependencies after successful build
 npm prune --omit=dev 2>&1
