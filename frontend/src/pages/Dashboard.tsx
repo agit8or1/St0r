@@ -237,8 +237,7 @@ export function Dashboard() {
             </div>
             {diskUsage && diskUsage.available && (
               <div className="flex-shrink-0">
-                <ResponsiveContainer width={180} height={180}>
-                  <PieChart>
+                  <PieChart width={180} height={180}>
                     <Pie
                       data={[
                         { name: 'Used', value: diskUsage.used },
@@ -267,7 +266,6 @@ export function Dashboard() {
                       }}
                     />
                   </PieChart>
-                </ResponsiveContainer>
               </div>
             )}
           </div>

@@ -1,12 +1,16 @@
 {
-  "version": "3.2.5",
-  "releaseDate": "2025-12-08",
+  "version": "3.2.7",
+  "releaseDate": "2026-03-03",
   "changelog": [
-    "Fixed stale/stuck jobs showing in Running Backups (-1% progress)",
-    "Added automatic stale job cleanup (runs every hour)",
-    "Added 'Clear Stale Jobs' button for manual cleanup",
-    "Fixed activities completed counter to respect date filters",
-    "Fixed '[object Object]' errors in backup schedule settings",
-    "Improved error message handling across all components"
+    "Security: fixed shell injection in client installer, logs, and server settings controllers",
+    "Security: JWT tokens now issued as HttpOnly SameSite=Strict cookies (no more localStorage)",
+    "Security: installer now generates random DB password and JWT secret (no hardcoded defaults)",
+    "Fixed: deleting a client now correctly removes it from the UrBackup database",
+    "Fixed: client settings page handles new clients gracefully instead of showing an error",
+    "Fixed: update checker now queries GitHub Releases API for real version info",
+    "Fixed: [object Object] display in backup schedule window settings",
+    "Fixed: SQLite WAL permissions for service user (SupplementaryGroups=urbackup)",
+    "Added: auto-update.sh installs to /opt/urbackup-gui on fresh install and upgrade",
+    "Added: database migration 002 adds TOTP columns and customer tables safely"
   ]
 }
