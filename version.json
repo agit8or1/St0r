@@ -1,11 +1,11 @@
 {
-  "version": "3.2.18",
+  "version": "3.2.19",
   "releaseDate": "2026-03-03",
   "changelog": [
-    "Fix: Windows installer now embeds correct server URL (internet_server pushed to UrBackup DB on FQDN save)",
-    "Fix: UrBackup API login handles no-password mode (no salt response)",
-    "Fix: Update Now button uses inline confirmation instead of browser-blocked window.confirm",
-    "Fix: Installer Pre-configured URL now shows FQDN instead of IP address",
-    "Fix: PUT /api/settings no longer 500 — .env file ownership corrected"
+    "Fix: Update progress modal now shows 'Service Restarting...' while service is down during update",
+    "Fix: About page Update Now / Force Reinstall buttons use inline confirm (no browser-blocked dialog)",
+    "Fix: Update notification shows error if update trigger fails instead of silently opening empty modal",
+    "Fix: Windows installer now embeds correct server URL (internet_server set in UrBackup DB)",
+    "Fix: UrBackup API login handles no-password mode"
   ]
 }

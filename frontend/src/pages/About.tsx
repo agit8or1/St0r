@@ -39,6 +39,9 @@ export function About() {
   const [updateInProgress, setUpdateInProgress] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateStep, setUpdateStep] = useState('');
+  const [confirmingUpdate, setConfirmingUpdate] = useState(false);
+  const [confirmingReinstall, setConfirmingReinstall] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
 
   const [currentVersion, setCurrentVersion] = useState('Loading...');
 
@@ -90,6 +93,7 @@ export function About() {
           credentials: 'include'
         });
         const data = await response.json();
+        setReconnecting(false);
 
         const log = data.log || '';
         setUpdateLog(log);
@@ -133,8 +137,10 @@ export function About() {
           setUpdateStep('Update failed');
           clearInterval(pollInterval);
         }
-      } catch (error) {
-        console.error('Failed to fetch update log:', error);
+      } catch (_error) {
+        // Service is restarting — show reconnecting state, keep polling
+        setReconnecting(true);
+        setUpdateStep('Service restarting...');
       }
     }, 1000); // Poll every second
 
@@ -195,73 +201,37 @@ export function About() {
     }
   };
 
-  const handleUpdate = async () => {
-    if (!window.confirm('This will update St0r to the latest version. The service will restart automatically. Continue?')) {
-      return;
-    }
-
+  const triggerUpdate = async (force = false) => {
     setUpdating(true);
     setUpdateError('');
     setUpdateMessage('');
     setShowProgressModal(true);
     setUpdateInProgress(true);
-    setUpdateLog('Starting update...\n');
+    setReconnecting(false);
+    setUpdateLog(force ? 'Starting reinstall (repair mode)...\n' : 'Starting update...\n');
 
     try {
-      const response = await fetch('/api/system-update/update', {
+      const url = force ? '/api/system-update/update?force=true' : '/api/system-update/update';
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to trigger update');
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Server returned ${response.status}`);
       }
-
-      // Progress modal will show live updates via polling
     } catch (error: any) {
-      setUpdateError(error.response?.data?.error || 'Failed to trigger update');
+      setUpdateError(error.message || 'Failed to trigger update');
       setUpdating(false);
       setShowProgressModal(false);
       setUpdateInProgress(false);
     }
   };
 
-  const handleForceReinstall = async () => {
-    if (!window.confirm('This will REINSTALL the current version (repair mode). This is useful if something is broken. The service will restart automatically. Continue?')) {
-      return;
-    }
-
-    setUpdating(true);
-    setUpdateError('');
-    setUpdateMessage('');
-    setShowProgressModal(true);
-    setUpdateInProgress(true);
-    setUpdateLog('Starting reinstall (repair mode)...\n');
-
-    try {
-      const response = await fetch('/api/system-update/update?force=true', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to trigger reinstall');
-      }
-
-      // Progress modal will show live updates via polling
-    } catch (error: any) {
-      setUpdateError(error.response?.data?.error || 'Failed to trigger reinstall');
-      setUpdating(false);
-      setShowProgressModal(false);
-      setUpdateInProgress(false);
-    }
-  };
+  const handleUpdate = () => setConfirmingUpdate(true);
+  const handleForceReinstall = () => setConfirmingReinstall(true);
 
   return (
     <Layout>
@@ -473,61 +443,53 @@ export function About() {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={checkForUpdates}
                   disabled={checking}
                   className="btn btn-secondary flex items-center gap-2"
                 >
                   {checking ? (
-                    <>
-                      <Loader className="h-4 w-4 animate-spin" />
-                      Checking...
-                    </>
+                    <><Loader className="h-4 w-4 animate-spin" />Checking...</>
                   ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4" />
-                      Check for Updates
-                    </>
+                    <><RefreshCw className="h-4 w-4" />Check for Updates</>
                   )}
                 </button>
+
                 {updateAvailable && (
+                  confirmingUpdate ? (
+                    <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-lg px-3 py-1.5">
+                      <span className="text-sm text-blue-800 dark:text-blue-200 font-medium">Service will restart — confirm?</span>
+                      <button onClick={() => { setConfirmingUpdate(false); triggerUpdate(false); }} className="btn btn-primary btn-sm flex items-center gap-1">
+                        <Download className="h-3 w-3" /> Yes, Update
+                      </button>
+                      <button onClick={() => setConfirmingUpdate(false)} className="btn btn-secondary btn-sm">Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={handleUpdate} disabled={updating} className="btn btn-primary flex items-center gap-2">
+                      {updating ? <><Loader className="h-4 w-4 animate-spin" />Updating...</> : <><Download className="h-4 w-4" />Update Now</>}
+                    </button>
+                  )
+                )}
+
+                {confirmingReinstall ? (
+                  <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-700 rounded-lg px-3 py-1.5">
+                    <span className="text-sm text-orange-800 dark:text-orange-200 font-medium">Reinstall current version?</span>
+                    <button onClick={() => { setConfirmingReinstall(false); triggerUpdate(true); }} className="btn btn-sm flex items-center gap-1 bg-orange-500 text-white hover:bg-orange-600 border-orange-500">
+                      <Download className="h-3 w-3" /> Yes, Reinstall
+                    </button>
+                    <button onClick={() => setConfirmingReinstall(false)} className="btn btn-secondary btn-sm">Cancel</button>
+                  </div>
+                ) : (
                   <button
-                    onClick={handleUpdate}
-                    disabled={updating}
-                    className="btn btn-primary flex items-center gap-2"
+                    onClick={handleForceReinstall}
+                    disabled={updating || checking}
+                    className="btn btn-secondary flex items-center gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:border-orange-400 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                    title="Force reinstall current version (repair mode)"
                   >
-                    {updating ? (
-                      <>
-                        <Loader className="h-4 w-4 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4" />
-                        Update Now
-                      </>
-                    )}
+                    <Download className="h-4 w-4" />Force Reinstall
                   </button>
                 )}
-                <button
-                  onClick={handleForceReinstall}
-                  disabled={updating || checking}
-                  className="btn btn-secondary flex items-center gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:border-orange-400 dark:text-orange-400 dark:hover:bg-orange-900/20"
-                  title="Force reinstall current version (repair mode)"
-                >
-                  {updating ? (
-                    <>
-                      <Loader className="h-4 w-4 animate-spin" />
-                      Reinstalling...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4" />
-                      Force Reinstall
-                    </>
-                  )}
-                </button>
               </div>
             </div>
 
@@ -665,10 +627,12 @@ export function About() {
                 )}
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-white mb-1">
-                    {updateInProgress ? 'Updating St0r...' : 'Update Complete!'}
+                    {reconnecting ? 'Service Restarting...' : updateInProgress ? 'Updating St0r...' : 'Update Complete!'}
                   </h2>
-                  <p className="text-blue-100 text-sm">
+                  <p className="text-blue-100 text-sm flex items-center gap-2">
+                    {reconnecting && <Loader className="h-3 w-3 animate-spin" />}
                     {updateStep || 'Initializing update process...'}
+                    {reconnecting && <span className="text-yellow-200"> — waiting for service to come back online</span>}
                   </p>
                 </div>
                 <div className="text-right">

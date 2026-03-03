@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, X, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Download, X, RefreshCw, AlertTriangle, AlertCircle } from 'lucide-react';
 
 interface VersionInfo {
   version: string;
@@ -15,6 +15,7 @@ export function UpdateNotification() {
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   // Generate or retrieve installation ID
   const getInstallId = () => {
@@ -89,14 +90,20 @@ export function UpdateNotification() {
 
   const handleConfirmUpdate = async () => {
     setConfirming(false);
+    setUpdateError(null);
     try {
-      await fetch('/api/system-update/update', {
+      const response = await fetch('/api/system-update/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setUpdateError(data.error || `Failed to start update (${response.status})`);
+        return;
+      }
     } catch (_e) {
-      // Navigate to About regardless — it will show the running update log
+      // Network error — service may be starting the update; navigate anyway
     }
     navigate('/about?autoUpdate=true');
   };
@@ -141,6 +148,13 @@ export function UpdateNotification() {
                     <li>And {latestVersion.changelog.length - 3} more...</li>
                   )}
                 </ul>
+              </div>
+            )}
+
+            {updateError && (
+              <div className="flex items-center gap-2 mb-2 text-xs text-red-200 bg-red-900/40 rounded px-2 py-1">
+                <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                {updateError}
               </div>
             )}
 
