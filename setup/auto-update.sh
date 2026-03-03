@@ -18,6 +18,9 @@ trap cleanup EXIT
 
 timestamp() { date '+%Y-%m-%d %H:%M:%S'; }
 
+# Clear previous log so the progress modal starts fresh
+truncate -s 0 /var/log/urbackup-gui-update.log 2>/dev/null || true
+
 echo "$(timestamp) Starting St0r update..."
 
 # ── 1. Fetch release info ──────────────────────────────────────────────────
@@ -25,13 +28,17 @@ echo "$(timestamp) Fetching latest release from GitHub..."
 RELEASE_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" \
   -H "User-Agent: St0r-Update-Checker/1.0" "$GITHUB_API")
 
-TARBALL_URL=$(echo "$RELEASE_JSON" | grep '"tarball_url"' | head -1 | cut -d'"' -f4)
-VERSION=$(echo "$RELEASE_JSON"     | grep '"tag_name"'    | head -1 | cut -d'"' -f4)
+# GitHub returns minified single-line JSON — use python3 to parse it reliably
+VERSION=$(echo "$RELEASE_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
 
-if [ -z "$TARBALL_URL" ] || [ -z "$VERSION" ]; then
+if [ -z "$VERSION" ]; then
   echo "ERROR: Could not parse GitHub release info"
   exit 1
 fi
+
+# Build direct archive URL — avoids API redirect chain
+TARBALL_URL="https://github.com/agit8or1/St0r/archive/refs/tags/${VERSION}.tar.gz"
+
 echo "$(timestamp) Latest version: $VERSION"
 
 # ── 2. Backup current installation ────────────────────────────────────────
