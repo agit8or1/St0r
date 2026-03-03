@@ -5,8 +5,8 @@
 set -e
 
 # Version
-INSTALLER_VERSION="3.2.3"
-INSTALLER_DATE="2025-11-20"
+INSTALLER_VERSION="3.2.6"
+INSTALLER_DATE="2026-03-03"
 
 echo "============================================"
 echo "St0r Universal Installer"
@@ -395,20 +395,31 @@ if [ "$INSTALL_STOR" = true ]; then
     systemctl start mariadb
     systemctl enable mariadb
 
-    # Create database and user (only if fresh install)
+    # Configure database
     if [ "$STOR_INSTALLED" = false ]; then
-        mysql -u root <<EOF
-CREATE DATABASE IF NOT EXISTS urbackup_gui;
-CREATE USER IF NOT EXISTS 'urbackup'@'localhost' IDENTIFIED BY 'urbackup123';
+        # Fresh install: generate a random DB password
+        DB_PASS=$(openssl rand -hex 24)
+
+        mysql -u root <<SQLEOF
+CREATE DATABASE IF NOT EXISTS urbackup_gui CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'urbackup'@'localhost' IDENTIFIED BY '${DB_PASS}';
 GRANT ALL PRIVILEGES ON urbackup_gui.* TO 'urbackup'@'localhost';
 FLUSH PRIVILEGES;
-EOF
+SQLEOF
 
         # Run database schema
         echo "[6/9] Setting up database schema..."
         mysql -u root urbackup_gui < $INSTALL_DIR/database/init/01_schema.sql
+
+        # Store generated password for .env creation below
+        GENERATED_DB_PASS="$DB_PASS"
     else
-        echo "[6/9] Skipping database initialization (upgrade mode)..."
+        echo "[6/9] Running database migrations (upgrade mode)..."
+        # Run any new migration files that exist
+        for mig in $INSTALL_DIR/database/migrations/*.sql; do
+            echo "  Applying migration: $(basename $mig)..."
+            mysql -u root urbackup_gui < "$mig" 2>/dev/null || true
+        done
     fi
 
     # Install backend dependencies
@@ -442,12 +453,29 @@ EOF
     ln -sf /etc/nginx/sites-available/urbackup-gui /etc/nginx/sites-enabled/urbackup-gui
     rm -f /etc/nginx/sites-enabled/default
 
+    # Ensure the service user is in the urbackup group (for SQLite write access)
+    if id urbackup &>/dev/null; then
+        usermod -a -G urbackup $ACTUAL_USER 2>/dev/null || true
+        # Make UrBackup database files group-writable
+        chmod -f g+w /var/urbackup/backup_server.db \
+                     /var/urbackup/backup_server.db-shm \
+                     /var/urbackup/backup_server.db-wal \
+                     /var/urbackup/backup_server_settings.db \
+                     /var/urbackup/backup_server_settings.db-shm \
+                     /var/urbackup/backup_server_settings.db-wal \
+                     /var/urbackup 2>/dev/null || true
+    fi
+
     # Create systemd service for backend
     cp $INSTALL_DIR/setup/urbackup-gui.service /etc/systemd/system/
     systemctl daemon-reload
 
     # Create .env file if it doesn't exist
     if [ ! -f "$INSTALL_DIR/backend/.env" ]; then
+        # Use the generated DB password if this is a fresh install, otherwise prompt
+        if [ -z "$GENERATED_DB_PASS" ]; then
+            GENERATED_DB_PASS=$(openssl rand -hex 24)
+        fi
         cat > $INSTALL_DIR/backend/.env <<EOF
 NODE_ENV=production
 PORT=3000
@@ -455,10 +483,15 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=urbackup_gui
 DB_USER=urbackup
-DB_PASSWORD=urbackup123
-JWT_SECRET=$(openssl rand -hex 32)
+DB_PASSWORD=${GENERATED_DB_PASS}
+JWT_SECRET=$(openssl rand -hex 64)
+URBACKUP_DB_PATH=/var/urbackup/backup_server.db
+URBACKUP_API_URL=http://localhost:55414/x
+URBACKUP_USERNAME=admin
+URBACKUP_PASSWORD=
 EOF
         chown $ACTUAL_USER:$ACTUAL_USER $INSTALL_DIR/backend/.env
+        chmod 640 $INSTALL_DIR/backend/.env
     fi
 
     # Start services
@@ -503,9 +536,9 @@ if [ "$INSTALL_STOR" = true ]; then
     echo ""
     echo "  Default credentials:"
     echo "    Username: admin"
-    echo "    Password: Chin00k2023###"
+    echo "    Password: (set on first login — follow the setup wizard)"
     echo ""
-    echo "  ⚠ IMPORTANT: Change the default password immediately!"
+    echo "  ⚠ IMPORTANT: Set a strong password on first login!"
     echo ""
 
     if [ "$STOR_INSTALLED" = false ]; then

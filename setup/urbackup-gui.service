@@ -6,6 +6,7 @@ Wants=mariadb.service
 [Service]
 Type=simple
 User=administrator
+SupplementaryGroups=urbackup
 WorkingDirectory=/opt/urbackup-gui/backend
 Environment=NODE_ENV=production
 EnvironmentFile=/opt/urbackup-gui/backend/.env

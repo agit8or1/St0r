@@ -32,6 +32,7 @@ logs/
 # Docker
 docker-compose.override.yml
 
-# Database
-*.sql
+# Database (exclude SQLite files and backup dumps, keep schema/migrations)
 *.db
+*.db-shm
+*.db-wal

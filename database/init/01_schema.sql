@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS app_users (
     is_admin BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     last_login TIMESTAMP NULL,
+    totp_secret VARCHAR(255) NULL,
+    totp_enabled TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_username (username),
@@ -128,9 +130,8 @@ CREATE TABLE IF NOT EXISTS customer_users (
     UNIQUE KEY unique_customer_user (customer_id, user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- TOTP columns added to app_users (ALTER for existing installs)
--- ALTER TABLE app_users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(255) NULL;
--- ALTER TABLE app_users ADD COLUMN IF NOT EXISTS totp_enabled TINYINT(1) NOT NULL DEFAULT 0;
+-- Default admin user will be created by the backend on first run
+-- (no seed data here — backend handles first-run setup)
 
 -- Default admin user will be created by the backend on first run
 -- Password: admin123 (CHANGE THIS IMMEDIATELY AFTER FIRST LOGIN!)

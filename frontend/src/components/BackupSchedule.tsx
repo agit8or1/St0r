@@ -139,7 +139,22 @@ export function BackupSchedule({ clientId, clientName }: BackupScheduleProps) {
 
       if (data && data.settings) {
         console.log('Setting settings with', Object.keys(data.settings).length, 'keys');
-        setSettings(data.settings);
+
+        // Backup window fields from the UrBackup API can come back as objects instead of
+        // strings (a 7×24 schedule grid). Coerce non-string values to '' so the text
+        // inputs never show "[object Object]".
+        const normalized = { ...data.settings };
+        const windowKeys = [
+          'backup_window_incr_file', 'backup_window_full_file',
+          'backup_window_incr_image', 'backup_window_full_image',
+        ] as const;
+        for (const k of windowKeys) {
+          if (normalized[k] !== undefined && typeof normalized[k] !== 'string') {
+            normalized[k] = '';
+          }
+        }
+
+        setSettings(normalized);
 
         // Parse backup paths
         if (data.settings.default_dirs) {

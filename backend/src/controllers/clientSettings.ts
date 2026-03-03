@@ -15,10 +15,16 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
     }
 
     const settings = await urbackupService.getClientSettings(clientId);
-    res.json(settings);
-  } catch (error) {
+    // Wrap in { settings } so the frontend can access data.settings consistently
+    res.json({ settings });
+  } catch (error: any) {
+    // UrBackup API "error: 1" means unknown client or unauthenticated — not a server crash
+    if (error?.message?.includes('UrBackup API error: 1')) {
+      res.status(404).json({ error: 'Client settings not found', settings: {} });
+      return;
+    }
     logger.error('Failed to get client settings:', error);
-    res.status(500).json({ error: 'Failed to get client settings' });
+    res.status(500).json({ error: 'Failed to get client settings', settings: {} });
   }
 }
 
