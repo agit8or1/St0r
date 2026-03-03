@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger.js';
 import { UrBackupDbService } from './urbackupDb.js';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 // For write operations, we still need to communicate with the UrBackup server
 // Since we're running on the same server, we can use localhost
@@ -153,11 +153,13 @@ export class UrBackupService {
    */
   private parseCurrentTransferProgress(clientId: number): any | null {
     try {
-      // Get last 200 lines from urbackup log and find latest progress line
-      const logOutput = execSync(
-        'sudo tail -200 /var/log/urbackup.log | grep "% finished" | tail -1',
-        { encoding: 'utf-8', timeout: 5000 }
-      ).trim();
+      // Read last 200 lines from urbackup log and find the latest progress line in JS
+      const tailOutput = execFileSync('tail', ['-200', '/var/log/urbackup.log'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      const progressLines = tailOutput.split('\n').filter(l => l.includes('% finished'));
+      const logOutput = (progressLines[progressLines.length - 1] ?? '').trim();
 
       if (!logOutput) {
         return null;

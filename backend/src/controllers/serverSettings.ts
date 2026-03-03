@@ -101,9 +101,12 @@ async function updateEnvFile(updates: Record<string, string>): Promise<void> {
   let newContent = content;
 
   for (const [key, value] of Object.entries(updates)) {
-    const regex = new RegExp(`^${key}=.*$`, 'm');
+    // Escape key so it is safe to embed in a RegExp
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`^${escapedKey}=.*$`, 'm');
     if (regex.test(newContent)) {
-      newContent = newContent.replace(regex, `${key}=${value}`);
+      // Use a function replacer so special $ sequences in value are treated literally
+      newContent = newContent.replace(regex, () => `${key}=${value}`);
     } else {
       // Add new key if it doesn't exist
       newContent += `\n${key}=${value}`;

@@ -1,10 +1,10 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 interface LogEntry {
   time: string;
@@ -34,14 +34,23 @@ function stripAnsi(str: string): string {
   return str.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
+function parseLimit(raw: unknown, fallback: number, max: number): number {
+  const n = parseInt(raw as string);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.min(n, max);
+}
+
 export async function getLogs(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const limit = parseInt(req.query.limit as string) || 200;
+    const limit = parseLimit(req.query.limit, 200, 1000);
 
-    // Get logs from journalctl for urbackup-gui service
-    const { stdout } = await execAsync(
-      `journalctl -u urbackup-gui.service -n ${limit} --no-pager -o json`
-    );
+    // execFile — limit is a JS number, never touches a shell
+    const { stdout } = await execFileAsync('journalctl', [
+      '-u', 'urbackup-gui.service',
+      '-n', String(limit),
+      '--no-pager',
+      '-o', 'json',
+    ]);
 
     const logs: LogEntry[] = [];
     const lines = stdout.trim().split('\n');
@@ -102,12 +111,15 @@ export async function getLogs(req: AuthRequest, res: Response): Promise<void> {
 
 export async function getLiveLog(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const limit = parseInt(req.query.limit as string) || 50;
+    const limit = parseLimit(req.query.limit, 50, 1000);
 
-    // Get latest logs from journalctl
-    const { stdout } = await execAsync(
-      `journalctl -u urbackup-gui.service -n ${limit} --no-pager -o json`
-    );
+    // execFile — limit is a JS number, never touches a shell
+    const { stdout } = await execFileAsync('journalctl', [
+      '-u', 'urbackup-gui.service',
+      '-n', String(limit),
+      '--no-pager',
+      '-o', 'json',
+    ]);
 
     const logs: LogEntry[] = [];
     const lines = stdout.trim().split('\n');
