@@ -97,9 +97,8 @@ export async function getUpdateLog(req: Request, res: Response) {
       const status = stdout.trim();
       inProgress = status === 'active' || status === 'activating';
     } catch (_e) {
-      // Non-zero exit means unit is not active (inactive/failed/not-found).
-      // Fall back to log contents to determine completion state.
-      inProgress = !log.includes('SUCCESS') && !log.includes('Update completed successfully');
+      // Non-zero exit means unit is inactive, failed, or not found — not running.
+      inProgress = false;
     }
 
     res.json({

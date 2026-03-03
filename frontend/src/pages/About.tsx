@@ -58,24 +58,11 @@ export function About() {
     checkForUpdates();
     fetchInstallStats();
 
-    // If navigated here from the update notification, auto-show progress modal.
-    // Also check if an update is already running (e.g. browser was refreshed mid-update).
+    // Only open the progress modal when explicitly navigated from the update notification
     if (searchParams.get('autoUpdate') === 'true') {
       setShowProgressModal(true);
       setUpdateInProgress(true);
       setUpdateLog('Starting update...\n');
-    } else {
-      // Check if an update is already in progress
-      fetch('/api/system-update/update-log', { credentials: 'include' })
-        .then(r => r.json())
-        .then(data => {
-          if (data.inProgress) {
-            setShowProgressModal(true);
-            setUpdateInProgress(true);
-            setUpdateLog(data.log || '');
-          }
-        })
-        .catch(() => {});
     }
   }, []);
 
