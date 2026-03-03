@@ -15,21 +15,19 @@ fi
 set -euo pipefail
 
 # ── Locate Node.js / npm (systemd-run uses minimal PATH without user profiles) ──
+# Glob directly for npm binary — avoids pipefail issues with ls|sort|tail pipelines
 if ! command -v npm &>/dev/null; then
-  # NodeSource system install
-  for _d in /usr/bin /usr/local/bin; do
-    [ -x "$_d/npm" ] && export PATH="$_d:$PATH" && break
+  for _npm_bin in /usr/bin/npm \
+                  /usr/local/bin/npm \
+                  /root/.nvm/versions/node/*/bin/npm \
+                  /home/*/.nvm/versions/node/*/bin/npm; do
+    [ -x "$_npm_bin" ] || continue
+    export PATH="${_npm_bin%/npm}:$PATH"
+    break
   done
 fi
-if ! command -v npm &>/dev/null; then
-  # nvm install for any local user
-  for _nvm in /root/.nvm /home/*/.nvm; do
-    _bin=$(ls -d "$_nvm"/versions/node/*/bin 2>/dev/null | sort -V | tail -1)
-    if [ -x "$_bin/npm" ]; then export PATH="$_bin:$PATH"; break; fi
-  done
-fi
-command -v npm &>/dev/null || { echo "ERROR: npm not found in PATH ($PATH)"; exit 1; }
-echo "Using npm: $(command -v npm) ($(npm --version))"
+command -v npm &>/dev/null || { echo "ERROR: npm not found — install Node.js system-wide or ensure nvm is set up"; exit 1; }
+echo "Using npm $(npm --version) at $(command -v npm)"
 
 INSTALL_DIR="/opt/urbackup-gui"
 BACKUP_DIR="/opt/urbackup-gui-backup-$(date +%Y%m%d-%H%M%S)"
