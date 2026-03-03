@@ -1,9 +1,10 @@
 import os from 'os';
-import { exec } from 'child_process';
+import net from 'net';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export interface SystemMetrics {
   cpu: {
@@ -81,8 +82,9 @@ export class SystemMonitor {
    */
   async getDiskInfo() {
     try {
-      const { stdout } = await execAsync('df -B1 / | tail -1');
-      const parts = stdout.trim().split(/\s+/);
+      const { stdout } = await execFileAsync('df', ['-B1', '/']);
+      const lines = stdout.trim().split('\n');
+      const parts = lines[lines.length - 1].split(/\s+/);
 
       const total = parseInt(parts[1]);
       const used = parseInt(parts[2]);
@@ -131,17 +133,29 @@ export class SystemMonitor {
   /**
    * Test latency to UrBackup server
    */
-  async testLatency(host: string, port: number): Promise<number> {
-    const start = Date.now();
+  testLatency(host: string, port: number): Promise<number> {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const socket = new net.Socket();
 
-    try {
-      // Use netcat to test connection
-      await execAsync(`timeout 2 bash -c 'cat < /dev/null > /dev/tcp/${host}/${port}'`);
-      const latency = Date.now() - start;
-      return latency;
-    } catch (error) {
-      // If connection fails or times out, return -1
-      return -1;
-    }
+      socket.setTimeout(2000);
+
+      socket.on('connect', () => {
+        socket.destroy();
+        resolve(Date.now() - start);
+      });
+
+      socket.on('error', () => {
+        socket.destroy();
+        resolve(-1);
+      });
+
+      socket.on('timeout', () => {
+        socket.destroy();
+        resolve(-1);
+      });
+
+      socket.connect(port, host);
+    });
   }
 }
