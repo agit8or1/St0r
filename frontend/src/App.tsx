@@ -20,6 +20,7 @@ import { Documentation } from './pages/Documentation';
 import { Profile } from './pages/Profile';
 import ServerSettings from './pages/ServerSettings';
 import { Loading } from './components/Loading';
+import { UpdateNotification } from './components/UpdateNotification';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -31,10 +32,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 }
 
+function AuthenticatedUpdateNotification() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <UpdateNotification /> : null;
+}
+
 function App() {
   return (
     <ThemeProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthenticatedUpdateNotification />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route

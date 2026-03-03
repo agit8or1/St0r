@@ -19,7 +19,6 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../contexts/ThemeContext';
 import { Logo } from './Logo';
-import { UpdateNotification } from './UpdateNotification';
 import { BugReportModal } from './BugReportModal';
 
 interface LayoutProps {
@@ -138,9 +137,6 @@ export function Layout({ children }: LayoutProps) {
       <main className="ml-64 min-h-screen">
         <div className="p-8">{children}</div>
       </main>
-
-      {/* Update Notification */}
-      <UpdateNotification />
 
       {/* Bug Report Modal */}
       <BugReportModal

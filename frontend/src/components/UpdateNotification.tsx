@@ -79,10 +79,6 @@ export function UpdateNotification() {
 
   const handleDismiss = () => {
     setDismissed(true);
-    // Remember which version was dismissed so the banner reappears for newer versions
-    if (latestVersion) {
-      localStorage.setItem('dismissedUpdateVersion', latestVersion.version);
-    }
   };
 
   const handleUpdate = async () => {
@@ -101,8 +97,7 @@ export function UpdateNotification() {
     navigate('/about?autoUpdate=true');
   };
 
-  const dismissedVersion = localStorage.getItem('dismissedUpdateVersion');
-  if (!updateAvailable || dismissed || dismissedVersion === latestVersion?.version) {
+  if (!updateAvailable || dismissed) {
     return null;
   }
 

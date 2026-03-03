@@ -1,5 +1,5 @@
 {
-  "version": "3.2.14",
+  "version": "3.2.13",
   "releaseDate": "2026-03-03",
   "changelog": [
     "UI: renamed 'Clients' to 'Endpoints' throughout the interface",
