@@ -102,11 +102,15 @@ chmod +x "$INSTALL_DIR/auto-update.sh"
 # ── 6. Build backend ──────────────────────────────────────────────────────
 echo "$(timestamp) Installing backend dependencies..."
 cd "$INSTALL_DIR/backend"
-npm install --omit=dev 2>&1
+# Full install needed so devDependencies (TypeScript) are available for the build
+npm install 2>&1
 echo "$(timestamp) Dependencies installed successfully"
 
 echo "$(timestamp) Building backend..."
 npm run build 2>&1
+
+# Prune devDependencies after successful build
+npm prune --omit=dev 2>&1
 
 # ── 7. Run DB migrations ───────────────────────────────────────────────────
 echo "$(timestamp) Running database migrations..."
