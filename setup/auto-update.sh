@@ -15,7 +15,6 @@ fi
 set -euo pipefail
 
 # ── Locate Node.js / npm (systemd-run uses minimal PATH without user profiles) ──
-# Glob directly for npm binary — avoids pipefail issues with ls|sort|tail pipelines
 if ! command -v npm &>/dev/null; then
   for _npm_bin in /usr/bin/npm \
                   /usr/local/bin/npm \
@@ -57,7 +56,7 @@ rollback() {
     echo "$(timestamp) No backup found — cannot restore automatically"
   fi
   echo "$(timestamp) Restarting urbackup-gui service..."
-  systemctl start urbackup-gui || true
+  systemctl start urbackup-gui 2>/dev/null || true
   echo "FAILED"
 }
 trap rollback ERR
@@ -67,16 +66,61 @@ truncate -s 0 /var/log/urbackup-gui-update.log 2>/dev/null || true
 
 echo "$(timestamp) Starting St0r update..."
 
-# ── 1. Fetch release info ──────────────────────────────────────────────────
-echo "$(timestamp) Fetching latest release from GitHub..."
-RELEASE_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" \
-  -H "User-Agent: St0r-Update-Checker/1.0" "$GITHUB_API")
+# ── Read optional GitHub token for higher API rate limits (5000/hr vs 60/hr) ──
+GITHUB_TOKEN=$(grep -E "^GITHUB_TOKEN=" "${INSTALL_DIR}/backend/.env" 2>/dev/null \
+  | cut -d= -f2- | tr -d '[:space:]') || true
 
-# GitHub returns minified single-line JSON — use python3 to parse it reliably
+# ── 1. Fetch release info (retry up to 3 times) ───────────────────────────────
+echo "$(timestamp) Fetching latest release from GitHub..."
+
+RELEASE_JSON=""
+for _attempt in 1 2 3; do
+  # Use -sS (silent but show errors) instead of -f so we can read the response
+  # body on failures (e.g. rate-limit message) without curl exiting non-zero
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    RELEASE_JSON=$(curl -sSL --max-time 30 \
+      -H "Accept: application/vnd.github+json" \
+      -H "User-Agent: St0r-Update-Checker/1.0" \
+      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+      "$GITHUB_API" 2>/dev/null) || true
+  else
+    RELEASE_JSON=$(curl -sSL --max-time 30 \
+      -H "Accept: application/vnd.github+json" \
+      -H "User-Agent: St0r-Update-Checker/1.0" \
+      "$GITHUB_API" 2>/dev/null) || true
+  fi
+
+  # Validate the response contains a tag_name field
+  if echo "${RELEASE_JSON}" | python3 -c \
+      "import json,sys; d=json.load(sys.stdin); assert 'tag_name' in d" 2>/dev/null; then
+    break
+  fi
+
+  # Extract GitHub's error message if available
+  _api_err=$(echo "${RELEASE_JSON}" | python3 -c \
+    "import json,sys; print(json.load(sys.stdin).get('message','(no message)'))" \
+    2>/dev/null || echo "invalid or empty response")
+
+  echo "$(timestamp) GitHub API attempt ${_attempt}/3 failed: ${_api_err}"
+
+  if [ "${_attempt}" -lt 3 ]; then
+    echo "$(timestamp) Retrying in 15s..."
+    sleep 15
+  else
+    echo "$(timestamp) ERROR: GitHub API unavailable after 3 attempts"
+    if [ -z "${GITHUB_TOKEN:-}" ]; then
+      echo "$(timestamp) Hint: add GITHUB_TOKEN=<token> to ${INSTALL_DIR}/backend/.env"
+      echo "$(timestamp)       to raise the rate limit from 60 to 5000 requests/hour"
+    fi
+    exit 1
+  fi
+done
+
+# Parse version tag
 VERSION=$(echo "$RELEASE_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
 
 if [ -z "$VERSION" ]; then
-  echo "ERROR: Could not parse GitHub release info"
+  echo "$(timestamp) ERROR: Could not parse version from GitHub response"
   exit 1
 fi
 
@@ -99,7 +143,7 @@ tar xzf "$TEMP_DIR/release.tar.gz" -C "$TEMP_DIR/src" --strip-components=1
 
 # ── 4. Stop service ────────────────────────────────────────────────────────
 echo "$(timestamp) Stopping urbackup-gui service..."
-systemctl stop urbackup-gui || true
+systemctl stop urbackup-gui 2>/dev/null || true
 
 # ── 5. Install new files (preserve .env) ──────────────────────────────────
 echo "$(timestamp) Installing new version..."
@@ -146,7 +190,7 @@ done
 
 # ── 8. Restart service ────────────────────────────────────────────────────
 echo "$(timestamp) Starting urbackup-gui service..."
-systemctl start urbackup-gui || true
+systemctl start urbackup-gui 2>/dev/null || true
 
 echo "$(timestamp) Update completed successfully - $VERSION installed"
 echo "SUCCESS"

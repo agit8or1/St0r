@@ -1,16 +1,14 @@
 {
-  "version": "3.2.7",
+  "version": "3.2.14",
   "releaseDate": "2026-03-03",
   "changelog": [
-    "Security: fixed shell injection in client installer, logs, and server settings controllers",
-    "Security: JWT tokens now issued as HttpOnly SameSite=Strict cookies (no more localStorage)",
-    "Security: installer now generates random DB password and JWT secret (no hardcoded defaults)",
-    "Fixed: deleting a client now correctly removes it from the UrBackup database",
-    "Fixed: client settings page handles new clients gracefully instead of showing an error",
-    "Fixed: update checker now queries GitHub Releases API for real version info",
-    "Fixed: [object Object] display in backup schedule window settings",
-    "Fixed: SQLite WAL permissions for service user (SupplementaryGroups=urbackup)",
-    "Added: auto-update.sh installs to /opt/urbackup-gui on fresh install and upgrade",
-    "Added: database migration 002 adds TOTP columns and customer tables safely"
+    "UI: renamed 'Clients' to 'Endpoints' throughout the interface",
+    "Feature: inline customer assignment dropdown on each endpoint card",
+    "Fix: update notification banner reappears for each new version (was permanently hidden after one dismissal)",
+    "Fix: auto-update rollback on failure — restores backup and restarts service automatically",
+    "Fix: 'Reload Now' no longer re-opens the update progress modal after completing",
+    "Fix: update progress modal shows red error banner on failure",
+    "Fix: GitHub API rate limit — retry with backoff, optional GITHUB_TOKEN support",
+    "Fix: Vite allowedHosts auto-populated from URBACKUP_SERVER_FQDN setting"
   ]
 }
