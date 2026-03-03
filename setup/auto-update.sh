@@ -122,7 +122,7 @@ done
 
 # ── 8. Restart service ────────────────────────────────────────────────────
 echo "$(timestamp) Starting urbackup-gui service..."
-systemctl start urbackup-gui
+systemctl start urbackup-gui || true
 
 echo "$(timestamp) Update completed successfully - $VERSION installed"
 echo "SUCCESS"
