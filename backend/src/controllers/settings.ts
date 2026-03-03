@@ -5,6 +5,8 @@ import { readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import { UrBackupService } from '../services/urbackup.js';
+import { execFile } from 'child_process';
 
 // Resolve .env relative to this file so it works in both dev (src/controllers/)
 // and production (dist/controllers/) without hardcoding the install path.
@@ -136,6 +138,31 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
     }
 
     logger.info(`Settings updated by ${user?.username || 'unknown'}: FQDN=${urbackupServerFqdn || 'not set'}, Host=${urbackupServerHost || 'not set'}, Port=${urbackupServerPort}`);
+
+    // Push internet_server to UrBackup so generated installers embed the correct server address
+    const fqdnForUrBackup = urbackupServerFqdn || urbackupServerHost;
+    if (fqdnForUrBackup) {
+      // Try API first; fall back to direct DB write (runs as root via sudo)
+      let pushedViaApi = false;
+      try {
+        const urbackupService = new UrBackupService();
+        await urbackupService.setSettings({ internet_server: fqdnForUrBackup });
+        logger.info(`Pushed internet_server=${fqdnForUrBackup} to UrBackup via API`);
+        pushedViaApi = true;
+      } catch (urbackupErr) {
+        logger.warn(`Could not push internet_server to UrBackup API (non-fatal): ${urbackupErr}`);
+      }
+
+      if (!pushedViaApi) {
+        // Direct DB write as fallback
+        const dbPath = '/var/urbackup/backup_server_settings.db';
+        const sql = `INSERT OR REPLACE INTO settings (key, value, clientid) VALUES ('internet_server', '${fqdnForUrBackup.replace(/'/g, "''")}', 0);`;
+        execFile('sudo', ['-u', 'urbackup', 'sqlite3', dbPath, sql], (err) => {
+          if (err) logger.warn(`Could not write internet_server to UrBackup DB: ${err.message}`);
+          else logger.info(`Wrote internet_server=${fqdnForUrBackup} to UrBackup DB directly`);
+        });
+      }
+    }
 
     res.json({
       success: true,

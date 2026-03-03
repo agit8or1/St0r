@@ -59,14 +59,36 @@ export class UrBackupService {
           saltData = parsedData;
           break;
         }
+
+        // No-password mode: UrBackup returns ses but no salt
+        if (parsedData.ses && !parsedData.salt && parsedData.error === 0) {
+          saltData = { ...parsedData, noPassword: true };
+          break;
+        }
       }
 
-      if (!saltData || !saltData.ses || !saltData.salt) {
+      if (!saltData || !saltData.ses) {
         logger.error(`[UrBackup API] Failed to get valid salt after 3 attempts`);
         throw new Error('Failed to get salt/session from UrBackup server');
       }
 
       logger.info(`[UrBackup API] Salt response: ${JSON.stringify(saltData)}`);
+
+      // No-password mode: skip hashing, log in with empty password directly
+      if (saltData.noPassword) {
+        logger.info(`[UrBackup API] No-password mode detected — logging in with plain credentials`);
+        const loginResponse = await fetch(`${URBACKUP_API_URL}?a=login`, {
+          method: 'POST',
+          headers: { 'User-Agent': 'st0r', 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `username=${URBACKUP_USERNAME}&password=${encodeURIComponent(URBACKUP_PASSWORD)}&ses=${saltData.ses}&plainpw=1`
+        });
+        const loginData: any = JSON.parse(await loginResponse.text());
+        logger.info(`[UrBackup API] No-pw login response: ${JSON.stringify(loginData)}`);
+        this.sessionId = loginData.session || saltData.ses;
+        this.sessionExpiry = Date.now() + (30 * 60 * 1000);
+        logger.info(`[UrBackup API] ✓ Authenticated (no-password mode)! Session: ${this.sessionId}`);
+        return this.sessionId;
+      }
 
       logger.info(`[UrBackup API] Got salt: ${saltData.salt}, session: ${saltData.ses}`);
 
