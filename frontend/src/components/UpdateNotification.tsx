@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, X, RefreshCw } from 'lucide-react';
+import { Download, X, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface VersionInfo {
   version: string;
@@ -14,6 +14,7 @@ export function UpdateNotification() {
   const [latestVersion, setLatestVersion] = useState<VersionInfo | null>(null);
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   // Generate or retrieve installation ID
   const getInstallId = () => {
@@ -78,13 +79,16 @@ export function UpdateNotification() {
   };
 
   const handleDismiss = () => {
+    setConfirming(false);
     setDismissed(true);
   };
 
-  const handleUpdate = async () => {
-    if (!window.confirm(`Update St0r to version ${latestVersion?.version}? The service will restart automatically.`)) {
-      return;
-    }
+  const handleUpdateClick = () => {
+    setConfirming(true);
+  };
+
+  const handleConfirmUpdate = async () => {
+    setConfirming(false);
     try {
       await fetch('/api/system-update/update', {
         method: 'POST',
@@ -140,21 +144,45 @@ export function UpdateNotification() {
               </div>
             )}
 
-            <div className="flex gap-2">
-              <button
-                onClick={handleUpdate}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg hover:bg-white/90 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Update Now
-              </button>
-              <button
-                onClick={handleDismiss}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-medium"
-              >
-                Later
-              </button>
-            </div>
+            {confirming ? (
+              <div className="bg-white/10 rounded-lg p-3 mb-2">
+                <div className="flex items-center gap-2 mb-2 text-sm font-semibold">
+                  <AlertTriangle className="h-4 w-4 text-yellow-300" />
+                  Service will restart — confirm update?
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleConfirmUpdate}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg hover:bg-white/90 transition-colors"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Yes, Update
+                  </button>
+                  <button
+                    onClick={() => setConfirming(false)}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleUpdateClick}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white text-blue-600 font-semibold rounded-lg hover:bg-white/90 transition-colors"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Update Now
+                </button>
+                <button
+                  onClick={handleDismiss}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-medium"
+                >
+                  Later
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
