@@ -83,8 +83,20 @@ export function UpdateNotification() {
     sessionStorage.setItem('updateDismissed', 'true');
   };
 
-  const handleUpdate = () => {
-    navigate('/about');
+  const handleUpdate = async () => {
+    if (!window.confirm(`Update St0r to version ${latestVersion?.version}? The service will restart automatically.`)) {
+      return;
+    }
+    try {
+      await fetch('/api/system-update/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+    } catch (_e) {
+      // Navigate to About regardless — it will show the running update log
+    }
+    navigate('/about?autoUpdate=true');
   };
 
   if (!updateAvailable || dismissed || sessionStorage.getItem('updateDismissed')) {

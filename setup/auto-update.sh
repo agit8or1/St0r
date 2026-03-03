@@ -14,6 +14,23 @@ fi
 
 set -euo pipefail
 
+# ── Locate Node.js / npm (systemd-run uses minimal PATH without user profiles) ──
+if ! command -v npm &>/dev/null; then
+  # NodeSource system install
+  for _d in /usr/bin /usr/local/bin; do
+    [ -x "$_d/npm" ] && export PATH="$_d:$PATH" && break
+  done
+fi
+if ! command -v npm &>/dev/null; then
+  # nvm install for any local user
+  for _nvm in /root/.nvm /home/*/.nvm; do
+    _bin=$(ls -d "$_nvm"/versions/node/*/bin 2>/dev/null | sort -V | tail -1)
+    if [ -x "$_bin/npm" ]; then export PATH="$_bin:$PATH"; break; fi
+  done
+fi
+command -v npm &>/dev/null || { echo "ERROR: npm not found in PATH ($PATH)"; exit 1; }
+echo "Using npm: $(command -v npm) ($(npm --version))"
+
 INSTALL_DIR="/opt/urbackup-gui"
 BACKUP_DIR="/opt/urbackup-gui-backup-$(date +%Y%m%d-%H%M%S)"
 GITHUB_API="https://api.github.com/repos/agit8or1/St0r/releases/latest"

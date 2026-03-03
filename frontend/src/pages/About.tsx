@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Logo } from '../components/Logo';
 import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText } from 'lucide-react';
@@ -23,6 +24,7 @@ function compareVersions(version1: string, version2: string): boolean {
 }
 
 export function About() {
+  const [searchParams] = useSearchParams();
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -55,6 +57,26 @@ export function About() {
     fetchCurrentVersion();
     checkForUpdates();
     fetchInstallStats();
+
+    // If navigated here from the update notification, auto-show progress modal.
+    // Also check if an update is already running (e.g. browser was refreshed mid-update).
+    if (searchParams.get('autoUpdate') === 'true') {
+      setShowProgressModal(true);
+      setUpdateInProgress(true);
+      setUpdateLog('Starting update...\n');
+    } else {
+      // Check if an update is already in progress
+      fetch('/api/system-update/update-log', { credentials: 'include' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.inProgress) {
+            setShowProgressModal(true);
+            setUpdateInProgress(true);
+            setUpdateLog(data.log || '');
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const fetchCurrentVersion = async () => {
