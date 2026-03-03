@@ -75,12 +75,16 @@ router.get('/stats', async (req: Request, res: Response) => {
 router.get('/latest', async (req: Request, res: Response): Promise<void> => {
   try {
     const githubApiUrl = 'https://api.github.com/repos/agit8or1/St0r/releases/latest';
-    const response = await fetch(githubApiUrl, {
-      headers: {
-        'Accept': 'application/vnd.github+json',
-        'User-Agent': 'St0r-Update-Checker/1.0',
-      },
-    });
+    const githubHeaders: Record<string, string> = {
+      'Accept': 'application/vnd.github+json',
+      'User-Agent': 'St0r-Update-Checker/1.0',
+    };
+    const githubToken = process.env.GITHUB_TOKEN;
+    if (githubToken) {
+      githubHeaders['Authorization'] = `Bearer ${githubToken}`;
+    }
+
+    const response = await fetch(githubApiUrl, { headers: githubHeaders });
 
     if (!response.ok) {
       logger.warn(`GitHub releases API returned ${response.status}`);

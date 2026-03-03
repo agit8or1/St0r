@@ -37,7 +37,7 @@ export function Settings() {
 
       const response = await fetch('/api/server-settings', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         }
       });
 
@@ -59,7 +59,7 @@ export function Settings() {
     try {
       const response = await fetch('/api/settings', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         }
       });
 
@@ -80,7 +80,7 @@ export function Settings() {
       const response = await fetch('/api/server-settings', {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(settings)
@@ -108,7 +108,7 @@ export function Settings() {
       const response = await fetch('/api/settings', {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(clientSettings)
@@ -136,7 +136,7 @@ export function Settings() {
     try {
       const response = await fetch('/api/2fa/status', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         }
       });
 
@@ -155,7 +155,7 @@ export function Settings() {
       const response = await fetch('/api/2fa/setup', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         }
       });
 
@@ -181,7 +181,7 @@ export function Settings() {
       const response = await fetch('/api/2fa/verify', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ token: verificationCode })
@@ -215,7 +215,7 @@ export function Settings() {
       const response = await fetch('/api/2fa/disable', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         }
       });
 

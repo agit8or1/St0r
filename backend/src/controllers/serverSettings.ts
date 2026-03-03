@@ -243,8 +243,14 @@ export async function setServerSettings(req: AuthRequest, res: Response): Promis
         settingsToSave[key] = urbackupSettings[key];
       });
 
-      await urbackupService.setSettings(settingsToSave);
-      logger.info(`UrBackup settings updated by ${user?.username || 'unknown'}: ${urbackupKeys.join(', ')}`);
+      try {
+        await urbackupService.setSettings(settingsToSave);
+        logger.info(`UrBackup settings updated by ${user?.username || 'unknown'}: ${urbackupKeys.join(', ')}`);
+      } catch (urbackupError) {
+        // Non-fatal: env file changes already saved above. UrBackup API may be
+        // unavailable or reject the setting — log and continue.
+        logger.warn(`Could not push settings to UrBackup API (${urbackupKeys.join(', ')}): ${urbackupError}`);
+      }
     }
 
     res.json({
