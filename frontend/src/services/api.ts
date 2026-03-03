@@ -21,26 +21,17 @@ class ApiService {
   constructor() {
     this.api = axios.create({
       baseURL: '/api',
+      withCredentials: true,
       headers: {
         'Content-Type': 'application/json',
       },
-    });
-
-    // Add token to requests
-    this.api.interceptors.request.use((config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
     });
 
     // Handle 401 errors
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
-          localStorage.removeItem('token');
+        if (error.response?.status === 401 && window.location.pathname !== '/login') {
           localStorage.removeItem('user');
           window.location.href = '/login';
         }
@@ -65,6 +56,10 @@ class ApiService {
     } catch {
       return false;
     }
+  }
+
+  async logout(): Promise<void> {
+    await this.api.post('/auth/logout');
   }
 
   // Servers
@@ -312,30 +307,40 @@ class ApiService {
     return response.data;
   }
 
-  downloadWindowsInstaller(authKey?: string, clientId?: string): void {
-    const token = localStorage.getItem('token');
+  async downloadWindowsInstaller(authKey?: string, clientId?: string): Promise<void> {
     const url = new URL('/api/client-installer/windows', window.location.origin);
-    url.searchParams.set('token', token || '');
     if (authKey) {
       url.searchParams.set('authkey', authKey);
     }
     if (clientId) {
       url.searchParams.set('clientid', clientId);
     }
-    window.location.href = url.toString();
+    const response = await fetch(url.toString(), { credentials: 'include' });
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = `UrBackupClient-${clientId || 'windows'}.exe`;
+    a.click();
+    URL.revokeObjectURL(objectUrl);
   }
 
-  downloadLinuxInstaller(authKey?: string, clientId?: string): void {
-    const token = localStorage.getItem('token');
+  async downloadLinuxInstaller(authKey?: string, clientId?: string): Promise<void> {
     const url = new URL('/api/client-installer/linux', window.location.origin);
-    url.searchParams.set('token', token || '');
     if (authKey) {
       url.searchParams.set('authkey', authKey);
     }
     if (clientId) {
       url.searchParams.set('clientid', clientId);
     }
-    window.location.href = url.toString();
+    const response = await fetch(url.toString(), { credentials: 'include' });
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = `urbackup-client-installer.sh`;
+    a.click();
+    URL.revokeObjectURL(objectUrl);
   }
 }
 

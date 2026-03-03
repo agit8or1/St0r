@@ -110,6 +110,7 @@ export function PasswordChangeModal({ onPasswordChanged }: PasswordChangeModalPr
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="input w-full"
                 placeholder="admin123"
+                autoComplete="current-password"
                 required
                 disabled={loading}
               />
@@ -125,6 +126,7 @@ export function PasswordChangeModal({ onPasswordChanged }: PasswordChangeModalPr
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="input w-full"
                 placeholder="Enter new password (min 8 characters)"
+                autoComplete="new-password"
                 required
                 minLength={8}
                 disabled={loading}
@@ -141,6 +143,7 @@ export function PasswordChangeModal({ onPasswordChanged }: PasswordChangeModalPr
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="input w-full"
                 placeholder="Confirm new password"
+                autoComplete="new-password"
                 required
                 disabled={loading}
               />

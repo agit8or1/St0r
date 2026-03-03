@@ -139,12 +139,25 @@ router.get('/linux', authenticate, async (req: Request, res: Response) => {
   try {
     const { authkey, clientName } = req.query;
 
+    // Validate inputs against strict allowlists to prevent shell injection
+    const clientNameStr = clientName ? String(clientName).trim() : '';
+    const authkeyStr = authkey ? String(authkey).trim() : '';
+
+    if (clientNameStr && !/^[a-zA-Z0-9_-]{1,64}$/.test(clientNameStr)) {
+      res.status(400).json({ error: 'Invalid clientName: only alphanumeric, hyphen, and underscore characters allowed (max 64)' });
+      return;
+    }
+    if (authkeyStr && !/^[a-zA-Z0-9]{1,128}$/.test(authkeyStr)) {
+      res.status(400).json({ error: 'Invalid authkey: only alphanumeric characters allowed (max 128)' });
+      return;
+    }
+
     const serverAddress = getServerAddress();
     const serverPort = process.env.URBACKUP_SERVER_PORT || '55414';
 
     // Use provided values or fallback to defaults
-    const finalAuthkey = (authkey && String(authkey).trim()) || 'abcdefghijklmnopqrstuvwxyz';
-    const finalClientName = (clientName && String(clientName).trim()) || 'urbackup-client';
+    const finalAuthkey = authkeyStr || 'abcdefghijklmnopqrstuvwxyz';
+    const finalClientName = clientNameStr || 'urbackup-client';
 
     logger.info(`Linux client installer requested: client=${finalClientName}, server=${serverAddress}:${serverPort}`);
 

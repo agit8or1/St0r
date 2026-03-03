@@ -59,11 +59,14 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   return findUserByUsername(username);
 }
 
+const ALLOWED_UPDATE_FIELDS = ['username', 'email', 'password_hash', 'is_admin', 'is_active', 'last_login', 'totp_secret', 'totp_enabled'];
+
 export async function updateUser(id: number, updates: Partial<User>): Promise<void> {
   const fields: string[] = [];
   const values: any[] = [];
 
   Object.entries(updates).forEach(([key, value]) => {
+    if (!ALLOWED_UPDATE_FIELDS.includes(key)) return;
     fields.push(`${key} = ?`);
     values.push(value);
   });

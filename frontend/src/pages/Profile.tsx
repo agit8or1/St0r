@@ -272,6 +272,7 @@ export function Profile() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="input w-full"
+                autoComplete="current-password"
                 required
               />
             </div>
@@ -285,6 +286,7 @@ export function Profile() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="input w-full"
+                autoComplete="new-password"
                 required
                 minLength={8}
               />
@@ -300,6 +302,7 @@ export function Profile() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="input w-full"
+                autoComplete="new-password"
                 required
               />
             </div>

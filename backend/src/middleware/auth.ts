@@ -15,8 +15,12 @@ export function authenticate(
     const authHeader = req.headers.authorization;
     let token: string | undefined;
 
-    // Check Authorization header first
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    // Check HttpOnly cookie first (preferred, XSS-safe)
+    if (req.cookies?.auth_token) {
+      token = req.cookies.auth_token;
+    }
+    // Fall back to Authorization header (for API clients)
+    else if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
     }
     // Fall back to query parameter (for file downloads)

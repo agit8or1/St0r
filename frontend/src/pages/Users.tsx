@@ -297,6 +297,7 @@ export function Users() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="input"
                   placeholder={editingUser ? 'Leave blank to keep current' : 'Enter password'}
+                  autoComplete="new-password"
                 />
               </div>
 

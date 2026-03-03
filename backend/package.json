@@ -19,10 +19,12 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/qrcode": "^1.5.6",
     "@types/speakeasy": "^2.0.10",
     "axios": "^1.13.1",
     "bcrypt": "^5.1.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",

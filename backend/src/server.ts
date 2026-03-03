@@ -1,8 +1,9 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 import { testConnection } from './config/database.js';
 import { logger } from './utils/logger.js';
 
@@ -26,9 +27,6 @@ import settingsRoutes from './routes/settings.js';
 import clientInstallerRoutes from './routes/clientInstaller.js';
 import storageRoutes from './routes/storage.js';
 import browseRoutes from './routes/browse.js';
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,6 +55,9 @@ const apiLimiter = rateLimit({
 
 app.use('/api/auth/login', authLimiter);
 app.use('/api/', apiLimiter);
+
+// Cookie parsing middleware
+app.use(cookieParser());
 
 // Body parsing middleware
 app.use(express.json());

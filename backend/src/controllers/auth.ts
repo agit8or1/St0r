@@ -72,6 +72,13 @@ export async function login(req: Request, res: Response): Promise<void> {
       isAdmin: user.is_admin,
     });
 
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
+
     res.json({
       token,
       user: {
@@ -85,6 +92,11 @@ export async function login(req: Request, res: Response): Promise<void> {
     logger.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+}
+
+export async function logout(req: Request, res: Response): Promise<void> {
+  res.clearCookie('auth_token');
+  res.json({ success: true });
 }
 
 export async function validateToken(req: Request, res: Response): Promise<void> {
