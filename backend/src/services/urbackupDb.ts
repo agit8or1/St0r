@@ -614,6 +614,45 @@ export class UrBackupDbService {
   }
 
   /**
+   * Remove a client and all associated data directly from the database.
+   * The UrBackup HTTP API silently no-ops without authenticated session,
+   * so direct DB deletion is required.
+   */
+  async removeClient(clientId: number) {
+    let mainDb;
+    let settingsDb;
+    try {
+      mainDb = await openUrBackupDbReadWrite();
+
+      // Delete the client row
+      await mainDb.run('DELETE FROM clients WHERE id = ?', [clientId]);
+      // Clean up related tables
+      await mainDb.run('DELETE FROM orig_client_settings WHERE clientid = ?', [clientId]);
+      await mainDb.run('UPDATE backups SET delete_pending = 1 WHERE clientid = ?', [clientId]);
+      await mainDb.run('UPDATE backup_images SET delete_pending = 1 WHERE clientid = ?', [clientId]);
+
+      // Remove settings from settings database
+      const sqlite3 = await import('sqlite3');
+      const { open } = await import('sqlite');
+      settingsDb = await open({
+        filename: process.env.URBACKUP_DB_PATH?.replace('backup_server.db', 'backup_server_settings.db') || '/var/urbackup/backup_server_settings.db',
+        driver: sqlite3.default.Database,
+        mode: sqlite3.default.OPEN_READWRITE
+      });
+      await settingsDb.run('DELETE FROM settings WHERE clientid = ?', [clientId]);
+
+      logger.info(`Client ${clientId} removed from database`);
+      return { success: true };
+    } catch (error) {
+      logger.error(`Failed to remove client ${clientId} from database:`, error);
+      throw error;
+    } finally {
+      if (mainDb) await mainDb.close();
+      if (settingsDb) await settingsDb.close();
+    }
+  }
+
+  /**
    * Get client authentication key from settings database
    */
   async getClientAuthkey(clientId: number): Promise<string> {

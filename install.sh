@@ -466,6 +466,10 @@ SQLEOF
                      /var/urbackup 2>/dev/null || true
     fi
 
+    # Install auto-update script
+    cp $INSTALL_DIR/setup/auto-update.sh $INSTALL_DIR/auto-update.sh
+    chmod +x $INSTALL_DIR/auto-update.sh
+
     # Create systemd service for backend
     cp $INSTALL_DIR/setup/urbackup-gui.service /etc/systemd/system/
     systemctl daemon-reload

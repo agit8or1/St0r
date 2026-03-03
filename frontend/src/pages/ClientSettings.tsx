@@ -39,10 +39,14 @@ export function ClientSettings() {
 
       // Get settings
       const response = await fetch(`/api/client-settings/${foundClient.id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        credentials: 'include'
       });
+
+      if (response.status === 404) {
+        // Client exists in our DB but not yet known to UrBackup — show empty settings
+        setSettings({});
+        return;
+      }
 
       if (!response.ok) {
         throw new Error('Failed to load settings');
@@ -66,9 +70,9 @@ export function ClientSettings() {
       const response = await fetch(`/api/client-settings/${clientId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(settings)
       });
 

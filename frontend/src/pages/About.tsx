@@ -78,9 +78,7 @@ export function About() {
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch('/api/system-update/update-log', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+          credentials: 'include'
         });
         const data = await response.json();
 
@@ -198,10 +196,8 @@ export function About() {
     try {
       const response = await fetch('/api/system-update/update', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -234,10 +230,8 @@ export function About() {
     try {
       const response = await fetch('/api/system-update/update?force=true', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
 
       const data = await response.json();

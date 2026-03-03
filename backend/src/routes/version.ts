@@ -1,13 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { query } from '../config/database.js';
 import { logger } from '../utils/logger.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
 
 const router = Router();
 
@@ -75,34 +71,47 @@ router.get('/stats', async (req: Request, res: Response) => {
   }
 });
 
-// Get latest available version from update package
+// Get latest available version from GitHub Releases
 router.get('/latest', async (req: Request, res: Response): Promise<void> => {
   try {
-    // Try to read version.json from downloads directory
-    const versionJsonPath = '/opt/urbackup-gui/frontend/dist/downloads/version.json';
+    const githubApiUrl = 'https://api.github.com/repos/agit8or1/St0r/releases/latest';
+    const response = await fetch(githubApiUrl, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'St0r-Update-Checker/1.0',
+      },
+    });
 
-    if (existsSync(versionJsonPath)) {
-      const latestVersion = JSON.parse(readFileSync(versionJsonPath, 'utf-8'));
-      res.json(latestVersion);
+    if (!response.ok) {
+      logger.warn(`GitHub releases API returned ${response.status}`);
+      res.status(404).json({ error: 'No release found on GitHub' });
       return;
     }
 
-    // Fallback: read VERSION file and construct response
-    const versionFilePath = '/opt/urbackup-gui/VERSION';
-    if (existsSync(versionFilePath)) {
-      const version = readFileSync(versionFilePath, 'utf-8').trim();
-      res.json({
-        version: version,
-        releaseDate: new Date().toISOString().split('T')[0],
-        downloadUrl: `https://stor.agit8or.net/downloads/stor-v${version}-deployment.tar.gz`
-      });
-      return;
-    }
+    const release: any = await response.json();
 
-    res.status(404).json({ error: 'No version information available' });
+    // Parse tag name: "v3.2.6" → "3.2.6"
+    const version = (release.tag_name || '').replace(/^v/, '');
+
+    // Extract bullet-point lines from release body as changelog
+    const changelog: string[] = release.body
+      ? release.body
+          .split('\n')
+          .filter((l: string) => /^[-*]\s+/.test(l.trim()))
+          .map((l: string) => l.replace(/^[-*]\s+/, '').trim())
+          .filter((l: string) => l.length > 0)
+      : [];
+
+    res.json({
+      version,
+      releaseDate: release.published_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+      changelog,
+      downloadUrl: release.tarball_url,
+      htmlUrl: release.html_url,
+    });
   } catch (error) {
-    logger.error('Failed to read latest version:', error);
-    res.status(500).json({ error: 'Failed to read latest version' });
+    logger.error('Failed to fetch latest version from GitHub:', error);
+    res.status(500).json({ error: 'Failed to check for updates' });
   }
 });
 

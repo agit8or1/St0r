@@ -1005,8 +1005,10 @@ export class UrBackupService {
     try {
       logger.info(`Removing client with ID: ${clientId}`);
       const numericId = typeof clientId === 'string' ? parseInt(clientId) : clientId;
-      const result = await this.apiCall('remove_client', { clientid: numericId });
-      logger.info(`Client ${clientId} removed successfully:`, result);
+      // Use direct DB deletion — the UrBackup HTTP API requires an authenticated
+      // session cookie and silently no-ops without it (delete_pending stays 0).
+      const result = await this.dbService.removeClient(numericId);
+      logger.info(`Client ${clientId} removed successfully`);
       return result;
     } catch (error: any) {
       logger.error(`Failed to remove client ${clientId}:`, error.message);
