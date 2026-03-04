@@ -40,6 +40,7 @@ export function ClientDetail() {
   const [showAuthKey, setShowAuthKey] = useState(false);
   const [loadingAuthKey, setLoadingAuthKey] = useState(false);
   const [serverInfo, setServerInfo] = useState<{ serverIP: string; serverPort: string; serverUrl: string } | null>(null);
+  const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     loadClientData();
@@ -153,10 +154,12 @@ export function ClientDetail() {
       const clientId = client.id || (client as any).clientid;
       console.log('Starting backup with:', { clientName, clientId, type, incremental });
       await api.startBackup(clientName, type, incremental, clientId);
-      alert(`${incremental ? 'Incremental' : 'Full'} ${type} backup started successfully`);
+      setBackupMessage({ type: 'success', text: `${incremental ? 'Incremental' : 'Full'} ${type} backup started successfully` });
+      setTimeout(() => setBackupMessage(null), 5000);
     } catch (err: any) {
       console.error('Backup start error:', err);
-      alert(err.response?.data?.error || 'Failed to start backup');
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to start backup';
+      setBackupMessage({ type: 'error', text: errorMsg });
     } finally {
       setStartingBackup(null);
     }
@@ -190,6 +193,17 @@ export function ClientDetail() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* Backup message */}
+        {backupMessage && (
+          <div className={`rounded-lg p-4 ${
+            backupMessage.type === 'success'
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+          }`}>
+            {backupMessage.text}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center gap-4">
           <button

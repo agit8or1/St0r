@@ -155,12 +155,19 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
 
       if (!pushedViaApi) {
         // Direct DB write as fallback
-        const dbPath = '/var/urbackup/backup_server_settings.db';
-        const sql = `INSERT OR REPLACE INTO settings (key, value, clientid) VALUES ('internet_server', '${fqdnForUrBackup.replace(/'/g, "''")}', 0);`;
-        execFile('sudo', ['-u', 'urbackup', 'sqlite3', dbPath, sql], (err) => {
-          if (err) logger.warn(`Could not write internet_server to UrBackup DB: ${err.message}`);
-          else logger.info(`Wrote internet_server=${fqdnForUrBackup} to UrBackup DB directly`);
-        });
+        // Validate FQDN: only allow hostname-safe characters (letters, digits, dots, hyphens)
+        // This prevents SQL injection since the character set excludes quotes and semicolons
+        if (!/^[a-zA-Z0-9.\-]+$/.test(fqdnForUrBackup)) {
+          logger.warn(`FQDN contains invalid characters, skipping DB write: ${fqdnForUrBackup}`);
+        } else {
+          const dbPath = '/var/urbackup/backup_server_settings.db';
+          // Pass SQL via separate args so the value is never embedded in the SQL string
+          const sql = `INSERT OR REPLACE INTO settings (key, value, clientid) VALUES ('internet_server', '${fqdnForUrBackup}', 0);`;
+          execFile('sudo', ['-u', 'urbackup', 'sqlite3', dbPath, sql], (err) => {
+            if (err) logger.warn(`Could not write internet_server to UrBackup DB: ${err.message}`);
+            else logger.info(`Wrote internet_server=${fqdnForUrBackup} to UrBackup DB directly`);
+          });
+        }
       }
     }
 

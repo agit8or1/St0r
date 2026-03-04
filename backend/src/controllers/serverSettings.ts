@@ -138,6 +138,7 @@ export async function getServerSettings(req: AuthRequest, res: Response): Promis
     const dbSettings = await getUrBackupSettings();
 
     // Try to get settings from API, but don't fail if it's not available
+    // getSettings() now returns a flat {key: value} map (booleans are JS booleans)
     let urbackupSettings: Record<string, any> = {};
     try {
       urbackupSettings = await urbackupService.getSettings();

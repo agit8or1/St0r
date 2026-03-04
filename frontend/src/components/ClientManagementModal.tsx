@@ -28,6 +28,9 @@ export function ClientManagementModal({
   const [editingClient, setEditingClient] = useState<string | null>(null);
   const [editedName, setEditedName] = useState('');
   const [regeneratingKey, setRegeneratingKey] = useState<string | null>(null);
+  const [modalMessage, setModalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<{ id: number | string; name: string } | null>(null);
+  const [pendingRegenKey, setPendingRegenKey] = useState<{ id: number | string; name: string } | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -36,39 +39,48 @@ export function ClientManagementModal({
     }
   }, [isOpen]);
 
+  const showMsg = (type: 'success' | 'error', text: string) => {
+    setModalMessage({ type, text });
+    if (type === 'success') setTimeout(() => setModalMessage(null), 4000);
+  };
+
   const handleAddClient = async () => {
     if (!newClientName.trim()) {
-      alert('Please enter a client name');
+      showMsg('error', 'Please enter a client name');
       return;
     }
 
     setAdding(true);
     try {
       await api.addClient(newClientName.trim());
+      const added = newClientName.trim();
       setNewClientName('');
       onClientAdded();
-      alert(`Client "${newClientName}" added successfully!`);
+      showMsg('success', `Client "${added}" added successfully!`);
     } catch (error) {
       console.error('Failed to add client:', error);
-      alert('Failed to add client. Please try again.');
+      showMsg('error', 'Failed to add client. Please try again.');
     } finally {
       setAdding(false);
     }
   };
 
   const handleRemoveClient = async (clientId: number | string, clientName: string) => {
-    if (!confirm(`Are you sure you want to remove client "${clientName}"?\n\nWARNING: This will also delete all backups for this client!`)) {
-      return;
-    }
+    setPendingRemove({ id: clientId, name: clientName });
+  };
 
-    setDeleting(String(clientId));
+  const doRemoveClient = async () => {
+    if (!pendingRemove) return;
+    const { id, name } = pendingRemove;
+    setPendingRemove(null);
+    setDeleting(String(id));
     try {
-      await api.removeClient(clientId);
+      await api.removeClient(id);
       onClientRemoved();
-      alert(`Client "${clientName}" has been marked for removal and will be deleted during the server's cleanup window.\n\nAll backups for this client will also be removed.`);
+      showMsg('success', `Client "${name}" marked for removal. All backups will be removed.`);
     } catch (error) {
       console.error('Failed to remove client:', error);
-      alert('Failed to remove client. Please try again.');
+      showMsg('error', 'Failed to remove client. Please try again.');
     } finally {
       setDeleting(null);
     }
@@ -99,7 +111,7 @@ export function ClientManagementModal({
       setExpandedClient(clientIdStr);
     } catch (error) {
       console.error('Failed to get auth key:', error);
-      alert('Failed to retrieve authentication key. Please try again.');
+      showMsg('error', 'Failed to retrieve authentication key. Please try again.');
     } finally {
       setLoadingAuthKey(null);
     }
@@ -112,7 +124,7 @@ export function ClientManagementModal({
       setTimeout(() => setCopiedKey(null), 2000);
     } catch (error) {
       console.error('Failed to copy:', error);
-      alert('Failed to copy authentication key');
+      showMsg('error', 'Failed to copy authentication key');
     }
   };
 
@@ -136,22 +148,25 @@ export function ClientManagementModal({
       await api.updateClientName(clientId, editedName.trim());
       onClientAdded(); // Reload clients
       handleCancelEdit();
-      alert(`Client renamed from "${oldName}" to "${editedName}"`);
+      showMsg('success', `Client renamed from "${oldName}" to "${editedName}"`);
     } catch (error) {
       console.error('Failed to update client name:', error);
-      alert('Failed to update client name. Please try again.');
+      showMsg('error', 'Failed to update client name. Please try again.');
     }
   };
 
   const handleRegenerateKey = async (clientId: string | number, clientName: string) => {
-    if (!confirm(`Regenerate authentication key for "${clientName}"?\n\nWARNING: The client will need to reconnect with the new key!`)) {
-      return;
-    }
+    setPendingRegenKey({ id: clientId, name: clientName });
+  };
 
-    const clientIdStr = String(clientId);
+  const doRegenerateKey = async () => {
+    if (!pendingRegenKey) return;
+    const { id, name } = pendingRegenKey;
+    setPendingRegenKey(null);
+    const clientIdStr = String(id);
     setRegeneratingKey(clientIdStr);
     try {
-      await api.regenerateClientKey(clientId);
+      await api.regenerateClientKey(id);
 
       // Clear the cached auth key so it will be reloaded
       const newAuthKeys = new Map(authKeys);
@@ -161,16 +176,16 @@ export function ClientManagementModal({
       // If the key was expanded, reload it
       if (expandedClient === clientIdStr) {
         setLoadingAuthKey(clientIdStr);
-        const result = await api.getClientAuthkey(clientId);
+        const result = await api.getClientAuthkey(id);
         newAuthKeys.set(clientIdStr, result.authkey);
         setAuthKeys(newAuthKeys);
         setLoadingAuthKey(null);
       }
 
-      alert(`Authentication key regenerated for "${clientName}"!\n\nThe client will need to reconnect.`);
+      showMsg('success', `Authentication key regenerated for "${name}". The client will need to reconnect.`);
     } catch (error) {
       console.error('Failed to regenerate key:', error);
-      alert('Failed to regenerate authentication key. Please try again.');
+      showMsg('error', 'Failed to regenerate authentication key. Please try again.');
     } finally {
       setRegeneratingKey(null);
     }
@@ -180,6 +195,37 @@ export function ClientManagementModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      {/* Remove client confirm */}
+      {pendingRemove && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Remove Client</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to remove "{pendingRemove.name}"? This will also delete all backups for this client.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setPendingRemove(null)} className="btn btn-secondary">Cancel</button>
+              <button onClick={doRemoveClient} className="btn bg-red-600 text-white hover:bg-red-700">Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Regenerate key confirm */}
+      {pendingRegenKey && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-yellow-600 dark:text-yellow-400 mb-2">Regenerate Auth Key</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Regenerate authentication key for "{pendingRegenKey.name}"? The client will need to reconnect with the new key.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setPendingRegenKey(null)} className="btn btn-secondary">Cancel</button>
+              <button onClick={doRegenerateKey} className="btn btn-primary">Regenerate</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
@@ -196,6 +242,17 @@ export function ClientManagementModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* Status message */}
+          {modalMessage && (
+            <div className={`mb-4 rounded-lg p-3 text-sm ${
+              modalMessage.type === 'success'
+                ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+                : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+            }`}>
+              {modalMessage.text}
+            </div>
+          )}
+
           {/* Add New Client Section */}
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">

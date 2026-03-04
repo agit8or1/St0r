@@ -902,43 +902,62 @@ export class UrBackupService {
 
   async getSettings() {
     try {
-      return await this.apiCall('settings', { sa: 'general' });
+      const response = await this.apiCall('settings', { sa: 'general' });
+      // UrBackup returns {settings: {key: {value: x}, ...}, ...}
+      // Return only the flat settings extracted from the nested structure
+      const raw: Record<string, any> = response?.settings || {};
+      const flat: Record<string, any> = {};
+      for (const [key, val] of Object.entries(raw)) {
+        if (val && typeof val === 'object' && !Array.isArray(val) && 'value' in (val as any)) {
+          flat[key] = (val as any).value;
+        } else if (typeof val !== 'object') {
+          flat[key] = val;
+        }
+      }
+      return flat;
     } catch (error) {
       logger.error('Failed to get settings:', error);
       throw error;
     }
   }
 
-  async setSettings(settings: any) {
+  async setSettings(newSettings: any) {
     try {
       const session = await this.login();
 
-      // Get current settings
-      const currentSettings = await this.getSettings();
+      // Helper: booleans must be '1'/'0' for UrBackup
+      const toUrBackupStr = (v: any): string => {
+        if (v === true || v === 'true') return '1';
+        if (v === false || v === 'false') return '0';
+        return String(v);
+      };
+
+      // Get current settings (already flattened by getSettings())
+      const currentFlat = await this.getSettings();
 
       // Apply updates
-      for (const [key, value] of Object.entries(settings)) {
+      for (const [key, value] of Object.entries(newSettings)) {
         if (value !== null && value !== undefined) {
-          currentSettings[key] = value;
+          currentFlat[key] = value;
         }
       }
 
-      // Save all settings
-      currentSettings.sa = 'general_save';
-
+      // Build POST body for UrBackup general settings save
       const saveParams = new URLSearchParams();
-      for (const [key, value] of Object.entries(currentSettings)) {
+      saveParams.set('sa', 'general_save');
+      saveParams.set('ses', session);
+
+      for (const [key, value] of Object.entries(currentFlat)) {
         if (value !== null && value !== undefined) {
-          saveParams.append(key, String(value));
+          saveParams.set(key, toUrBackupStr(value));
         }
       }
 
-      const response = await fetch(`${URBACKUP_API_URL}?ses=${session}`, {
+      const response = await fetch(`${URBACKUP_API_URL}?a=settings&ses=${session}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'User-Agent': 'st0r',
-          'Accept': 'application/json'
         },
         body: saveParams.toString()
       });
@@ -948,7 +967,8 @@ export class UrBackupService {
       if (result?.saved_ok === true) {
         return { success: true };
       } else {
-        throw new Error('Settings save failed');
+        logger.warn('UrBackup general settings save returned:', JSON.stringify(result));
+        throw new Error(`Settings save failed: ${JSON.stringify(result)}`);
       }
     } catch (error) {
       logger.error('Failed to set settings:', error);
@@ -986,6 +1006,14 @@ export class UrBackupService {
       saveParams.set('t_clientid', clientId);
       saveParams.set('ses', session); // UrBackup requires ses in POST body AND URL
 
+      // Helper: convert any value to the string UrBackup expects
+      // Booleans must be '1'/'0', not 'true'/'false'
+      const toUrBackupStr = (v: any): string => {
+        if (v === true || v === 'true') return '1';
+        if (v === false || v === 'false') return '0';
+        return String(v);
+      };
+
       // Flatten current settings as base, including the .use parameter UrBackup requires
       for (const [key, val] of Object.entries(rawSettings)) {
         if (val && typeof val === 'object' && !Array.isArray(val)) {
@@ -993,19 +1021,19 @@ export class UrBackupService {
           if ('use' in v) {
             const effective = v.use === 0 ? v.value : v.value_group;
             if (effective !== null && effective !== undefined) {
-              saveParams.set(key, String(effective));
+              saveParams.set(key, toUrBackupStr(effective));
               saveParams.set(`${key}.use`, String(v.use));
             }
           }
         } else if (typeof val !== 'object' && val !== null && val !== undefined) {
-          saveParams.set(key, String(val));
+          saveParams.set(key, toUrBackupStr(val));
         }
       }
 
       // Apply user's changes — mark each as client override (use=0)
       for (const [key, value] of Object.entries(newSettings)) {
         if (value !== null && value !== undefined) {
-          saveParams.set(key, String(value));
+          saveParams.set(key, toUrBackupStr(value));
           saveParams.set(`${key}.use`, '0'); // 0 = client-specific override
         }
       }

@@ -151,3 +151,106 @@ export interface StorageInfo {
     error?: string;
   }>;
 }
+
+// Replication types
+export interface ReplicationSettings {
+  id: number;
+  enabled: boolean;
+  concurrency: number;
+  trigger_mode: 'hook_and_schedule' | 'hook_only' | 'schedule_only';
+  schedule_type: 'interval' | 'cron';
+  interval_seconds: number;
+  cron_expression: string;
+  debounce_seconds: number;
+  max_staleness_minutes: number;
+  retry_max_attempts: number;
+  retry_base_seconds: number;
+  retry_max_seconds: number;
+  default_bandwidth_limit_mbps: number;
+  default_verify_after_sync: boolean;
+  default_checksum_verify: boolean;
+  pause_during_active_backup: boolean;
+  state_set_json: {
+    include_paths: string[];
+    exclude_patterns: string[];
+    repo_paths: string[];
+    db: { type: 'sqlite' | 'mysql'; sqlite_path?: string; mysql_dsn?: string };
+  } | null;
+}
+
+export interface ReplicationTarget {
+  id: string;
+  name: string;
+  enabled: boolean;
+  mode: 'push_ssh_rsync';
+  host: string;
+  port: number;
+  ssh_user: string;
+  auth_type: 'ssh_key' | 'password';
+  ssh_private_key_encrypted: string | null;
+  ssh_password_encrypted: string | null;
+  ssh_known_host_fingerprint: string | null;
+  target_root_path: string;
+  target_repo_paths_map: Record<string, string> | null;
+  target_db_type: 'sqlite' | 'mysql';
+  target_db_dsn_encrypted: string | null;
+  verify_after_sync: boolean;
+  checksum_verify: boolean;
+  bandwidth_limit_mbps: number;
+  exclude_patterns: string[] | null;
+  standby_service_mode: 'running_readonly' | 'stopped';
+  service_stop_cmd: string;
+  service_start_cmd: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReplicationRun {
+  id: string;
+  target_id: string;
+  started_at: string;
+  finished_at: string | null;
+  status: 'queued' | 'running' | 'success' | 'failed' | 'canceled';
+  trigger_type: 'hook' | 'schedule' | 'manual';
+  step: string | null;
+  progress: number;
+  bytes_sent: number;
+  files_sent: number;
+  snapshot_timestamp: string | null;
+  lag_seconds: number | null;
+  error_message: string | null;
+  details_json: { log?: string } | null;
+}
+
+export interface ReplicationEvent {
+  id: string;
+  target_id: string | null;
+  type: 'stale' | 'failed' | 'recovered' | 'config_changed' | 'run_started' | 'run_finished';
+  severity: 'info' | 'warn' | 'critical';
+  message: string;
+  created_at: string;
+}
+
+export interface ReplicationAlertChannel {
+  id: string;
+  type: 'email' | 'webhook';
+  enabled: boolean;
+  config_json: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReplicationTargetStatus {
+  target: ReplicationTarget;
+  lastRun: {
+    id: string;
+    status: string;
+    started_at: string;
+    finished_at: string | null;
+    progress: number;
+    lag_seconds: number | null;
+    bytes_sent: number;
+    error_message: string | null;
+  } | null;
+  isRunning: boolean;
+}

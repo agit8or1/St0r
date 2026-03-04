@@ -5,12 +5,13 @@ import {
   Activity as ActivityIcon,
   AlertCircle,
   CheckCircle,
+  GitBranch,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { api } from '../services/api';
-import type { Client, Activity } from '../types';
+import type { Client, Activity, ReplicationTargetStatus } from '../types';
 import { formatBytes, formatTimeAgo } from '../utils/format';
 
 export function Dashboard() {
@@ -20,6 +21,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [diskUsage, setDiskUsage] = useState<{ used: number; available: number } | null>(null);
+  const [replStatuses, setReplStatuses] = useState<ReplicationTargetStatus[]>([]);
 
   useEffect(() => {
     loadData();
@@ -29,10 +31,11 @@ export function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [clientsData, activitiesData, storageData] = await Promise.all([
+      const [clientsData, activitiesData, storageData, replData] = await Promise.all([
         api.getClients(),
         api.getCurrentActivities(),
-        api.getTotalStorage().catch(() => ({ used: 0, available: 0, servers: [] }))
+        api.getTotalStorage().catch(() => ({ used: 0, available: 0, servers: [] })),
+        api.getReplicationStatus().catch(() => []),
       ]);
       setClients(clientsData);
       if (Array.isArray(activitiesData)) {
@@ -44,6 +47,7 @@ export function Dashboard() {
         setActivities([]);
       }
       setDiskUsage({ used: storageData.used, available: storageData.available });
+      setReplStatuses(replData);
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load data');
@@ -96,7 +100,7 @@ export function Dashboard() {
 
         {/* Stats row */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          <div className="card py-3 px-4">
+          <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/clients')}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Endpoints</p>
@@ -113,7 +117,7 @@ export function Dashboard() {
             </p>
           </div>
 
-          <div className="card py-3 px-4">
+          <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/clients?filter=online')}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Online</p>
@@ -128,7 +132,7 @@ export function Dashboard() {
             </p>
           </div>
 
-          <div className="card py-3 px-4">
+          <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/clients?filter=failed')}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Failed Backups</p>
@@ -141,7 +145,7 @@ export function Dashboard() {
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Require attention</p>
           </div>
 
-          <div className="card py-3 px-4">
+          <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/activities')}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Active Tasks</p>
@@ -155,10 +159,40 @@ export function Dashboard() {
           </div>
         </div>
 
+        {/* Replication health card */}
+        {(() => {
+          const replHealthy = replStatuses.filter(s => s.lastRun?.status === 'success').length;
+          const replTotal = replStatuses.length;
+          const replDegraded = replStatuses.some(s => s.lastRun?.status === 'failed');
+          const replHealth = replTotal === 0 ? 'No targets' : replDegraded ? 'Degraded' : 'Healthy';
+          const worstLag = replStatuses.reduce((max, s) => {
+            const lag = s.lastRun?.lag_seconds ?? null;
+            return lag !== null ? (max === null ? lag : Math.max(max, lag)) : max;
+          }, null as number | null);
+          const lagStr = worstLag === null ? '—' : worstLag < 60 ? `${worstLag}s` : worstLag < 3600 ? `${Math.floor(worstLag / 60)}m` : `${Math.floor(worstLag / 3600)}h`;
+          return (
+            <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow flex items-center gap-4"
+              onClick={() => navigate('/replication')}>
+              <div className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 p-2 flex-shrink-0">
+                <GitBranch className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Replication</p>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className={`text-sm font-semibold ${replHealth === 'Healthy' ? 'text-green-600 dark:text-green-400' : replHealth === 'Degraded' ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                    {replHealth}
+                  </span>
+                  {replTotal > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{replHealthy}/{replTotal} healthy · lag {lagStr}</span>}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Storage + Charts row */}
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Disk Usage */}
-          <div className="card py-3 px-4 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
+          <div className="card py-3 px-4 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/server-settings')}>
             <div className="flex items-center gap-2 mb-2">
               <div className="rounded-full bg-purple-600 p-1.5">
                 <HardDrive className="h-4 w-4 text-white" />

@@ -19,6 +19,8 @@ import { About } from './pages/About';
 import { Documentation } from './pages/Documentation';
 import { Profile } from './pages/Profile';
 import ServerSettings from './pages/ServerSettings';
+import { Replication } from './pages/Replication';
+import { ReplicationTargetDetail } from './pages/ReplicationTargetDetail';
 import { Loading } from './components/Loading';
 import { UpdateNotification } from './components/UpdateNotification';
 
@@ -177,6 +179,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/replication"
+            element={
+              <ProtectedRoute>
+                <Replication />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/replication/targets/:id"
+            element={
+              <ProtectedRoute>
+                <ReplicationTargetDetail />
               </ProtectedRoute>
             }
           />

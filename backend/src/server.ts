@@ -27,6 +27,7 @@ import settingsRoutes from './routes/settings.js';
 import clientInstallerRoutes from './routes/clientInstaller.js';
 import storageRoutes from './routes/storage.js';
 import browseRoutes from './routes/browse.js';
+import replicationRoutes from './routes/replication.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -94,6 +95,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/client-installer', clientInstallerRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/browse', browseRoutes);
+app.use('/api/replication', replicationRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -143,6 +145,12 @@ async function startServer() {
 
     // Initialize default user if needed
     await initializeDefaultUser();
+
+    // Start replication services
+    const { replicationScheduler } = await import('./services/replicationScheduler.js');
+    const { replicationTrigger } = await import('./services/replicationTrigger.js');
+    await replicationScheduler.start();
+    replicationTrigger.start();
 
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);

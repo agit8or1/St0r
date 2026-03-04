@@ -46,6 +46,8 @@ export default function ServerSettings() {
   const [originalSettings, setOriginalSettings] = useState<ServerSettings>({});
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [pendingRestoreId, setPendingRestoreId] = useState<{ id: number; name: string } | null>(null);
 
   useEffect(() => {
     if (activeTab === 'backup') {
@@ -79,10 +81,6 @@ export default function ServerSettings() {
   };
 
   const saveSettings = async () => {
-    if (!confirm('Are you sure you want to save these settings? This will update the UrBackup server configuration.')) {
-      return;
-    }
-
     try {
       setSaveLoading(true);
 
@@ -207,10 +205,6 @@ export default function ServerSettings() {
   };
 
   const restoreBackup = async (backupId: number, backupName: string) => {
-    if (!confirm(`Are you sure you want to restore settings from "${backupName}"? This will overwrite current server settings.`)) {
-      return;
-    }
-
     try {
       setLoading(true);
       const response = await fetch(`/api/server-config-backup/${backupId}/restore`, {
@@ -531,7 +525,7 @@ export default function ServerSettings() {
                           View
                         </button>
                         <button
-                          onClick={() => restoreBackup(backup.id, backup.name)}
+                          onClick={() => setPendingRestoreId({ id: backup.id, name: backup.name })}
                           className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700"
                         >
                           <ArrowPathIcon className="h-4 w-4 mr-1" />
@@ -585,7 +579,7 @@ export default function ServerSettings() {
                   </button>
                   <button
                     onClick={() => {
-                      restoreBackup(selectedBackup.id, selectedBackup.name);
+                      setPendingRestoreId({ id: selectedBackup.id, name: selectedBackup.name });
                       setSelectedBackup(null);
                     }}
                     className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
@@ -630,7 +624,7 @@ export default function ServerSettings() {
                         Discard Changes
                       </button>
                       <button
-                        onClick={saveSettings}
+                        onClick={() => setShowSaveConfirm(true)}
                         disabled={saveLoading}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -810,7 +804,7 @@ export default function ServerSettings() {
                         Discard Changes
                       </button>
                       <button
-                        onClick={saveSettings}
+                        onClick={() => setShowSaveConfirm(true)}
                         disabled={saveLoading}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -898,6 +892,50 @@ export default function ServerSettings() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Save settings confirm dialog */}
+      {showSaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Save Settings?</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              This will update the UrBackup server configuration. Are you sure?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowSaveConfirm(false)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Cancel
+              </button>
+              <button onClick={() => { setShowSaveConfirm(false); saveSettings(); }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium">
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore backup confirm dialog */}
+      {pendingRestoreId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Restore Backup?</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Restore settings from <strong>"{pendingRestoreId.name}"</strong>? This will overwrite current server settings.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setPendingRestoreId(null)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Cancel
+              </button>
+              <button onClick={() => { const r = pendingRestoreId; setPendingRestoreId(null); restoreBackup(r.id, r.name); }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium">
+                Restore
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -14,7 +14,8 @@ import {
   FileText,
   Info,
   Bug,
-  Usb
+  Usb,
+  GitBranch
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../contexts/ThemeContext';
@@ -46,6 +47,7 @@ export function Layout({ children }: LayoutProps) {
     { path: '/customers', label: 'Customers', icon: Users },
     { path: '/alerts', label: 'Alerts', icon: Bell },
     { path: '/reports', label: 'Reports', icon: FileText },
+    { path: '/replication', label: 'Replication', icon: GitBranch },
     { path: '/users', label: 'Users', icon: Users },
     { path: '/docs', label: 'Documentation', icon: FileText },
     { path: '/settings', label: 'Settings', icon: Settings },

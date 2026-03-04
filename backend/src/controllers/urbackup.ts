@@ -280,6 +280,19 @@ export async function startBackup(req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    // Check start_ok from UrBackup result
+    const resultArr: any[] = result?.result || (Array.isArray(result) ? result : []);
+    const failed = resultArr.filter((r: any) => r.start_ok === false);
+    if (failed.length > 0) {
+      const types = failed.map((r: any) => r.start_type).join(', ');
+      logger.warn(`start_backup returned start_ok=false for types: ${types}. Client may be offline or internet backups may be disabled.`);
+      res.status(400).json({
+        error: `Backup could not be started (start_ok=false). The client may be offline, or internet ${backupType} backups may be disabled in client settings.`,
+        result
+      });
+      return;
+    }
+
     res.json({ success: true, result });
   } catch (error: any) {
     logger.error('Failed to start backup:', error);

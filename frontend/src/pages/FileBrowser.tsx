@@ -32,6 +32,8 @@ export function FileBrowser() {
   const [clientId, setClientId] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [restoring, setRestoring] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [confirmRestore, setConfirmRestore] = useState(false);
 
   useEffect(() => {
     loadBackups();
@@ -141,7 +143,7 @@ export function FileBrowser() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Failed to download file:', err);
-      alert('Failed to download file. Please try again.');
+      setMessage({ type: 'error', text: 'Failed to download file. Please try again.' });
     }
   };
 
@@ -181,16 +183,14 @@ export function FileBrowser() {
 
   const restoreFiles = async () => {
     if (selectedFiles.size === 0) {
-      alert('Please select files to restore');
+      setMessage({ type: 'error', text: 'Please select files to restore' });
       return;
     }
+    setConfirmRestore(true);
+  };
 
-    const confirmed = confirm(
-      `Are you sure you want to restore ${selectedFiles.size} file(s) to ${clientName}? This will overwrite existing files on the client.`
-    );
-
-    if (!confirmed) return;
-
+  const doRestore = async () => {
+    setConfirmRestore(false);
     setRestoring(true);
     try {
       const response = await fetch('/api/browse/restore', {
@@ -199,6 +199,7 @@ export function FileBrowser() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
+        credentials: 'include',
         body: JSON.stringify({
           clientId,
           backupId: selectedBackup!.id,
@@ -213,11 +214,11 @@ export function FileBrowser() {
         throw new Error(data.error || 'Restore failed');
       }
 
-      alert(`Restore initiated successfully for ${selectedFiles.size} file(s)!`);
+      setMessage({ type: 'success', text: `Restore initiated successfully for ${selectedFiles.size} file(s)!` });
       setSelectedFiles(new Set());
     } catch (err: any) {
       console.error('Failed to restore files:', err);
-      alert(`Failed to restore files: ${err.message}`);
+      setMessage({ type: 'error', text: `Failed to restore files: ${err.message}` });
     } finally {
       setRestoring(false);
     }
@@ -234,6 +235,34 @@ export function FileBrowser() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* Message */}
+        {message && (
+          <div className={`rounded-lg p-4 ${
+            message.type === 'success'
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+          }`}>
+            {message.text}
+            <button onClick={() => setMessage(null)} className="ml-2 underline text-sm">Dismiss</button>
+          </div>
+        )}
+
+        {/* Restore confirm dialog */}
+        {confirmRestore && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Confirm Restore</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Are you sure you want to restore {selectedFiles.size} file(s) to {clientName}? This will overwrite existing files on the client.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button onClick={() => setConfirmRestore(false)} className="btn btn-secondary">Cancel</button>
+                <button onClick={doRestore} className="btn btn-primary">Restore</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

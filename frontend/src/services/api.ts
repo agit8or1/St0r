@@ -13,6 +13,12 @@ import type {
   SystemMetrics,
   ServerLatency,
   StorageInfo,
+  ReplicationSettings,
+  ReplicationTarget,
+  ReplicationRun,
+  ReplicationEvent,
+  ReplicationAlertChannel,
+  ReplicationTargetStatus,
 } from '../types';
 
 class ApiService {
@@ -341,6 +347,88 @@ class ApiService {
     a.download = `urbackup-client-installer.sh`;
     a.click();
     URL.revokeObjectURL(objectUrl);
+  }
+
+  // Replication
+  async getReplicationSettings(): Promise<ReplicationSettings> {
+    const response = await this.api.get<ReplicationSettings>('/replication/settings');
+    return response.data;
+  }
+
+  async updateReplicationSettings(data: Partial<ReplicationSettings>): Promise<void> {
+    await this.api.put('/replication/settings', data);
+  }
+
+  async getReplicationTargets(): Promise<ReplicationTarget[]> {
+    const response = await this.api.get<ReplicationTarget[]>('/replication/targets');
+    return response.data;
+  }
+
+  async createReplicationTarget(data: Partial<ReplicationTarget> & { ssh_private_key?: string; ssh_password?: string; target_db_dsn?: string }): Promise<ReplicationTarget> {
+    const response = await this.api.post<ReplicationTarget>('/replication/targets', data);
+    return response.data;
+  }
+
+  async updateReplicationTarget(id: string, data: Partial<ReplicationTarget> & { ssh_private_key?: string; ssh_password?: string; target_db_dsn?: string }): Promise<ReplicationTarget> {
+    const response = await this.api.put<ReplicationTarget>(`/replication/targets/${id}`, data);
+    return response.data;
+  }
+
+  async deleteReplicationTarget(id: string): Promise<void> {
+    await this.api.delete(`/replication/targets/${id}`);
+  }
+
+  async testReplicationTarget(id: string): Promise<{ ok: boolean; checks: Record<string, { ok: boolean; message: string }> }> {
+    const response = await this.api.post<{ ok: boolean; checks: Record<string, { ok: boolean; message: string }> }>(`/replication/targets/${id}/test`);
+    return response.data;
+  }
+
+  async runReplicationTarget(id: string): Promise<{ runId: string }> {
+    const response = await this.api.post<{ runId: string }>(`/replication/targets/${id}/run`);
+    return response.data;
+  }
+
+  async getReplicationStatus(): Promise<ReplicationTargetStatus[]> {
+    const response = await this.api.get<ReplicationTargetStatus[]>('/replication/status');
+    return response.data;
+  }
+
+  async getReplicationRuns(targetId?: string, limit = 50): Promise<ReplicationRun[]> {
+    const response = await this.api.get<ReplicationRun[]>('/replication/runs', {
+      params: { ...(targetId ? { target_id: targetId } : {}), limit },
+    });
+    return response.data;
+  }
+
+  async getReplicationRun(id: string): Promise<ReplicationRun> {
+    const response = await this.api.get<ReplicationRun>(`/replication/runs/${id}`);
+    return response.data;
+  }
+
+  async getReplicationAlertChannels(): Promise<ReplicationAlertChannel[]> {
+    const response = await this.api.get<ReplicationAlertChannel[]>('/replication/alerts/channels');
+    return response.data;
+  }
+
+  async updateReplicationAlertChannels(channels: Partial<ReplicationAlertChannel>[]): Promise<ReplicationAlertChannel[]> {
+    const response = await this.api.put<ReplicationAlertChannel[]>('/replication/alerts/channels', { channels });
+    return response.data;
+  }
+
+  async deleteReplicationAlertChannel(id: string): Promise<void> {
+    await this.api.delete(`/replication/alerts/channels/${id}`);
+  }
+
+  async getReplicationEvents(targetId?: string, limit = 50): Promise<ReplicationEvent[]> {
+    const response = await this.api.get<ReplicationEvent[]>('/replication/events', {
+      params: { ...(targetId ? { target_id: targetId } : {}), limit },
+    });
+    return response.data;
+  }
+
+  async getReplicationSetupInstructions(): Promise<{ steps: Array<{ title: string; description: string; commands: string[] }> }> {
+    const response = await this.api.get('/replication/targets/setup-instructions');
+    return response.data;
   }
 }
 

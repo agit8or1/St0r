@@ -76,8 +76,10 @@ export function ClientSettings() {
         body: JSON.stringify(settings)
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to save settings');
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.error || 'UrBackup did not confirm the save (saved_ok was false)');
       }
 
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
@@ -103,8 +105,8 @@ export function ClientSettings() {
           </label>
           <input
             type="checkbox"
-            checked={settings[key] === 'true' || settings[key] === true || settings[key] === '1'}
-            onChange={(e) => updateSetting(key, e.target.checked ? 'true' : 'false')}
+            checked={settings[key] === 'true' || settings[key] === true || settings[key] === '1' || settings[key] === 1}
+            onChange={(e) => updateSetting(key, e.target.checked ? '1' : '0')}
             className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
         </div>

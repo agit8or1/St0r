@@ -22,7 +22,11 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
     for (const [key, val] of Object.entries(rawSettings)) {
       if (val && typeof val === 'object' && !Array.isArray(val)) {
         const v = val as any;
-        if ('value' in v) {
+        if ('use' in v) {
+          // use=0 → client-specific override (v.value); use=1/2 → group default (v.value_group)
+          const effective = v.use === 0 ? v.value : v.value_group;
+          settings[key] = effective;
+        } else if ('value' in v) {
           settings[key] = v.value;
         } else if ('value_group' in v) {
           settings[key] = v.value_group;
@@ -31,7 +35,14 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
         settings[key] = val;
       }
     }
-    res.json({ settings });
+    // Also expose the raw 'use' values so the frontend knows which are overrides vs group defaults
+    const useValues: Record<string, number> = {};
+    for (const [key, val] of Object.entries(rawSettings)) {
+      if (val && typeof val === 'object' && !Array.isArray(val) && 'use' in (val as any)) {
+        useValues[key] = (val as any).use;
+      }
+    }
+    res.json({ settings, useValues });
   } catch (error: any) {
     // UrBackup API "error: 1" means unknown client or unauthenticated — not a server crash
     if (error?.message?.includes('UrBackup API error: 1')) {

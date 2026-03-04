@@ -1,8 +1,19 @@
 {
-  "version": "3.2.21",
+  "version": "3.2.23",
   "releaseDate": "2026-03-04",
   "changelog": [
-    "Fix: Windows client installer now embeds correct internet auth key (was using per-client key instead of global internet_authkey)",
-    "Fix: Endpoint backup settings page now shows populated values instead of blank fields"
+    "Feature: Full Standby Replication — mirror UrBackup to 1+ DR targets via SSH/rsync",
+    "Feature: Replication dashboard tab with overview, targets, settings, and alerts",
+    "Feature: Per-target run history with step-by-step log viewer",
+    "Feature: AES-256-GCM encrypted storage of SSH keys and credentials",
+    "Feature: Hook-based and schedule-based replication triggers with debounce",
+    "Enhancement: Dashboard stat cards are now clickable links",
+    "Enhancement: Dashboard shows replication health card",
+    "Fix: Settings pipeline — UrBackup booleans now sent as 1/0 not true/false",
+    "Fix: Client settings show correct effective values (group vs client override)",
+    "Fix: Global settings (getSettings/setSettings) correctly flatten API response",
+    "Fix: Backup trigger now surfaces start_ok=false as a clear error message",
+    "Fix: Backup buttons use inline React notification instead of alert()",
+    "Fix: ServerSettings save/restore use inline confirm dialogs instead of window.confirm()"
   ]
 }
