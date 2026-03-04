@@ -12,7 +12,8 @@ import {
   Play,
   Filter,
   RefreshCw,
-  ChevronDown
+  ChevronDown,
+  StopCircle,
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
@@ -36,6 +37,8 @@ export function Activities() {
   const [selectedClient, setSelectedClient] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRangeFilter>('all');
   const [clearingStaleJobs, setClearingStaleJobs] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelNotify, setCancelNotify] = useState<{ id: string; msg: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     loadActivities();
@@ -73,6 +76,22 @@ export function Activities() {
       setClients(data || []);
     } catch (err) {
       console.error('Failed to load clients:', err);
+    }
+  };
+
+  const handleCancelActivity = async (activityId: string, clientName: string) => {
+    setCancellingId(activityId);
+    setCancelNotify(null);
+    try {
+      await api.stopActivity(activityId);
+      setCancelNotify({ id: activityId, msg: `Cancelled backup for ${clientName}`, ok: true });
+      setTimeout(() => setCancelNotify(null), 4000);
+      await loadActivities();
+    } catch (err: any) {
+      setCancelNotify({ id: activityId, msg: err?.response?.data?.error || 'Failed to cancel backup', ok: false });
+      setTimeout(() => setCancelNotify(null), 5000);
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -508,6 +527,17 @@ export function Activities() {
               </span>
             </div>
 
+            {cancelNotify && (
+              <div className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
+                cancelNotify.ok
+                  ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+                  : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+              }`}>
+                {cancelNotify.ok ? <CheckCircle className="h-4 w-4 flex-shrink-0" /> : <XCircle className="h-4 w-4 flex-shrink-0" />}
+                {cancelNotify.msg}
+              </div>
+            )}
+
             <div className="grid gap-4">
               {filteredCurrentActivities.map((activity, index) => {
                 const activityData = activity as any;
@@ -549,7 +579,7 @@ export function Activities() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           {isPaused && (
                             <span className="flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 rounded">
                               <Pause className="h-3 w-3" />
@@ -559,6 +589,15 @@ export function Activities() {
                           <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {pcdone.toFixed(0)}%
                           </span>
+                          <button
+                            onClick={() => handleCancelActivity(String(activityData.id || index), clientName)}
+                            disabled={cancellingId === String(activityData.id || index)}
+                            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title="Cancel this backup"
+                          >
+                            <StopCircle className="h-3.5 w-3.5" />
+                            {cancellingId === String(activityData.id || index) ? 'Cancelling…' : 'Cancel'}
+                          </button>
                         </div>
                       </div>
 
