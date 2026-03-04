@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Logo } from '../components/Logo';
-import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText } from 'lucide-react';
+import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText, Heart, Star, X } from 'lucide-react';
 
 /**
  * Compare two semantic version strings
@@ -44,6 +44,7 @@ export function About() {
   const [reconnecting, setReconnecting] = useState(false);
 
   const [currentVersion, setCurrentVersion] = useState('Loading...');
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   // Generate or retrieve installation ID
   const getInstallId = () => {
@@ -602,7 +603,96 @@ export function About() {
             For detailed documentation, visit the <a href="/docs" className="text-blue-600 dark:text-blue-400 hover:underline">Documentation</a> page
           </p>
         </div>
+
+        {/* Support Button */}
+        <div className="flex justify-center pb-2">
+          <button
+            onClick={() => setShowSupportModal(true)}
+            className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all hover:shadow-xl hover:scale-105 active:scale-95"
+          >
+            <Heart className="h-5 w-5 fill-current" />
+            Support This Project
+          </button>
+        </div>
       </div>
+
+      {/* Support Modal */}
+      {showSupportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm" onClick={() => setShowSupportModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-200 dark:border-gray-700" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-6 relative">
+              <button onClick={() => setShowSupportModal(false)} className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+              <div className="flex items-center gap-3">
+                <Heart className="h-8 w-8 text-white fill-current" />
+                <div>
+                  <h2 className="text-xl font-bold text-white">Support St0r</h2>
+                  <p className="text-pink-100 text-sm">Help keep this project alive and growing</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Links */}
+            <div className="p-6 space-y-3">
+              <a
+                href="https://github.com/sponsors/agit8or1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 p-4 rounded-xl border-2 border-pink-200 dark:border-pink-800 hover:border-pink-400 dark:hover:border-pink-600 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-all group"
+              >
+                <div className="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-pink-200 dark:group-hover:bg-pink-900/60 transition-colors">
+                  <Heart className="h-5 w-5 text-pink-600 dark:text-pink-400 fill-current" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">Sponsor on GitHub</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Support development with a monthly contribution</p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-pink-500 transition-colors flex-shrink-0" />
+              </a>
+
+              <a
+                href="https://github.com/agit8or1/St0r"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 p-4 rounded-xl border-2 border-yellow-200 dark:border-yellow-800 hover:border-yellow-400 dark:hover:border-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all group"
+              >
+                <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-yellow-200 dark:group-hover:bg-yellow-900/60 transition-colors">
+                  <Star className="h-5 w-5 text-yellow-500 fill-current" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">Star on GitHub</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Give the project a star — it really helps!</p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-yellow-500 transition-colors flex-shrink-0" />
+              </a>
+
+              <a
+                href="https://mspreboot.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 p-4 rounded-xl border-2 border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group"
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors">
+                  <ExternalLink className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">MSP Reboot</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Support the business behind St0r</p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+              </a>
+            </div>
+
+            <div className="px-6 pb-6 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Thank you for using St0r! Your support means everything.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Enhanced Update Progress Modal */}
       {showProgressModal && (

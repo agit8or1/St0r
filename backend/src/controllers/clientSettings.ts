@@ -15,31 +15,24 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
     }
 
     const result = await urbackupService.getClientSettings(clientId);
-    // UrBackup returns settings as {key: {use, value, value_group}} — extract effective values:
-    // use=0 means client-specific override → use 'value' (effective); use=1 means group default → use 'value_group'
+    // UrBackup returns settings as {key: {use, value, value_client, value_group}}
+    // use=1: client-specific override (use 'value')
+    // use=2: group/global default (use 'value', which UrBackup resolves to group/global)
+    // 'value' is always the resolved effective value regardless of use
     const rawSettings = result?.settings || result || {};
     const settings: Record<string, any> = {};
+    const useValues: Record<string, number> = {};
     for (const [key, val] of Object.entries(rawSettings)) {
       if (val && typeof val === 'object' && !Array.isArray(val)) {
         const v = val as any;
+        if ('value' in v) {
+          settings[key] = v.value;
+        }
         if ('use' in v) {
-          // v.value is always the effective resolved value in UrBackup (use=0 → client override, 1/2 → group/global)
-          // Do NOT use v.value_group — after a client-override save, use may stay 2 but value updates correctly
-          settings[key] = v.value;
-        } else if ('value' in v) {
-          settings[key] = v.value;
-        } else if ('value_group' in v) {
-          settings[key] = v.value_group;
+          useValues[key] = v.use;
         }
       } else if (typeof val !== 'object') {
         settings[key] = val;
-      }
-    }
-    // Also expose the raw 'use' values so the frontend knows which are overrides vs group defaults
-    const useValues: Record<string, number> = {};
-    for (const [key, val] of Object.entries(rawSettings)) {
-      if (val && typeof val === 'object' && !Array.isArray(val) && 'use' in (val as any)) {
-        useValues[key] = (val as any).use;
       }
     }
     res.json({ settings, useValues });

@@ -79,11 +79,11 @@ export function Activities() {
     }
   };
 
-  const handleCancelActivity = async (activityId: string, clientName: string) => {
+  const handleCancelActivity = async (activityId: string, clientName: string, clientId?: string | number) => {
     setCancellingId(activityId);
     setCancelNotify(null);
     try {
-      await api.stopActivity(activityId);
+      await api.stopActivity(activityId, clientId);
       setCancelNotify({ id: activityId, msg: `Cancelled backup for ${clientName}`, ok: true });
       setTimeout(() => setCancelNotify(null), 4000);
       await loadActivities();
@@ -589,15 +589,15 @@ export function Activities() {
                           <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {pcdone.toFixed(0)}%
                           </span>
-                          <button
-                            onClick={() => handleCancelActivity(String(activityData.id || index), clientName)}
-                            disabled={cancellingId === String(activityData.id || index)}
+                          {activityData.process_id && <button
+                            onClick={() => handleCancelActivity(String(activityData.process_id), clientName, activityData.clientid)}
+                            disabled={cancellingId === String(activityData.process_id)}
                             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             title="Cancel this backup"
                           >
                             <StopCircle className="h-3.5 w-3.5" />
-                            {cancellingId === String(activityData.id || index) ? 'Cancelling…' : 'Cancel'}
-                          </button>
+                            {cancellingId === String(activityData.process_id) ? 'Cancelling…' : 'Cancel'}
+                          </button>}
                         </div>
                       </div>
 

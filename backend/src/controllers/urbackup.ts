@@ -62,7 +62,8 @@ export async function getClients(req: AuthRequest, res: Response): Promise<void>
             ip: clientStatus.ip || clientStatus.lastip || null,
             os_simple: clientStatus.os_simple,
             os_version_string: clientStatus.os_version_string,
-            delete_pending: clientStatus.delete_pending === '1' || clientStatus.delete_pending === 1
+            delete_pending: clientStatus.delete_pending === '1' || clientStatus.delete_pending === 1,
+            no_backup_paths: clientStatus.no_backup_paths === true || clientStatus.no_backup_paths === 1
           });
         }
       });
@@ -121,7 +122,8 @@ export async function getClients(req: AuthRequest, res: Response): Promise<void>
         ip: ipAddress,
         os_simple: statusInfo.os_simple || client.os_simple,
         os_version_string: statusInfo.os_version_string || client.os_version_string,
-        delete_pending: statusInfo.delete_pending || false
+        delete_pending: statusInfo.delete_pending || false,
+        no_backup_paths: statusInfo.no_backup_paths || false
       };
     });
 
@@ -303,6 +305,7 @@ export async function startBackup(req: AuthRequest, res: Response): Promise<void
 export async function stopActivity(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { activityId } = req.params;
+    const { clientId } = req.body;
 
     if (!activityId) {
       res.status(400).json({ error: 'Activity ID is required' });
@@ -316,7 +319,7 @@ export async function stopActivity(req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    const result = await service.stopActivity(activityId);
+    const result = await service.stopActivity(activityId, clientId);
     res.json(result);
   } catch (error) {
     logger.error('Failed to stop activity:', error);

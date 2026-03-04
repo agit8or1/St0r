@@ -14,16 +14,24 @@ const dbService = new UrBackupDbService();
 export async function getTotalStorage(req: AuthRequest, res: Response): Promise<void> {
   try {
     // Get UrBackup backup path from environment or use default
-    const backupPath = process.env.URBACKUP_BACKUP_PATH || '/var/urbackup';
+    const backupPath = process.env.URBACKUP_BACKUP_PATH || '/home/administrator/urbackup-storage';
 
-    // Get disk usage for the backup path — execFile avoids shell injection
-    const { stdout } = await execFileAsync('df', ['-B1', backupPath]);
-    const lines = stdout.trim().split('\n');
-    const parts = lines[lines.length - 1].split(/\s+/);
+    // Use df to get partition capacity and free space
+    const { stdout: dfOut } = await execFileAsync('df', ['-B1', backupPath]);
+    const dfLines = dfOut.trim().split('\n');
+    const dfParts = dfLines[dfLines.length - 1].split(/\s+/);
+    const totalSize = parseInt(dfParts[1]) || 0;
+    const availableSize = parseInt(dfParts[3]) || 0;
 
-    const totalSize = parseInt(parts[1]) || 0;
-    const usedSize = parseInt(parts[2]) || 0;
-    const availableSize = parseInt(parts[3]) || 0;
+    // Use du to get the actual bytes used by the backup directory itself
+    let usedSize = 0;
+    try {
+      const { stdout: duOut } = await execFileAsync('du', ['-sb', backupPath]);
+      usedSize = parseInt(duOut.trim().split(/\s+/)[0]) || 0;
+    } catch {
+      // Fallback: df used if du fails (e.g. permission issue)
+      usedSize = parseInt(dfParts[2]) || 0;
+    }
 
     // Get storage used by clients from database
     const stats = await dbService.getServerStats();

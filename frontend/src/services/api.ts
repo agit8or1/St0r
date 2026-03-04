@@ -175,8 +175,9 @@ class ApiService {
     });
   }
 
-  async stopActivity(activityId: string, serverId?: number): Promise<void> {
+  async stopActivity(activityId: string, clientId?: string | number, serverId?: number): Promise<void> {
     await this.api.post(`/urbackup/activities/${activityId}/stop`, {
+      clientId,
       serverId,
     });
   }

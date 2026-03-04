@@ -303,6 +303,24 @@ export class UrBackupService {
         throw new Error(`Invalid JSON response: ${responseText}`);
       }
 
+      // If a session-required action returns error:1, our cached session is stale — re-login and retry once
+      if (result.error === 1 && requiresSession.includes(action)) {
+        logger.warn(`[UrBackup API] Session expired for '${action}', clearing cache and re-authenticating`);
+        this.sessionId = '';
+        this.sessionExpiry = 0;
+        const freshSession = await this.login();
+        const retryParams = new URLSearchParams({ ...params, a: action, ses: freshSession });
+        const retryUrl = `${URBACKUP_API_URL}?a=${action}&ses=${freshSession}`;
+        const retryResp = await fetch(retryUrl, {
+          method: 'POST',
+          headers: { 'User-Agent': 'st0r', 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: retryParams.toString()
+        });
+        const retryText = await retryResp.text();
+        result = retryText ? JSON.parse(retryText) : {};
+        logger.info(`[UrBackup API] Re-auth retry result:`, JSON.stringify(result));
+      }
+
       // If we get an error AND we didn't already use a session, try with session
       if (result.error && !requiresSession.includes(action)) {
         logger.warn(`[UrBackup API] Got error response, trying with session...`);
@@ -379,24 +397,34 @@ export class UrBackupService {
    * Based on urbackupserver/server_status.h action enum
    */
   private getActionString(action: number): string {
+    // Matches UrBackup's action enum from urbackupserver JS UI (status + progress API)
     const actionMap: Record<number, string> = {
-      0: 'Idle',
-      1: 'Indexing',
-      2: 'Full file backup',
-      3: 'Incremental file backup',
-      4: 'Full image backup',
-      5: 'Incremental image backup',
-      6: 'Resumed full file backup',
-      7: 'Resumed incremental file backup',
-      8: 'Resumed full image backup',
-      9: 'Resumed incremental image backup',
-      10: 'File backup - Hashing',
-      11: 'File backup - Checking',
-      12: 'Image backup - Syncing',
+      0:  'Idle',
+      1:  'Incremental file backup',
+      2:  'Full file backup',
+      3:  'Incremental image backup',
+      4:  'Full image backup',
+      5:  'Resumed incremental file backup',
+      6:  'Resumed full file backup',
+      7:  'Resumed incremental image backup',
+      8:  'Resumed full image backup',
+      9:  'Restoring image',
+      10: 'Starting backup',
+      11: 'Hashing files',
+      12: 'Checking files',
       13: 'Restoring file',
-      14: 'Restoring image'
     };
     return actionMap[action] || `Unknown action (${action})`;
+  }
+
+  private isImageAction(action: number): boolean {
+    // Image backup actions: 3, 4, 7, 8, 9
+    return [3, 4, 7, 8, 9].includes(action);
+  }
+
+  private isIncrementalAction(action: number): boolean {
+    // Incremental actions: 1 (incr_file), 3 (incr_image), 5 (resumed incr_file), 7 (resumed incr_image)
+    return [1, 3, 5, 7].includes(action);
   }
 
   // ========== READ OPERATIONS (Using Direct Database Access) ==========
@@ -448,11 +476,19 @@ export class UrBackupService {
           return clients.map(client => {
             const api = apiMap.get(client.id);
             if (!api) return client;
+            const c = client as any;
+            let ip = api.ip || api.lastip || c.ip || null;
+            if (ip === '-' || ip === '' || ip === 'null') ip = null;
             return {
               ...client,
               online: api.online === true,
               lastseen: api.lastseen ? api.lastseen * 1000 : client.lastseen,
               status: api.online ? 'online' : 'offline',
+              ip,
+              os_simple: api.os_simple || c.os_simple,
+              os_version_string: api.os_version_string || c.os_version_string,
+              delete_pending: api.delete_pending === '1' || api.delete_pending === 1 || false,
+              no_backup_paths: api.no_backup_paths === true || api.no_backup_paths === 1 || false,
             };
           });
         }
@@ -531,92 +567,62 @@ export class UrBackupService {
         const progressResult = await this.apiCall('progress', {});
         const progressData: any[] = progressResult?.progress || [];
 
+        // If the progress API succeeded (even with empty list), it is authoritative.
+        // An empty list means nothing is running — don't fall back to stale DB records.
+        if (progressData && Array.isArray(progressData) && progressData.length === 0) {
+          logger.info('[getCurrentActivities] Progress API returned empty — no active backups');
+          return [];
+        }
+
         if (progressData && Array.isArray(progressData) && progressData.length > 0) {
           logger.info(`[getCurrentActivities] Processing ${progressData.length} progress items`);
-          // Merge API progress data with database activities
-          const mergedActivities: any[] = [...dbActivities];
+          // Progress API is authoritative — build result from progress items only.
+          // DB activities without a matching progress item are stale and discarded.
+          const mergedActivities: any[] = [];
 
-          // Add any activities from API that aren't in database (like indexing)
           for (const progress of progressData) {
-            // Check if this activity is already in database results
-            // Match by clientid and backup type (file/image) since process ID != backup ID
             const actionStr = this.getActionString(progress.action);
-            const isImageBackup = actionStr.toLowerCase().includes('image');
+            const isImageBackup = this.isImageAction(progress.action);
             const progressType = isImageBackup ? 'image' : 'file';
 
-            const existsInDb = dbActivities.some(
+            // Find matching DB activity for metadata enrichment only
+            const dbMatch = dbActivities.find(
               (act: any) => act.clientid === progress.clientid && act.type === progressType
             );
 
-            if (!existsInDb) {
-              // This is a new activity not in DB (likely indexing)
-              const actionStr = this.getActionString(progress.action);
-              const isImageBackup = actionStr.toLowerCase().includes('image');
+            // pcdone of -1 means UrBackup is preparing/indexing — valid running state
+            const pcdone = (typeof progress.pcdone === 'number' && progress.pcdone >= 0) ? progress.pcdone : 0;
 
-              mergedActivities.push({
-                id: progress.id || `progress-${progress.clientid}`,
-                clientid: progress.clientid,
-                clientName: progress.name || progress.client,
-                name: progress.name || progress.client,
-                client: progress.name || progress.client,
-                backuptime: Date.now(),
-                incremental: [3, 5, 7, 9].includes(progress.action), // Incremental action IDs
-                type: isImageBackup ? 'image' : 'file',
-                path: progress.path || '',
-                action: actionStr,
-                pcdone: progress.pcdone || 0,
-                done_bytes: progress.done_bytes || 0,
-                total_bytes: progress.total_bytes || 0,
-                speed_bpms: progress.speed_bpms || 0,
-                paused: progress.paused || false,
-                details: progress.details || '',
-                eta_ms: progress.eta_ms > 0 ? progress.eta_ms : null
-              } as any);
-            } else {
-              // Update existing activity with real-time progress data
-              // Match by clientid and type, not by ID
-              const activityIndex = mergedActivities.findIndex(
-                (act: any) => act.clientid === progress.clientid && act.type === progressType
-              );
-              if (activityIndex !== -1) {
-                const existingActivity: any = mergedActivities[activityIndex];
-                mergedActivities[activityIndex] = {
-                  ...existingActivity,
-                  action: actionStr,
-                  pcdone: progress.pcdone || existingActivity.pcdone,
-                  done_bytes: progress.done_bytes || existingActivity.done_bytes,
-                  total_bytes: progress.total_bytes || existingActivity.total_bytes,
-                  speed_bpms: progress.speed_bpms || 0,
-                  paused: progress.paused || false,
-                  details: progress.details || existingActivity.details,
-                  eta_ms: progress.eta_ms > 0 ? progress.eta_ms : null,
-                  process_id: progress.id // Store the process ID from progress API
-                } as any;
-              }
-            }
+            mergedActivities.push({
+              id: dbMatch?.id || progress.id || `progress-${progress.clientid}`,
+              clientid: progress.clientid,
+              clientName: dbMatch?.clientName || progress.name || progress.client,
+              name: dbMatch?.name || progress.name || progress.client,
+              client: dbMatch?.client || progress.name || progress.client,
+              backuptime: dbMatch?.backuptime || Date.now(),
+              incremental: this.isIncrementalAction(progress.action),
+              type: progressType,
+              path: progress.path || dbMatch?.path || '',
+              action: actionStr,
+              pcdone,
+              done_bytes: progress.done_bytes || 0,
+              total_bytes: progress.total_bytes || 0,
+              speed_bpms: progress.speed_bpms || 0,
+              paused: progress.paused || false,
+              details: progress.details || dbMatch?.details || '',
+              eta_ms: progress.eta_ms > 0 ? progress.eta_ms : null,
+              process_id: progress.id,
+            } as any);
           }
 
-          // Filter out stale/invalid activities before returning
-          const validActivities = mergedActivities.filter(activity => {
-            // Remove activities with negative progress (indicates stale/error state)
-            if (activity.pcdone < 0) {
-              logger.info(`[getCurrentActivities] Filtering out stale activity: ${activity.name} (pcdone: ${activity.pcdone})`);
-              return false;
-            }
-            // Remove activities marked as complete
-            if (activity.complete === 1) {
-              logger.info(`[getCurrentActivities] Filtering out completed activity: ${activity.name}`);
-              return false;
-            }
-            return true;
-          });
-
-          logger.info(`[getCurrentActivities] Returning ${validActivities.length} valid activities (filtered ${mergedActivities.length - validActivities.length} stale)`);
-          return validActivities;
+          logger.info(`[getCurrentActivities] Returning ${mergedActivities.length} activities from progress API`);
+          return mergedActivities;
         }
       } catch (apiError) {
-        // If API call fails, just return database results
-        logger.warn('Failed to get progress from API, using database only:', apiError);
+        // If the progress API fails we cannot reliably determine what is running.
+        // DB records with complete=0 may be stale, so return empty to avoid phantom activities.
+        logger.warn('[getCurrentActivities] Progress API failed — returning empty to avoid stale records:', apiError);
+        return [];
       }
 
       // Parse log for current file transfer progress and attach to running backups
@@ -794,9 +800,17 @@ export class UrBackupService {
     }
   }
 
-  async stopActivity(activityId: string) {
+  async stopActivity(activityId: string, clientId?: string | number) {
     try {
-      return await this.apiCall('stop_backup', { id: activityId });
+      // UrBackup stops a backup by sending stop_clientid + stop_id to the progress endpoint
+      const params: Record<string, any> = {
+        stop_id: activityId,
+        with_lastacts: '0',
+      };
+      if (clientId !== undefined && clientId !== null && clientId !== '') {
+        params.stop_clientid = String(clientId);
+      }
+      return await this.apiCall('progress', params);
     } catch (error) {
       logger.error('Failed to stop activity:', error);
       throw error;
@@ -982,10 +996,14 @@ export class UrBackupService {
 
   async getClientSettings(clientId: string) {
     try {
-      const result = await this.apiCall('settings', {
-        sa: 'clientsettings',
-        t_clientid: clientId
+      // Must use t_clientid (not clientid) to get full {use, value, value_group} format
+      const session = await this.login();
+      const response = await fetch(`${URBACKUP_API_URL}?a=settings&ses=${session}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+        body: `sa=clientsettings&t_clientid=${encodeURIComponent(clientId)}&ses=${session}`
       });
+      const result = await response.json() as any;
       return result;
     } catch (error) {
       logger.error('Failed to get client settings:', error);
@@ -997,7 +1015,7 @@ export class UrBackupService {
     try {
       const session = await this.login();
 
-      // Get current settings and flatten them (extract effective values from {use, value, value_group} format)
+      // Get current settings using t_clientid (full format with use/value/value_group)
       const currentResponse = await this.getClientSettings(clientId);
       const rawSettings = currentResponse?.settings || {};
 
@@ -1005,23 +1023,23 @@ export class UrBackupService {
       saveParams.set('sa', 'clientsettings_save');
       saveParams.set('t_clientid', clientId);
       saveParams.set('ses', session); // UrBackup requires ses in POST body AND URL
+      saveParams.set('overwrite', 'true');
 
       // Helper: convert any value to the string UrBackup expects
-      // Booleans must be '1'/'0', not 'true'/'false'
       const toUrBackupStr = (v: any): string => {
-        if (v === true || v === 'true') return '1';
-        if (v === false || v === 'false') return '0';
+        if (v === true || v === 'true') return 'true';
+        if (v === false || v === 'false') return 'false';
         return String(v);
       };
 
-      // Flatten current settings as base, including the .use parameter UrBackup requires
+      // Preserve current settings as base (use their existing use values)
       for (const [key, val] of Object.entries(rawSettings)) {
         if (val && typeof val === 'object' && !Array.isArray(val)) {
           const v = val as any;
-          if ('use' in v) {
-            const effective = v.use === 0 ? v.value : v.value_group;
-            if (effective !== null && effective !== undefined) {
-              saveParams.set(key, toUrBackupStr(effective));
+          if ('use' in v && 'value' in v) {
+            // 'value' is always the resolved effective value
+            if (v.value !== null && v.value !== undefined) {
+              saveParams.set(key, toUrBackupStr(v.value));
               saveParams.set(`${key}.use`, String(v.use));
             }
           }
@@ -1030,11 +1048,11 @@ export class UrBackupService {
         }
       }
 
-      // Apply user's changes — mark each as client override (use=0)
+      // Apply user's changes — use=1 means client-specific override
       for (const [key, value] of Object.entries(newSettings)) {
         if (value !== null && value !== undefined) {
           saveParams.set(key, toUrBackupStr(value));
-          saveParams.set(`${key}.use`, '0'); // 0 = client-specific override
+          saveParams.set(`${key}.use`, '1'); // 1 = client-specific override
         }
       }
 
