@@ -232,12 +232,19 @@ export function Dashboard() {
                 sublabel={`${formatBytes(metrics.memory.used)} / ${formatBytes(metrics.memory.total)}`}
                 color="#10b981"
               />
-              <Gauge
-                pct={Math.min(100, Math.round(((metrics.network.rxBytesPerSec + metrics.network.txBytesPerSec) / (125 * 1024 * 1024)) * 100))}
-                label="Network"
-                sublabel={`↓${formatBytes(metrics.network.rxBytesPerSec)}/s ↑${formatBytes(metrics.network.txBytesPerSec)}/s`}
-                color="#f59e0b"
-              />
+              {(() => {
+                const linkBytesPerSec = (metrics.network.linkSpeedMbps * 1_000_000) / 8;
+                const totalRate = metrics.network.rxBytesPerSec + metrics.network.txBytesPerSec;
+                const netPct = Math.min(100, Math.round((totalRate / linkBytesPerSec) * 100));
+                return (
+                  <Gauge
+                    pct={netPct}
+                    label="Network"
+                    sublabel={`↓${formatBytes(metrics.network.rxBytesPerSec)}/s ↑${formatBytes(metrics.network.txBytesPerSec)}/s`}
+                    color="#f59e0b"
+                  />
+                );
+              })()}
             </div>
           </div>
         )}

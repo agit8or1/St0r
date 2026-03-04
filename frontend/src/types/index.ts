@@ -132,6 +132,7 @@ export interface SystemMetrics {
     iface: string;
     rxBytesPerSec: number;
     txBytesPerSec: number;
+    linkSpeedMbps: number;
   };
   uptime: number;
   hostname: string;

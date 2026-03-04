@@ -61,7 +61,7 @@ async function getMemoryUsage(): Promise<{ total: number; used: number; free: nu
   return { total, used, free: available, usagePercent };
 }
 
-async function getNetworkUsage(): Promise<{ iface: string; rxBytesPerSec: number; txBytesPerSec: number }> {
+async function getNetworkUsage(): Promise<{ iface: string; rxBytesPerSec: number; txBytesPerSec: number; linkSpeedMbps: number }> {
   const raw = await readProcFile('/proc/net/dev');
   const now = Date.now();
 
@@ -89,7 +89,20 @@ async function getNetworkUsage(): Promise<{ iface: string; rxBytesPerSec: number
   prevNetStat = { iface: bestIface, rx: bestRx, tx: bestTx };
   prevNetTime = now;
 
-  return { iface: bestIface || 'eth0', rxBytesPerSec: Math.round(rxRate), txBytesPerSec: Math.round(txRate) };
+  // Read link speed: env override → sysfs → fallback 1000 Mbps
+  let linkSpeedMbps = 1000;
+  const envSpeed = parseInt(process.env.NETWORK_LINK_SPEED_MBPS || '', 10);
+  if (envSpeed > 0) {
+    linkSpeedMbps = envSpeed;
+  } else {
+    try {
+      const speedStr = await readFile(`/sys/class/net/${bestIface}/speed`, 'utf-8');
+      const parsed = parseInt(speedStr.trim(), 10);
+      if (parsed > 0) linkSpeedMbps = parsed;
+    } catch { /* virtual/wireless interfaces may not expose speed */ }
+  }
+
+  return { iface: bestIface || 'eth0', rxBytesPerSec: Math.round(rxRate), txBytesPerSec: Math.round(txRate), linkSpeedMbps };
 }
 
 export async function getSystemMetrics(req: Request, res: Response) {
