@@ -1,9 +1,10 @@
 {
-  "version": "3.2.25",
+  "version": "3.2.26",
   "releaseDate": "2026-03-04",
   "changelog": [
-    "Fix: Exclude Windows junction points from default backup paths (Documents and Settings, Application Data, Local Settings, My Documents, etc.) — prevents file sizes being counted 2x causing inflated totals",
-    "Fix: 'Clear Stale Jobs' now uses inline confirm instead of window.confirm (blocked on HTTPS); shows result inline instead of alert()",
-    "Fix: Cancel backup waits 1.5s for UrBackup to remove job before refreshing activity list"
+    "Feature: Server-managed client mode — green/yellow banner shows whether client_set_settings is pushed from server; toggle locks all settings server-side",
+    "Feature: Browse client filesystem — click Browse next to backup path input to navigate the live client's directories and select folders",
+    "Feature: Apply default Windows exclusions button — one click adds junction points, temp files, Windows/ProgramFiles dirs to exclusion list",
+    "Fix: null values from UrBackup API no longer override defaults (e.g. client_set_settings=null no longer masks the server-managed default)"
   ]
 }

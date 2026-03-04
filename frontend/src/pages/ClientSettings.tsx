@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
-import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch } from 'lucide-react';
+import { ClientFileBrowser } from '../components/ClientFileBrowser';
 
 interface ClientSettings {
   [key: string]: any;
@@ -87,6 +88,8 @@ export function ClientSettings() {
   const [noBackupPaths, setNoBackupPaths] = useState(false);
   const [newIncludePath, setNewIncludePath] = useState('');
   const [newExcludePattern, setNewExcludePattern] = useState('');
+  const [showFileBrowser, setShowFileBrowser] = useState(false);
+  const [showImageBrowser, setShowImageBrowser] = useState(false);
 
   useEffect(() => { loadSettings(); }, [clientName]);
 
@@ -106,7 +109,9 @@ export function ClientSettings() {
       const data = await response.json();
       const raw = data.settings || data;
       // Merge with defaults so all fields are always present
-      setSettings({ ...getDefaults(), ...raw });
+      // Filter out null/undefined API values so defaults are used for unset settings
+      const cleanRaw = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== null && v !== undefined));
+      setSettings({ ...getDefaults(), ...cleanRaw });
     } catch (err) {
       console.error('Failed to load settings:', err);
       setMessage({ type: 'error', text: 'Failed to load settings' });
@@ -214,6 +219,7 @@ export function ClientSettings() {
     cbt_volumes: 'ALL',
     image_file_format: 'default',
     // Permissions
+    client_set_settings: false,
     allow_config_paths: false,
     allow_file_restore: true,
     allow_component_restore: true,
@@ -330,6 +336,39 @@ export function ClientSettings() {
           </div>
         )}
 
+        {/* Server-managed mode banner */}
+        <div className={`rounded-lg border p-4 flex items-center justify-between gap-4 ${
+          !bool('client_set_settings')
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
+            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700'
+        }`}>
+          <div className="flex items-center gap-3">
+            {!bool('client_set_settings')
+              ? <Lock className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+              : <Unlock className="h-5 w-5 text-yellow-600 dark:text-yellow-400 shrink-0" />
+            }
+            <div>
+              <p className={`text-sm font-semibold ${!bool('client_set_settings') ? 'text-green-800 dark:text-green-200' : 'text-yellow-800 dark:text-yellow-200'}`}>
+                {!bool('client_set_settings') ? 'Server-managed — all settings pushed to client' : 'Client-managed — client controls its own settings'}
+              </p>
+              <p className={`text-xs mt-0.5 ${!bool('client_set_settings') ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
+                {!bool('client_set_settings')
+                  ? 'Schedule, backup paths, and all options are defined here and sent to the client on every connection.'
+                  : 'The client can override settings via its tray icon. Enable server-managed mode to push all settings from this page.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-xs font-medium ${!bool('client_set_settings') ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
+              {!bool('client_set_settings') ? 'Managed' : 'Unmanaged'}
+            </span>
+            <Toggle checked={!bool('client_set_settings')} onChange={v => {
+              set('client_set_settings', !v);
+              if (v) set('allow_config_paths', false); // also lock paths when enabling server-managed
+            }} />
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex gap-6 overflow-x-auto">
@@ -389,7 +428,18 @@ export function ClientSettings() {
                     onKeyDown={e => e.key === 'Enter' && addPath()}
                     placeholder="e.g. C:\Users or %USERPROFILE%" className="input flex-1 font-mono text-sm" />
                   <button onClick={addPath} className="btn btn-primary flex items-center gap-1"><Plus className="h-4 w-4" /> Add</button>
+                  <button onClick={() => setShowFileBrowser(true)} className="btn btn-secondary flex items-center gap-1" title="Browse client filesystem">
+                    <FolderSearch className="h-4 w-4" /> Browse
+                  </button>
                 </div>
+                {showFileBrowser && (
+                  <ClientFileBrowser
+                    clientId={clientId}
+                    onSelect={p => { if (!getPaths().includes(p)) setPaths([...getPaths(), p]); }}
+                    onClose={() => setShowFileBrowser(false)}
+                    existingPaths={getPaths()}
+                  />
+                )}
               </Section>
 
               <Section title="Exclude Patterns" collapsible>
@@ -413,6 +463,12 @@ export function ClientSettings() {
                     placeholder="e.g. *.tmp or C:\Windows\Temp\*" className="input flex-1 font-mono text-sm" />
                   <button onClick={addExclude} className="btn btn-primary flex items-center gap-1"><Plus className="h-4 w-4" /> Add</button>
                 </div>
+                <button
+                  onClick={() => setExcludes(getDefaults().exclude_files.split(';').filter(Boolean))}
+                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline text-left"
+                >
+                  Apply default Windows exclusions (junction points, temp files, Windows dir)
+                </button>
                 <div className="pt-2">
                   <Row label="Backup paths are optional" hint="If enabled, the backup will succeed even if backup paths don't exist on the client.">
                     <Toggle checked={bool('backup_dirs_optional')} onChange={v => set('backup_dirs_optional', v)} />

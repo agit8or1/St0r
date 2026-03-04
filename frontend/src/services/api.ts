@@ -234,6 +234,11 @@ class ApiService {
     return response.data;
   }
 
+  async browseClientFilesystem(clientId: string, path: string = '') {
+    const response = await this.api.get(`/urbackup/clients/${clientId}/browse`, { params: { path } });
+    return response.data;
+  }
+
   // Customers
   async getCustomers(): Promise<Customer[]> {
     const response = await this.api.get<Customer[]>('/customers');

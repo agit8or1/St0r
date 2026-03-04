@@ -484,3 +484,17 @@ export async function regenerateClientKey(req: AuthRequest, res: Response): Prom
     res.status(500).json({ error: 'Failed to regenerate client authentication key' });
   }
 }
+
+export async function browseClientFilesystem(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { clientId } = req.params;
+    const path = (req.query.path as string) || '';
+    const service = await getService();
+    if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
+    const result = await service.browseClientFilesystem(clientId, path);
+    res.json(result);
+  } catch (error) {
+    logger.error('Failed to browse client filesystem:', error);
+    res.status(500).json({ error: 'Failed to browse client filesystem' });
+  }
+}
