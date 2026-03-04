@@ -5,8 +5,8 @@
 set -e
 
 # Version
-INSTALLER_VERSION="3.2.6"
-INSTALLER_DATE="2026-03-03"
+INSTALLER_VERSION="3.2.23"
+INSTALLER_DATE="2026-03-04"
 
 echo "============================================"
 echo "St0r Universal Installer"
@@ -24,7 +24,7 @@ fi
 # Get the actual user who ran sudo
 ACTUAL_USER="${SUDO_USER:-$USER}"
 INSTALL_DIR="/opt/urbackup-gui"
-VERSION_FILE="$INSTALL_DIR/.version"
+VERSION_FILE="$INSTALL_DIR/version.json"
 
 echo "Running as user: $ACTUAL_USER"
 echo ""
@@ -50,7 +50,7 @@ STOR_VERSION="Not installed"
 if [ -d "$INSTALL_DIR" ] && [ -f "/etc/systemd/system/urbackup-gui.service" ]; then
     STOR_INSTALLED=true
     if [ -f "$VERSION_FILE" ]; then
-        STOR_VERSION=$(grep "VERSION=" "$VERSION_FILE" | cut -d= -f2)
+        STOR_VERSION=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$VERSION_FILE" | grep -o '"[^"]*"$' | tr -d '"')
     else
         STOR_VERSION="Unknown"
     fi
@@ -163,13 +163,14 @@ else
     else
         echo "Upgrade available: $STOR_VERSION → $INSTALLER_VERSION"
         echo ""
-        echo "What's new in v3.2.0:"
-        echo "  • File Browser - Browse and download files from any backup"
-        echo "  • File Restore - Restore multiple files directly to client"
-        echo "  • Bare Metal Restore - Download restore ISO and instructions"
-        echo "  • Fixed backup history showing 0 backups"
-        echo "  • Fixed file browsing and download security"
-        echo "  • Improved deployment process"
+        echo "What's new in v$INSTALLER_VERSION:"
+        echo "  • Full Standby Replication — mirror to DR targets via SSH/rsync"
+        echo "  • AES-256-GCM encrypted storage of SSH keys and passwords"
+        echo "  • Replication dashboard with health cards, run history, alerts"
+        echo "  • Image backups grouped by session (C:, D:, System Reserved)"
+        echo "  • Clickable Dashboard stat cards"
+        echo "  • All alert()/confirm() calls replaced with inline modals"
+        echo "  • Settings pipeline fixes (boolean, client override, global)"
         echo ""
         read -p "Upgrade to v$INSTALLER_VERSION? (Y/n): " -n 1 -r < /dev/tty
         echo ""
@@ -301,7 +302,7 @@ if [ "$INSTALL_STOR" = true ]; then
 
     # Install dependencies
     echo "[2/9] Installing system dependencies..."
-    apt-get install -y -qq curl gnupg2 software-properties-common nginx mariadb-server
+    apt-get install -y -qq curl gnupg2 software-properties-common nginx mariadb-server rsync sqlite3
 
     # Install Node.js 20
     echo "[3/9] Installing Node.js 20..."
@@ -336,7 +337,7 @@ if [ "$INSTALL_STOR" = true ]; then
 
     # Determine installation method
     SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    DOWNLOAD_URL="https://stor.agit8or.net/downloads/stor-v3.2.3-deployment.tar.gz"
+    DOWNLOAD_URL="https://github.com/agit8or1/St0r/archive/refs/tags/v${INSTALLER_VERSION}.tar.gz"
     IS_SOURCE_INSTALL=false
 
     # Check if we're running from source directory (local install) or need to download
@@ -351,36 +352,43 @@ if [ "$INSTALL_STOR" = true ]; then
             IS_SOURCE_INSTALL=true
         fi
     else
-        # Remote installation - download package
-        echo "  Downloading latest package..."
-        TEMP_PACKAGE="/tmp/urbackup-gui-download-$$.tar.gz"
+        # Remote installation - download from GitHub
+        echo "  Downloading v${INSTALLER_VERSION} from GitHub..."
+        TEMP_PACKAGE="/tmp/stor-download-$$.tar.gz"
+        TEMP_DIR="/tmp/stor-extract-$$"
 
         if ! curl -fSL "$DOWNLOAD_URL" -o "$TEMP_PACKAGE"; then
             echo ""
-            echo "ERROR: Failed to download package"
+            echo "ERROR: Failed to download package from GitHub"
+            echo "  URL: $DOWNLOAD_URL"
             echo ""
-            echo "Alternative: Download source and run locally"
+            echo "Alternative: clone and run locally:"
+            echo "  git clone https://github.com/agit8or1/St0r.git"
+            echo "  sudo ./St0r/install.sh"
             exit 1
         fi
 
         # Extract package
         echo "  Extracting package..."
-        cd /tmp
-        tar -xzf "$TEMP_PACKAGE"
+        mkdir -p "$TEMP_DIR"
+        tar -xzf "$TEMP_PACKAGE" -C "$TEMP_DIR" --strip-components=1
 
-        if [ ! -d "/tmp/urbackup-gui" ]; then
-            echo "ERROR: Package extraction failed"
-            rm -f "$TEMP_PACKAGE"
+        if [ ! -d "$TEMP_DIR/backend" ]; then
+            echo "ERROR: Package extraction failed — backend directory not found"
+            rm -rf "$TEMP_PACKAGE" "$TEMP_DIR"
             exit 1
         fi
 
         # Copy files to installation directory
-        cp -r /tmp/urbackup-gui/* $INSTALL_DIR/
+        cp -r "$TEMP_DIR"/. $INSTALL_DIR/
         chown -R $ACTUAL_USER:$ACTUAL_USER $INSTALL_DIR
 
+        # Source install — will build below
+        IS_SOURCE_INSTALL=true
+
         # Cleanup
-        rm -rf /tmp/urbackup-gui "$TEMP_PACKAGE"
-        echo "  ✓ Package downloaded and extracted"
+        rm -rf "$TEMP_DIR" "$TEMP_PACKAGE"
+        echo "  ✓ Source downloaded and extracted"
     fi
 
     # Restore .env file if it was backed up
@@ -489,6 +497,7 @@ DB_NAME=urbackup_gui
 DB_USER=urbackup
 DB_PASSWORD=${GENERATED_DB_PASS}
 JWT_SECRET=$(openssl rand -hex 64)
+APP_SECRET_KEY=$(openssl rand -hex 32)
 URBACKUP_DB_PATH=/var/urbackup/backup_server.db
 URBACKUP_API_URL=http://localhost:55414/x
 URBACKUP_USERNAME=admin
@@ -507,8 +516,7 @@ EOF
     systemctl enable nginx
 
     # Write version file
-    echo "VERSION=$INSTALLER_VERSION" > "$VERSION_FILE"
-    echo "DATE=$INSTALLER_DATE" >> "$VERSION_FILE"
+    echo "{\"version\":\"$INSTALLER_VERSION\",\"date\":\"$INSTALLER_DATE\"}" > "$VERSION_FILE"
     chown $ACTUAL_USER:$ACTUAL_USER "$VERSION_FILE"
 
     echo ""
@@ -540,21 +548,12 @@ if [ "$INSTALL_STOR" = true ]; then
     echo ""
     echo "  Default credentials:"
     echo "    Username: admin"
-    echo "    Password: (set on first login — follow the setup wizard)"
+    echo "    Password: admin123"
     echo ""
-    echo "  ⚠ IMPORTANT: Set a strong password on first login!"
+    echo "  ⚠ IMPORTANT: Change the default password immediately after first login!"
+    echo "    Profile → Change Password"
     echo ""
-
-    if [ "$STOR_INSTALLED" = false ]; then
-        echo "What's new in v3.2.0:"
-        echo "  • File Browser - Browse and download files from any backup"
-        echo "  • File Restore - Restore multiple files directly to client"
-        echo "  • Bare Metal Restore - Download restore ISO and instructions"
-        echo "  • Fixed backup history showing 0 backups"
-        echo "  • Fixed file browsing and download security"
-        echo "  • Real-time backup progress with transfer speed and ETA"
-        echo "  • Storage pie chart visualization"
-    fi
+    echo "  ⚠ Enable 2FA for the admin account after login (Profile → Enable 2FA)"
 
     echo ""
     echo "Useful commands:"
