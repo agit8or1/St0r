@@ -649,8 +649,13 @@ export function Activities() {
 
                   // Determine backup type
                   const isIncremental = activityData.incremental > 0;
-                  const isImageBackup = activityData.image === 1 || (action && typeof action === 'string' && action.toLowerCase().includes('image'));
+                  const isImageBackup = activityData.type === 'image' || activityData.image === 1 || (action && typeof action === 'string' && action.toLowerCase().includes('image'));
                   const backupType = isImageBackup ? 'Image' : (isIncremental ? 'Incremental' : 'Full');
+
+                  // Partition info for image backups
+                  const letters = activityData.letters;
+                  const partitionCount = activityData.partition_count;
+                  const partitionStr = letters ? ` (${letters})` : (partitionCount > 1 ? ` (${partitionCount} partitions)` : '');
 
                   // Get error details if available
                   const details = activityData.details || '';
@@ -668,7 +673,7 @@ export function Activities() {
                               {clientName}
                             </p>
                             <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                              {backupType} Backup{details ? ` • ${details}` : ''}{displayBytes > 0 ? ` • ${formatBytes(displayBytes)}` : ''}
+                              {backupType} Backup{partitionStr}{details ? ` • ${details}` : ''}{displayBytes > 0 ? ` • ${formatBytes(displayBytes)}` : ''}
                             </p>
                           </div>
                         </div>
@@ -709,8 +714,13 @@ export function Activities() {
 
                 // Determine backup type from activity data
                 const isIncremental = activityData.incremental > 0;
-                const isImageBackup = activityData.image === 1 || (action && typeof action === 'string' && action.toLowerCase().includes('image'));
+                const isImageBackup = activityData.type === 'image' || activityData.image === 1 || (action && typeof action === 'string' && action.toLowerCase().includes('image'));
                 const backupType = isImageBackup ? 'Image' : (isIncremental ? 'Incremental' : 'Full');
+
+                // Partition info for image backups
+                const letters = activityData.letters;
+                const partitionCount = activityData.partition_count;
+                const partitionStr = letters ? ` (${letters})` : (partitionCount > 1 ? ` (${partitionCount} partitions)` : '');
 
                 // Format duration if available (for completed backups)
                 const duration = activityData.duration;
@@ -734,7 +744,7 @@ export function Activities() {
                             {clientName}
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                            {backupType} Backup{durationStr ? ` • ${durationStr}` : ''}{displayBytes > 0 ? ` • ${formatBytes(displayBytes)}` : ''}
+                            {backupType} Backup{partitionStr}{durationStr ? ` • ${durationStr}` : ''}{displayBytes > 0 ? ` • ${formatBytes(displayBytes)}` : ''}
                           </p>
                         </div>
                       </div>

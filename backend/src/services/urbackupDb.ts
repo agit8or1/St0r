@@ -374,20 +374,24 @@ export class UrBackupDbService {
         LIMIT ?
       `, limit);
 
-      // Get recent image backups
+      // Get recent image backups — group by (clientid, backuptime) so multi-partition
+      // image backups appear as one entry with all partition letters listed
       const imageBackups = await db.all(`
         SELECT
-          b.id,
+          MIN(b.id) as id,
           b.clientid,
           c.name as client_name,
           b.backuptime,
           b.incremental,
           b.complete,
-          b.size_bytes,
+          SUM(b.size_bytes) as size_bytes,
+          COUNT(*) as partition_count,
+          GROUP_CONCAT(b.letter, ', ') as letters,
           'image' as backup_type
         FROM backup_images b
         JOIN clients c ON b.clientid = c.id
         WHERE b.complete = 1
+        GROUP BY b.clientid, b.backuptime
         ORDER BY b.backuptime DESC
         LIMIT ?
       `, limit);
@@ -406,6 +410,8 @@ export class UrBackupDbService {
         complete: activity.complete === 1,
         type: activity.backup_type,
         size_bytes: activity.size_bytes,
+        partition_count: activity.partition_count || null,
+        letters: activity.letters || null,
       }));
     } catch (error) {
       logger.error('Failed to get recent activities:', error);

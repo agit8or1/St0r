@@ -36,3 +36,15 @@ docker-compose.override.yml
 *.db
 *.db-shm
 *.db-wal
+
+# Release archives
+*.tar.gz
+*.tar.bz2
+*.zip
+
+# Secrets / certificates
+*.key
+*.pem
+*.p12
+*.pfx
+APP_SECRET_KEY

@@ -1,62 +1,66 @@
-# UrBackup GUI Deployment Guide
+# st0r — Deployment Guide
 
-## Quick Deployment
-
-To deploy the latest changes to the live environment:
+## Quick Deploy (Development → Production)
 
 ```bash
-cd /home/administrator/urbackup-gui
-sudo ./deploy.sh
-```
+cd /home/administrator/St0r
 
-This script will:
-1. Build the backend (TypeScript compilation)
-2. Build the frontend (Vite production build)
-3. Copy built files to `/opt/urbackup-gui/`
-4. Restart the `urbackup-gui` service
-5. Verify the deployment
+# Build and deploy backend
+cd backend && npm run build
+sudo rsync -a dist/ /opt/urbackup-gui/backend/dist/
 
-## Manual Deployment
+# Build and deploy frontend
+cd ../frontend && npm run build
+sudo rsync -a dist/ /opt/urbackup-gui/frontend/dist/
 
-If you need to deploy manually:
-
-### Backend Only
-```bash
-cd /home/administrator/urbackup-gui/backend
-sudo -u administrator bash -c 'export PATH=/home/administrator/.nvm/versions/node/v22.21.1/bin:$PATH && npm run build'
-sudo cp -r dist/* /opt/urbackup-gui/backend/dist/
+# Restart service
 sudo systemctl restart urbackup-gui
-```
-
-### Frontend Only
-```bash
-cd /home/administrator/urbackup-gui/frontend
-sudo -u administrator bash -c 'export PATH=/home/administrator/.nvm/versions/node/v22.21.1/bin:$PATH && npm run build'
-sudo cp -r dist/* /opt/urbackup-gui/frontend/dist/
-# No service restart needed for frontend only changes
 ```
 
 ## Directory Structure
 
 ```
-/home/administrator/urbackup-gui/   <- Development/source directory
-├── backend/
-│   ├── src/                        <- TypeScript source
-│   └── dist/                       <- Compiled JavaScript
-├── frontend/
-│   ├── src/                        <- React/TypeScript source  
-│   └── dist/                       <- Built static files
-└── deploy.sh                       <- Deployment script
+/home/administrator/St0r/           ← Development / source
+├── backend/src/                    ← TypeScript source
+├── backend/dist/                   ← Compiled JS (gitignored)
+├── frontend/src/                   ← React source
+├── frontend/dist/                  ← Vite build output (gitignored)
+└── deploy.sh                       ← Helper deploy script
 
-/opt/urbackup-gui/                  <- Production directory
-├── backend/
-│   └── dist/                       <- Running backend code
-└── frontend/
-    └── dist/                       <- Served by nginx
+/opt/urbackup-gui/                  ← Production (served by systemd + nginx)
+├── backend/dist/                   ← Running backend
+├── backend/.env                    ← Production secrets (not in git)
+├── frontend/dist/                  ← Static files served by nginx
+└── version.json                    ← Version manifest for update checker
+```
+
+## Backend Only
+
+```bash
+cd backend && npm run build
+sudo rsync -a dist/ /opt/urbackup-gui/backend/dist/
+sudo systemctl restart urbackup-gui
+```
+
+## Frontend Only
+
+```bash
+cd frontend && npm run build
+sudo rsync -a dist/ /opt/urbackup-gui/frontend/dist/
+# No service restart needed — nginx serves static files directly
+```
+
+## Database Migrations
+
+When upgrading, apply any new migration files:
+
+```bash
+sudo mysql -u root urbackup_gui < database/migrations/002_add_totp_and_customers.sql
+sudo mysql -u root urbackup_gui < database/migrations/003_replication.sql
 ```
 
 ## Version Info
 
-Current version: **3.2.3**
+Current version: **3.2.23**
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release notes.

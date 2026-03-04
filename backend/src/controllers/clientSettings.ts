@@ -23,9 +23,9 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
       if (val && typeof val === 'object' && !Array.isArray(val)) {
         const v = val as any;
         if ('use' in v) {
-          // use=0 → client-specific override (v.value); use=1/2 → group default (v.value_group)
-          const effective = v.use === 0 ? v.value : v.value_group;
-          settings[key] = effective;
+          // v.value is always the effective resolved value in UrBackup (use=0 → client override, 1/2 → group/global)
+          // Do NOT use v.value_group — after a client-override save, use may stay 2 but value updates correctly
+          settings[key] = v.value;
         } else if ('value' in v) {
           settings[key] = v.value;
         } else if ('value_group' in v) {

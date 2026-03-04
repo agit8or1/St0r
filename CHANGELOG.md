@@ -5,6 +5,52 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.23] - 2026-03-04
+
+### Added
+- **Full Standby Replication** — Mirror UrBackup to one or more DR targets via SSH/rsync
+  - Replication dashboard with Overview, Targets, Settings, and Alerts tabs
+  - Per-target test connection (SSH ping + rsync dry-run)
+  - Run history with step-by-step log viewer per target
+  - AES-256-GCM encrypted storage of SSH private keys and passwords
+  - Hook-based and schedule-based triggers with configurable debounce
+  - Email and webhook alert channels for failures, staleness, and recovery
+- **Replication health card** on Dashboard (shows overall status, healthy target count, worst lag)
+- **Clickable Dashboard stat cards** — Total Endpoints → /clients, Active Tasks → /activities, Storage → /server-settings, etc.
+
+### Fixed
+- Settings pipeline — UrBackup boolean settings now sent as `1`/`0` not `true`/`false`
+- Client endpoint settings now show correct effective values (resolves group vs. client override confusion)
+- Global settings (getSettings/setSettings) correctly flatten the UrBackup API response
+- Backup trigger now surfaces `start_ok=false` as a clear inline error message instead of silently failing
+- Backup buttons use inline React notification instead of browser `alert()`
+- ServerSettings save/restore use inline confirm dialogs instead of `window.confirm()`
+- FileBrowser restore uses inline confirm dialog instead of `window.confirm()`
+- `ClientManagementModal` — all 11 `alert()`/`confirm()` calls replaced with inline state modals
+- `Replication` page — all `alert()` calls replaced with inline notification banner
+- SQL injection mitigation: FQDN validated with strict hostname regex before any DB write
+- Client settings persistence: `getClientSettings` now returns `v.value` (effective resolved value) instead of `v.value_group`
+- Image backups in Activities now grouped by session — 3-partition backup shows as one entry ("Image Backup (C:, D:, System Reserved)")
+
+## [3.2.22] - 2026-02-xx
+
+### Fixed
+- Settings persistence across page reloads
+- Compact endpoints and dashboard UI layout improvements
+- UrBackup API no-password login uses GET (not POST with `plainpw=1`)
+- Update UI uses inline confirm state instead of `window.confirm()`
+- Reconnecting state surfaced to user; errors shown inline
+
+## [3.2.18] - 2026-01-xx
+
+### Fixed
+- Windows installer embeds correct server FQDN from settings
+- `.env` file permissions set correctly on production install
+- Settings sync between GUI and UrBackup `backup_server_settings.db`
+- Settings defaults applied correctly on first run
+- Production systemd service path fixes
+- `npm audit` high-severity vulnerabilities patched
+
 ## [3.2.5] - 2025-12-08
 
 ### Fixed

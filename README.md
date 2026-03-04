@@ -1,22 +1,56 @@
-# st0r - UrBackup Web GUI
+# st0r — UrBackup Web GUI
 
-A modern, feature-rich web interface for managing and monitoring UrBackup servers.
+A modern, full-featured web interface for managing and monitoring [UrBackup](https://www.urbackup.org/) servers. Built with React + TypeScript, designed to run directly on your UrBackup Linux server.
 
-**Important**: st0r is designed to be installed directly on Linux UrBackup servers and reads/writes directly from the UrBackup database for optimal performance and reliability.
+[![Version](https://img.shields.io/badge/version-3.2.23-blue.svg)](version.json)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+---
 
 ## Features
 
-- **Dashboard** - Real-time overview of backup status, client health, and active tasks
-- **Client Management** - Monitor all backup clients with detailed status information
-- **File Browser** - Browse and download files from any backup (NEW in v3.2.0)
-- **File Restore** - Restore multiple files directly to client from web interface (NEW in v3.2.0)
-- **Bare Metal Restore** - Download UrBackup Restore CD/USB ISO with step-by-step instructions (NEW in v3.2.0)
-- **Activity Monitoring** - Track current and historical backup activities with progress indicators
-- **Real-time Progress** - Live transfer speed (MB/s) and ETA for active backups
-- **Storage Visualization** - Pie chart showing used vs available backup storage
-- **Direct Database Access** - Reads directly from UrBackup's SQLite database for fast, reliable data access
-- **Beautiful UI** - Modern, responsive design built with React and TailwindCSS
-- **Secure** - JWT-based authentication with role-based access control
+### Core
+- **Dashboard** — Real-time overview: client health, storage usage, active tasks, replication status. All stat cards are clickable links.
+- **Client Management** — Monitor all backup clients with file/image status, last-seen, IP, OS. Filter by online/offline/failed.
+- **Endpoint Settings** — Per-client backup configuration: file paths, retention counts, backup windows, internet mode, auth key management.
+- **Backup Controls** — Start/stop full or incremental file and image backups from the web UI with inline status feedback.
+- **Backup History** — Complete per-client backup history with type, size, duration, and status.
+
+### File Operations
+- **File Browser** — Browse any backup snapshot by date; download individual files.
+- **File Restore** — Select files from a backup and restore them directly to the client machine.
+- **Bare Metal Restore** — Download UrBackup Restore CD/USB ISO with step-by-step instructions.
+
+### Monitoring
+- **Activity Monitoring** — Live and historical backup activities. Running backups show real-time progress, speed (MB/s), and ETA. Completed image backups are grouped by session (e.g., "Image Backup (C:, D:)").
+- **Storage Visualization** — Pie chart of used vs. available backup storage per client.
+- **Logs** — Browse UrBackup server logs from the web UI.
+- **Alerts** — Configurable alert rules with history.
+- **Reports** — Backup status reports.
+
+### Replication
+- **Full Standby Replication** — Mirror the UrBackup server to one or more DR targets via SSH/rsync.
+- **Replication Targets** — Add/edit/delete targets with SSH key or password auth, bandwidth limits, path mapping.
+- **Run History** — Per-target run log with step-by-step progress viewer.
+- **Alert Channels** — Email and webhook notifications for replication failures, stale targets, and recoveries.
+- **Scheduled + Hook-based Triggers** — Trigger replication on a schedule, after each backup completes, or both. Configurable debounce.
+- **AES-256-GCM encrypted credential storage** — SSH private keys and passwords are encrypted at rest.
+
+### Settings & Admin
+- **Server Settings** — Manage global UrBackup settings (internet mode, backup windows, retention, quotas) directly from the GUI.
+- **Internet Client Setup** — Generate Windows/Linux/macOS installers with the correct server address embedded.
+- **User Management** — Role-based access control; create/delete users; admin vs. read-only roles.
+- **2FA** — TOTP two-factor authentication per user (TOTP compatible with Google Authenticator, Authy, etc.).
+- **Customer Management** — Group clients by customer organization.
+- **Profile** — Change your own password and 2FA settings.
+
+### UI / UX
+- **Dark Mode** — System-aware with manual toggle; preference persisted across sessions.
+- **Responsive** — Works on desktop and tablet.
+- **Auto-update** — Built-in update checker; one-click update via the UI.
+- **Bug Reporting** — In-app bug report form.
+
+---
 
 ## Screenshots
 
@@ -26,69 +60,65 @@ A modern, feature-rich web interface for managing and monitoring UrBackup server
 ### Clients Overview
 ![Clients](screenshots/02-clients.png)
 
-### Client Detail with Backup History
+### Client Detail & Backup Controls
 ![Client Detail](screenshots/03-client-detail.png)
 
-### File Browser - Browse and Download Files
-![File Browser](screenshots/04-file-browser.png)
+### Activity Monitoring (grouped image partitions)
+![Activities](screenshots/04-activities.png)
 
-### Bare Metal Restore Instructions
-![Bare Metal Restore](screenshots/05-bare-metal-restore.png)
+### Replication Management
+![Replication](screenshots/05-replication.png)
+
+### File Browser
+![File Browser](screenshots/06-file-browser.png)
+
+### Server Settings
+![Settings](screenshots/07-settings.png)
+
+---
 
 ## Requirements
 
-- **Linux UrBackup Server** - Must be installed on the same server as UrBackup
-- **UrBackup Server 2.5.x or later** - Must have direct access to UrBackup's database
+- **Linux server running UrBackup Server 2.5.x or later**
+- Must be installed **on the same machine** as UrBackup (reads UrBackup's SQLite DB directly)
+- Node.js 20+, MariaDB, Nginx
 
-## Architecture
-
-- **Frontend**: React + Vite + TailwindCSS
-- **Backend**: Node.js + Express + TypeScript
-- **Database**: MariaDB (for st0r data) + Direct SQLite access (for UrBackup data)
-- **Web Server**: Nginx
+---
 
 ## Quick Installation
 
-### Automated Installation (Recommended)
-
-Download and run the universal installer:
+### Automated (Recommended)
 
 ```bash
-curl -fsSL http://stor.agit8or.net/downloads/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/agit8or1/St0r/main/install.sh | sudo bash
 ```
 
-Or download and run locally:
+Or download first:
 
 ```bash
-wget http://stor.agit8or.net/downloads/install.sh
+wget https://raw.githubusercontent.com/agit8or1/St0r/main/install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```
 
-The script will:
-1. Install all system dependencies (Node.js, MariaDB, nginx)
-2. Set up the database with proper schema
+The installer will:
+1. Install Node.js 20, MariaDB, Nginx
+2. Create the database and apply the schema
 3. Build the backend and frontend
-4. Configure nginx
-5. Set up systemd services
-6. Start everything automatically
+4. Configure Nginx as a reverse proxy
+5. Install and start the `urbackup-gui` systemd service
 
 After installation, access the GUI at: **http://YOUR_SERVER_IP**
 
 ### Manual Installation
 
-If you prefer to install manually:
-
 #### 1. Install Dependencies
 
 ```bash
-# Update system
 sudo apt-get update
-
-# Install dependencies
 sudo apt-get install -y curl gnupg2 nginx mariadb-server
 
-# Install Node.js 20
+# Node.js 20
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
 sudo apt-get install -y nodejs
 ```
@@ -96,36 +126,30 @@ sudo apt-get install -y nodejs
 #### 2. Configure MariaDB
 
 ```bash
-# Start MariaDB
-sudo systemctl start mariadb
-sudo systemctl enable mariadb
+sudo systemctl start mariadb && sudo systemctl enable mariadb
 
-# Create database and user
-sudo mysql -u root <<EOF
+sudo mysql -u root <<'EOF'
 CREATE DATABASE urbackup_gui;
-CREATE USER 'urbackup'@'localhost' IDENTIFIED BY 'urbackup123';
+CREATE USER 'urbackup'@'localhost' IDENTIFIED BY 'CHANGE_ME';
 GRANT ALL PRIVILEGES ON urbackup_gui.* TO 'urbackup'@'localhost';
 FLUSH PRIVILEGES;
 EOF
 
-# Import schema
 sudo mysql -u root urbackup_gui < database/init/01_schema.sql
 ```
 
 #### 3. Install Application
 
 ```bash
-# Create installation directory
 sudo mkdir -p /opt/urbackup-gui
 sudo cp -r . /opt/urbackup-gui/
 sudo chown -R $USER:$USER /opt/urbackup-gui
 
-# Install and build backend
+# Backend
 cd /opt/urbackup-gui/backend
 npm install
 npm run build
 
-# Create .env file
 cat > .env <<EOF
 NODE_ENV=production
 PORT=3000
@@ -133,11 +157,16 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=urbackup_gui
 DB_USER=urbackup
-DB_PASSWORD=urbackup123
+DB_PASSWORD=CHANGE_ME
 JWT_SECRET=$(openssl rand -hex 32)
+APP_SECRET_KEY=$(openssl rand -hex 32)
+URBACKUP_DB_PATH=/var/urbackup/backup_server.db
+URBACKUP_API_URL=http://localhost:55414/x
+URBACKUP_USERNAME=admin
+URBACKUP_PASSWORD=
 EOF
 
-# Install and build frontend
+# Frontend
 cd /opt/urbackup-gui/frontend
 npm install
 npm run build
@@ -146,206 +175,170 @@ npm run build
 #### 4. Configure Services
 
 ```bash
-# Install systemd service
+# Systemd service
 sudo cp /opt/urbackup-gui/setup/urbackup-gui.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable urbackup-gui
-sudo systemctl start urbackup-gui
+sudo systemctl enable --now urbackup-gui
 
-# Configure nginx
+# Nginx
 sudo cp /opt/urbackup-gui/setup/nginx-site.conf /etc/nginx/sites-available/urbackup-gui
 sudo ln -sf /etc/nginx/sites-available/urbackup-gui /etc/nginx/sites-enabled/urbackup-gui
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo systemctl restart nginx
 ```
 
+#### 5. Apply Database Migrations (if upgrading)
+
+```bash
+sudo mysql -u root urbackup_gui < database/migrations/002_add_totp_and_customers.sql
+sudo mysql -u root urbackup_gui < database/migrations/003_replication.sql
+```
+
+---
+
 ## Default Credentials
 
-**Username**: `admin`
-**Password**: `admin123`
+| Field | Value |
+|-------|-------|
+| Username | `admin` |
+| Password | `admin123` |
 
-**IMPORTANT**: Change the default password immediately after first login!
+> **Change the default password immediately after first login** via Profile → Change Password.
+
+---
 
 ## Service Management
 
-### Backend Service
-
 ```bash
-# Check status
+# Status / start / stop / restart
 sudo systemctl status urbackup-gui
-
-# Start service
-sudo systemctl start urbackup-gui
-
-# Stop service
-sudo systemctl stop urbackup-gui
-
-# Restart service
 sudo systemctl restart urbackup-gui
 
-# View logs
+# View live logs
 sudo journalctl -u urbackup-gui -f
-```
 
-### Nginx
-
-```bash
-# Check status
-sudo systemctl status nginx
-
-# Restart nginx
+# Nginx
 sudo systemctl restart nginx
-
-# Test configuration
-sudo nginx -t
+sudo nginx -t          # test config
 ```
 
-### MariaDB
+---
+
+## Updating
+
+### Via the GUI
+Go to **About** → **Check for Updates** → click **Update Now**.
+
+### Manually
 
 ```bash
-# Check status
-sudo systemctl status mariadb
-
-# Access database
-sudo mysql -u root urbackup_gui
-```
-
-## Updating the Application
-
-```bash
-# Navigate to installation directory
 cd /opt/urbackup-gui
+git pull                          # if installed from git
 
-# Pull latest changes (if using git)
-git pull
-
-# Update backend
-cd backend
-npm install
-npm run build
+cd backend && npm install && npm run build
+cd ../frontend && npm install && npm run build
 sudo systemctl restart urbackup-gui
-
-# Update frontend
-cd ../frontend
-npm install
-npm run build
 ```
+
+---
+
+## Configuring HTTPS
+
+```bash
+sudo apt-get install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com
+```
+
+Certbot will automatically update the Nginx configuration.
+
+---
+
+## Replication Setup
+
+1. Go to **Replication → Targets → Add Target**
+2. Enter the DR server host, SSH user, and authentication details (SSH key recommended)
+3. Configure paths: the target root path and any custom repository path mappings
+4. Click **Test Connection** to verify SSH + rsync connectivity
+5. Go to **Replication → Settings** to enable replication and set the trigger mode
+6. Click **Run Now** on any target to start an immediate replication
+
+SSH keys are stored AES-256-GCM encrypted in the database. The encryption key is derived from `APP_SECRET_KEY` in the backend `.env`.
+
+---
+
+## Security
+
+- JWT authentication stored in HttpOnly cookies (not localStorage)
+- bcrypt password hashing
+- Role-based access control (admin / read-only)
+- Optional per-user TOTP 2FA
+- `helmet.js` security headers
+- Rate limiting on auth endpoints
+- FQDN input validated before any SQL/shell use
+- SSH credentials encrypted at rest (AES-256-GCM)
+
+See [SECURITY.md](SECURITY.md) for the vulnerability reporting policy.
+
+---
 
 ## Troubleshooting
 
 ### Backend not starting
-
 ```bash
-# Check logs
 sudo journalctl -u urbackup-gui -n 50
-
-# Check if port 3000 is available
 sudo lsof -i :3000
-
-# Verify database connection
-mysql -u urbackup -p urbackup_gui
+mysql -u urbackup -p urbackup_gui -e "SELECT 1;"
 ```
+
+### Backup directory permission error
+The `urbackup` OS user must be able to traverse the backup storage path:
+```bash
+chmod o+x /home/administrator     # or wherever the backup folder lives
+```
+
+### Backups show start_ok=false
+- Verify the client is online in the Clients list
+- Enable **Internet → File Backups** and **Internet → Image Backups** in Server Settings
+- Check `/var/log/urbackup.log` for detailed errors
 
 ### Nginx errors
-
 ```bash
-# Check nginx error log
 sudo tail -f /var/log/nginx/error.log
-
-# Test nginx configuration
 sudo nginx -t
-
-# Check if port 80 is available
-sudo lsof -i :80
 ```
 
-### Database errors
+---
+
+## Uninstalling
 
 ```bash
-# Check MariaDB status
-sudo systemctl status mariadb
-
-# Check MariaDB logs
-sudo tail -f /var/log/mysql/error.log
-
-# Verify database exists
-sudo mysql -u root -e "SHOW DATABASES;"
-```
-
-## Security Considerations
-
-1. **Change default credentials** immediately after installation
-2. **Use strong passwords** for database and JWT secret
-3. **Use HTTPS** in production (configure nginx with SSL certificates)
-4. **Firewall rules** - Only expose necessary ports
-5. **Regular updates** - Keep dependencies and system packages updated
-6. **Backup database** - Regularly backup the MariaDB data
-
-## Database Backup
-
-```bash
-# Backup
-sudo mysqldump -u root urbackup_gui > backup.sql
-
-# Restore
-sudo mysql -u root urbackup_gui < backup.sql
-```
-
-## Configuring HTTPS
-
-1. Install certbot:
-```bash
-sudo apt-get install certbot python3-certbot-nginx
-```
-
-2. Obtain certificate:
-```bash
-sudo certbot --nginx -d yourdomain.com
-```
-
-3. Certbot will automatically configure nginx for HTTPS
-
-## Uninstallation
-
-```bash
-# Stop services
-sudo systemctl stop urbackup-gui
-sudo systemctl disable urbackup-gui
-
-# Remove systemd service
-sudo rm /etc/systemd/system/urbackup-gui.service
-sudo systemctl daemon-reload
-
-# Remove nginx configuration
-sudo rm /etc/nginx/sites-enabled/urbackup-gui
-sudo rm /etc/nginx/sites-available/urbackup-gui
+sudo systemctl stop urbackup-gui && sudo systemctl disable urbackup-gui
+sudo rm /etc/systemd/system/urbackup-gui.service && sudo systemctl daemon-reload
+sudo rm /etc/nginx/sites-enabled/urbackup-gui /etc/nginx/sites-available/urbackup-gui
 sudo systemctl restart nginx
-
-# Remove application
 sudo rm -rf /opt/urbackup-gui
-
-# Drop database (optional)
 sudo mysql -u root -e "DROP DATABASE urbackup_gui; DROP USER 'urbackup'@'localhost';"
 ```
 
+---
+
 ## Tech Stack
 
-- **Frontend Framework**: React 18
-- **Build Tool**: Vite
-- **UI Styling**: TailwindCSS
-- **Routing**: React Router
-- **HTTP Client**: Axios
-- **Icons**: Lucide React
-- **Backend**: Node.js + Express
-- **Language**: TypeScript
-- **Database**: MariaDB (st0r data) + SQLite (UrBackup data via direct access)
-- **Authentication**: JWT
-- **Web Server**: Nginx
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite, TailwindCSS, React Router, Recharts, Lucide React |
+| Backend | Node.js 20, Express, TypeScript |
+| Auth | JWT (HttpOnly cookie), bcrypt, TOTP (speakeasy) |
+| Databases | MariaDB (app data) + SQLite direct read (UrBackup data) |
+| Web Server | Nginx |
+| Replication | SSH, rsync, AES-256-GCM (Node.js crypto) |
+
+---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
 
 ## Support
 
-For issues and questions, please create an issue in the repository.
+Open an issue at [github.com/agit8or1/St0r/issues](https://github.com/agit8or1/St0r/issues).
