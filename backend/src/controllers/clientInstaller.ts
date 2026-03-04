@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 import { UrBackupService } from '../services/urbackup.js';
-import { UrBackupDbService } from '../services/urbackupDb.js';
 import os from 'os';
 import { existsSync } from 'fs';
 import path from 'path';
@@ -64,12 +63,15 @@ router.get('/windows', authenticate, async (req: Request, res: Response): Promis
     logger.info(`Windows client installer download for client ID: ${clientId}`);
 
     try {
-      // Get client authkey from database
-      const dbService = new UrBackupDbService();
-      const authkey = await dbService.getClientAuthkey(Number(clientId));
+      // Get the per-client internet_authkey from UrBackup — this is the unique key for this client
+      const urbackupService = new UrBackupService();
+      const clientSettingsResponse = await urbackupService.getClientSettings(String(clientId));
+      const rawAuthkey = clientSettingsResponse?.settings?.internet_authkey;
+      // Per-client key has use=0 (override), group/global key has use=1
+      const authkey = rawAuthkey?.value ?? rawAuthkey?.value_group;
 
       if (!authkey) {
-        throw new Error('Client authkey not found');
+        throw new Error('Could not get internet_authkey for this client from UrBackup settings');
       }
 
       const urbackupApiUrl = process.env.URBACKUP_API_URL || 'http://localhost:55414/x';

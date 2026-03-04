@@ -242,10 +242,13 @@ export class UrBackupService {
 
     let queryParams: URLSearchParams;
 
+    let sessionForUrl = '';
+
     if (requiresSession.includes(action)) {
       // Get session first for actions that require it
       logger.info(`[UrBackup API] Action '${action}' requires session - getting session first`);
       const session = await this.login();
+      sessionForUrl = session;
       queryParams = new URLSearchParams({
         ...params,
         a: action,
@@ -260,7 +263,9 @@ export class UrBackupService {
     }
 
     try {
-      const url = `${URBACKUP_API_URL}?a=${action}`;
+      const url = sessionForUrl
+        ? `${URBACKUP_API_URL}?a=${action}&ses=${sessionForUrl}`
+        : `${URBACKUP_API_URL}?a=${action}`;
       const body = queryParams.toString();
 
       logger.info(`[UrBackup API] POST ${url}`);
@@ -311,7 +316,7 @@ export class UrBackupService {
             ses: session
           });
 
-          const retryUrl = `${URBACKUP_API_URL}?a=${action}`;
+          const retryUrl = `${URBACKUP_API_URL}?a=${action}&ses=${session}`;
           const retryBody = queryParams.toString();
 
           logger.info(`[UrBackup API] Retry POST ${retryUrl}`);
@@ -424,7 +429,38 @@ export class UrBackupService {
 
   async getClients() {
     try {
-      return await this.dbService.getClients();
+      const clients = await this.dbService.getClients();
+
+      // UrBackup doesn't flush lastseen to SQLite immediately — fetch live online
+      // status from the API and merge it so connected clients show as online
+      try {
+        const session = await this.login();
+        const statusResult = await fetch(`${URBACKUP_API_URL}?a=status&ses=${session}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+          body: `ses=${session}`
+        });
+        const statusData: any = await statusResult.json();
+        const apiClients: any[] = statusData?.status || [];
+
+        if (apiClients.length > 0) {
+          const apiMap = new Map(apiClients.map((c: any) => [c.id, c]));
+          return clients.map(client => {
+            const api = apiMap.get(client.id);
+            if (!api) return client;
+            return {
+              ...client,
+              online: api.online === true,
+              lastseen: api.lastseen ? api.lastseen * 1000 : client.lastseen,
+              status: api.online ? 'online' : 'offline',
+            };
+          });
+        }
+      } catch (apiErr) {
+        logger.warn('Could not fetch live status from UrBackup API, using DB values:', apiErr);
+      }
+
+      return clients;
     } catch (error) {
       logger.error('Failed to get clients:', error);
       throw error;
@@ -940,33 +976,45 @@ export class UrBackupService {
   async setClientSettings(clientId: string, newSettings: any) {
     try {
       const session = await this.login();
-      const id = parseInt(clientId);
 
-      // Get current settings
-      const currentSettings = await this.getClientSettings(clientId);
-
-      // Apply updates
-      for (const [key, value] of Object.entries(newSettings)) {
-        currentSettings[key] = value;
-      }
-
-      // Save settings
-      currentSettings.sa = 'clientsettings_save';
-      currentSettings.t_clientid = id;
+      // Get current settings and flatten them (extract effective values from {use, value, value_group} format)
+      const currentResponse = await this.getClientSettings(clientId);
+      const rawSettings = currentResponse?.settings || {};
 
       const saveParams = new URLSearchParams();
-      for (const [key, value] of Object.entries(currentSettings)) {
-        if (value !== null && value !== undefined) {
-          saveParams.append(key, String(value));
+      saveParams.set('sa', 'clientsettings_save');
+      saveParams.set('t_clientid', clientId);
+      saveParams.set('ses', session); // UrBackup requires ses in POST body AND URL
+
+      // Flatten current settings as base, including the .use parameter UrBackup requires
+      for (const [key, val] of Object.entries(rawSettings)) {
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          const v = val as any;
+          if ('use' in v) {
+            const effective = v.use === 0 ? v.value : v.value_group;
+            if (effective !== null && effective !== undefined) {
+              saveParams.set(key, String(effective));
+              saveParams.set(`${key}.use`, String(v.use));
+            }
+          }
+        } else if (typeof val !== 'object' && val !== null && val !== undefined) {
+          saveParams.set(key, String(val));
         }
       }
 
-      const response = await fetch(`${URBACKUP_API_URL}?ses=${session}`, {
+      // Apply user's changes — mark each as client override (use=0)
+      for (const [key, value] of Object.entries(newSettings)) {
+        if (value !== null && value !== undefined) {
+          saveParams.set(key, String(value));
+          saveParams.set(`${key}.use`, '0'); // 0 = client-specific override
+        }
+      }
+
+      const response = await fetch(`${URBACKUP_API_URL}?a=settings&ses=${session}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'User-Agent': 'st0r',
-          'Accept': 'application/json'
         },
         body: saveParams.toString()
       });
@@ -1007,16 +1055,27 @@ export class UrBackupService {
 
   async addClient(clientName: string) {
     try {
-      logger.info(`Adding new client via direct database: ${clientName}`);
+      logger.info(`Adding new client via UrBackup API: ${clientName}`);
 
-      // Add client directly to database
-      const result = await this.dbService.addClient(clientName);
-      logger.info(`Client ${clientName} added successfully with ID: ${result.clientId}`);
+      // Use UrBackup's add_client API — it generates the correct internet_authkey
+      // and stores it properly in the settings DB
+      const session = await this.login();
+      const response = await fetch(`${URBACKUP_API_URL}?a=add_client&ses=${session}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+        body: `clientname=${encodeURIComponent(clientName)}&ses=${session}`
+      });
+      const result: any = await response.json();
 
+      if (!result.ok && !result.added_new_client) {
+        throw new Error(result.already_exists ? 'Client already exists' : 'Failed to add client via UrBackup API');
+      }
+
+      logger.info(`Client ${clientName} added with ID ${result.new_clientid}, authkey: ${result.new_authkey}`);
       return {
         success: true,
-        clientid: result.clientId,
-        authkey: result.authkey
+        clientid: result.new_clientid,
+        authkey: result.new_authkey
       };
     } catch (error: any) {
       logger.error(`Failed to add client ${clientName}:`, error.message);

@@ -1,10 +1,8 @@
 {
-  "version": "3.2.20",
-  "releaseDate": "2026-03-03",
+  "version": "3.2.21",
+  "releaseDate": "2026-03-04",
   "changelog": [
-    "Fix: UrBackup API login — no-password mode now uses correct GET login (was sending wrong POST causing auth failures every 15min)",
-    "Fix: Update progress modal shows 'Service Restarting...' while backend is down during update",
-    "Fix: About page Update Now / Force Reinstall use inline confirm instead of browser-blocked window.confirm",
-    "Fix: Update notification shows error if update POST fails instead of silently navigating to empty modal"
+    "Fix: Windows client installer now embeds correct internet auth key (was using per-client key instead of global internet_authkey)",
+    "Fix: Endpoint backup settings page now shows populated values instead of blank fields"
   ]
 }

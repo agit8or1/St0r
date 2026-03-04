@@ -225,14 +225,14 @@ export function ClientSettings() {
                 File Backup Settings
               </h2>
               <div className="grid gap-6 md:grid-cols-2">
-                {renderSettingField('Backup Window Start (HH:MM)', 'backup_window_incr_file', 'text')}
-                {renderSettingField('Backup Window End (HH:MM)', 'backup_window_full_file', 'text')}
+                {renderSettingField('Incremental Backup Window', 'backup_window_incr_file', 'text')}
+                {renderSettingField('Full Backup Window', 'backup_window_full_file', 'text')}
                 {renderSettingField('Max Full File Backups', 'max_file_full', 'number')}
                 {renderSettingField('Max Incremental File Backups', 'max_file_incr', 'number')}
-                {renderSettingField('Min File Backup Age (days)', 'min_file_full_age', 'number')}
-                {renderSettingField('Min Incremental Age (days)', 'min_file_incr_age', 'number')}
-                {renderSettingField('Full Backup Frequency (days)', 'interval_full_file', 'number')}
-                {renderSettingField('Incremental Frequency (hours)', 'interval_incr_file', 'number')}
+                {renderSettingField('Min Full Backup Age (days)', 'min_file_full', 'number')}
+                {renderSettingField('Min Incremental Age (minutes)', 'min_file_incr', 'number')}
+                {renderSettingField('Full Backup Interval (seconds)', 'update_freq_full', 'number')}
+                {renderSettingField('Incremental Interval (seconds)', 'update_freq_incr', 'number')}
               </div>
 
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 mt-8">
@@ -241,19 +241,18 @@ export function ClientSettings() {
               <div className="grid gap-6 md:grid-cols-2">
                 {renderSettingField('Max Full Image Backups', 'max_image_full', 'number')}
                 {renderSettingField('Max Incremental Image Backups', 'max_image_incr', 'number')}
-                {renderSettingField('Min Image Backup Age (days)', 'min_image_full_age', 'number')}
-                {renderSettingField('Min Incremental Age (days)', 'min_image_incr_age', 'number')}
-                {renderSettingField('Full Image Frequency (days)', 'interval_full_image', 'number')}
-                {renderSettingField('Incremental Frequency (days)', 'interval_incr_image', 'number')}
+                {renderSettingField('Min Full Image Age (days)', 'min_image_full', 'number')}
+                {renderSettingField('Min Incremental Age (days)', 'min_image_incr', 'number')}
+                {renderSettingField('Full Image Interval (seconds)', 'update_freq_image_full', 'number')}
+                {renderSettingField('Incremental Interval (seconds)', 'update_freq_image_incr', 'number')}
               </div>
 
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 mt-8">
                 Options
               </h2>
               <div className="space-y-3">
-                {renderSettingField('Enable File Backups', 'file_backup_enabled', 'checkbox')}
-                {renderSettingField('Enable Image Backups', 'image_backup_enabled', 'checkbox')}
-                {renderSettingField('Separate Hard Drive Volumes', 'separate_hdd', 'checkbox')}
+                {renderSettingField('Enable Internet File Backups', 'internet_full_file_backups', 'checkbox')}
+                {renderSettingField('Enable Internet Image Backups', 'internet_image_backups', 'checkbox')}
                 {renderSettingField('Enable Internet Mode', 'internet_mode_enabled', 'checkbox')}
               </div>
             </div>
@@ -265,19 +264,10 @@ export function ClientSettings() {
                 Advanced Settings
               </h2>
               <div className="grid gap-6 md:grid-cols-2">
-                {renderSettingField('Client Quota (GB)', 'soft_client_quota', 'number')}
-                {renderSettingField('Internet Speed Limit (Mbps)', 'internet_speed_limit', 'number')}
-                {renderSettingField('Local Speed Limit (Mbps)', 'local_speed_limit', 'number')}
-                {renderSettingField('Internet Transfer Mode', 'internet_transfer_mode', 'select', ['raw', 'compressed', 'hashed'])}
-              </div>
-
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 mt-8">
-                Notification Settings
-              </h2>
-              <div className="space-y-3">
-                {renderSettingField('Email Notifications', 'email_notifications', 'checkbox')}
-                {renderSettingField('Alert on Backup Error', 'alert_on_error', 'checkbox')}
-                {renderSettingField('Alert Script', 'alert_script', 'text')}
+                {renderSettingField('Client Quota (bytes, 0=unlimited)', 'client_quota', 'number')}
+                {renderSettingField('Internet Speed Limit (bytes/s, -1=unlimited)', 'internet_speed', 'number')}
+                {renderSettingField('Local Speed Limit (bytes/s, -1=unlimited)', 'local_speed', 'number')}
+                {renderSettingField('Internet Full File Transfer Mode', 'internet_full_file_transfer_mode', 'select', ['raw', 'compressed', 'hashed'])}
               </div>
 
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 mt-8">
@@ -288,12 +278,11 @@ export function ClientSettings() {
                   // Skip settings we've already displayed
                   const displayedKeys = [
                     'backup_window_incr_file', 'backup_window_full_file', 'max_file_full', 'max_file_incr',
-                    'min_file_full_age', 'min_file_incr_age', 'interval_full_file', 'interval_incr_file',
-                    'max_image_full', 'max_image_incr', 'min_image_full_age', 'min_image_incr_age',
-                    'interval_full_image', 'interval_incr_image', 'file_backup_enabled', 'image_backup_enabled',
-                    'separate_hdd', 'internet_mode_enabled', 'soft_client_quota', 'internet_speed_limit',
-                    'local_speed_limit', 'internet_transfer_mode', 'email_notifications', 'alert_on_error',
-                    'alert_script'
+                    'min_file_full', 'min_file_incr', 'update_freq_full', 'update_freq_incr',
+                    'max_image_full', 'max_image_incr', 'min_image_full', 'min_image_incr',
+                    'update_freq_image_full', 'update_freq_image_incr',
+                    'internet_full_file_backups', 'internet_image_backups', 'internet_mode_enabled',
+                    'client_quota', 'internet_speed', 'local_speed', 'internet_full_file_transfer_mode',
                   ];
 
                   if (displayedKeys.includes(key)) {

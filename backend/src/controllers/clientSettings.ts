@@ -14,8 +14,23 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const settings = await urbackupService.getClientSettings(clientId);
-    // Wrap in { settings } so the frontend can access data.settings consistently
+    const result = await urbackupService.getClientSettings(clientId);
+    // UrBackup returns settings as {key: {use, value, value_group}} — extract effective values:
+    // use=0 means client-specific override → use 'value' (effective); use=1 means group default → use 'value_group'
+    const rawSettings = result?.settings || result || {};
+    const settings: Record<string, any> = {};
+    for (const [key, val] of Object.entries(rawSettings)) {
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        const v = val as any;
+        if ('value' in v) {
+          settings[key] = v.value;
+        } else if ('value_group' in v) {
+          settings[key] = v.value_group;
+        }
+      } else if (typeof val !== 'object') {
+        settings[key] = val;
+      }
+    }
     res.json({ settings });
   } catch (error: any) {
     // UrBackup API "error: 1" means unknown client or unauthenticated — not a server crash

@@ -532,10 +532,6 @@ export class UrBackupDbService {
       // Open main database for client insert
       mainDb = await openUrBackupDbReadWrite();
 
-      // Generate a secure random auth key using crypto (64 hex characters)
-      const crypto = await import('crypto');
-      const authkey = crypto.randomBytes(32).toString('hex');
-
       // Insert the client
       const result = await mainDb.run(
         `INSERT INTO clients (name, lastbackup, lastseen, lastbackup_image, bytes_used_files,
@@ -559,9 +555,14 @@ export class UrBackupDbService {
         mode: sqlite3.default.OPEN_READWRITE
       });
 
+      // Fetch the global internet_authkey (stored with clientid=0) so new clients can authenticate
+      const globalAuthkeyRow = await settingsDb.get(
+        `SELECT value FROM settings WHERE key = 'internet_authkey' AND clientid = 0`
+      );
+      const authkey = globalAuthkeyRow?.value || '';
+
       // Insert all client settings for internet backup
       const settings = [
-        ['client_authkey', authkey],
         ['internet_mode_enabled', 'true'],
         ['internet_server', internetServer],
         ['internet_server_port', internetServerPort],
@@ -570,7 +571,8 @@ export class UrBackupDbService {
         ['internet_image_backups', 'true'],
         ['internet_compress', 'true'],
         ['internet_encrypt', 'false'],
-        ['computername', clientName]
+        ['computername', clientName],
+        ['client_authkey', authkey],
       ];
 
       for (const [key, value] of settings) {
@@ -590,7 +592,8 @@ export class UrBackupDbService {
         internet_image_backups: 'true',
         internet_compress: 'true',
         internet_encrypt: 'false',
-        computername: clientName
+        computername: clientName,
+        internet_authkey: authkey,
       };
 
       await mainDb.run(
