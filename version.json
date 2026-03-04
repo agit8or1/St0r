@@ -1,14 +1,9 @@
 {
-  "version": "3.2.24",
+  "version": "3.2.25",
   "releaseDate": "2026-03-04",
   "changelog": [
-    "Feature: Dashboard CPU, memory, and network bandwidth gauges",
-    "Feature: Cancel button for running backup jobs in Activities",
-    "Enhancement: Backup paths tab — 'Server-managed paths' toggle to control allow_config_paths from the UI",
-    "Enhancement: Inline backup start feedback on client detail page",
-    "Fix: no_backup_paths now correctly populated from UrBackup live status API",
-    "Fix: allow_config_paths control moved from Permissions tab to Backup Paths tab",
-    "Fix: Warning banner shows actionable fix instead of client-only instructions",
-    "Fix: Dashboard network gauge uses actual link capacity"
+    "Fix: Exclude Windows junction points from default backup paths (Documents and Settings, Application Data, Local Settings, My Documents, etc.) — prevents file sizes being counted 2x causing inflated totals",
+    "Fix: 'Clear Stale Jobs' now uses inline confirm instead of window.confirm (blocked on HTTPS); shows result inline instead of alert()",
+    "Fix: Cancel backup waits 1.5s for UrBackup to remove job before refreshing activity list"
   ]
 }

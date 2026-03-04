@@ -39,6 +39,8 @@ export function Activities() {
   const [clearingStaleJobs, setClearingStaleJobs] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelNotify, setCancelNotify] = useState<{ id: string; msg: string; ok: boolean } | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearStaleResult, setClearStaleResult] = useState<{ found: number; stopped: number } | null>(null);
 
   useEffect(() => {
     loadActivities();
@@ -86,6 +88,8 @@ export function Activities() {
       await api.stopActivity(activityId, clientId);
       setCancelNotify({ id: activityId, msg: `Cancelled backup for ${clientName}`, ok: true });
       setTimeout(() => setCancelNotify(null), 4000);
+      // Give UrBackup a moment to remove the job from its progress list before refreshing
+      await new Promise(r => setTimeout(r, 1500));
       await loadActivities();
     } catch (err: any) {
       setCancelNotify({ id: activityId, msg: err?.response?.data?.error || 'Failed to cancel backup', ok: false });
@@ -96,19 +100,19 @@ export function Activities() {
   };
 
   const handleClearStaleJobs = async () => {
-    if (!confirm('Clear all stale/stuck jobs? This will stop any jobs with negative or invalid progress.')) {
-      return;
-    }
-
+    setShowClearConfirm(false);
     setClearingStaleJobs(true);
+    setClearStaleResult(null);
     try {
       const result = await api.clearStaleJobs();
-      alert(`Cleared ${result.staleJobsStopped} stale job(s) out of ${result.staleJobsFound} found.`);
+      setClearStaleResult({ found: result.staleJobsFound, stopped: result.staleJobsStopped });
+      setTimeout(() => setClearStaleResult(null), 6000);
       // Reload activities to show updated list
       await loadActivities();
     } catch (err) {
       console.error('Failed to clear stale jobs:', err);
-      alert('Failed to clear stale jobs. Please try again.');
+      setCancelNotify({ id: 'stale', msg: 'Failed to clear stale jobs', ok: false });
+      setTimeout(() => setCancelNotify(null), 5000);
     } finally {
       setClearingStaleJobs(false);
     }
@@ -278,15 +282,27 @@ export function Activities() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleClearStaleJobs}
-              disabled={clearingStaleJobs}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Stop and remove stale/stuck jobs"
-            >
-              <XCircle className={`h-4 w-4 ${clearingStaleJobs ? 'animate-spin' : ''}`} />
-              {clearingStaleJobs ? 'Clearing...' : 'Clear Stale Jobs'}
-            </button>
+            {showClearConfirm ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-600">
+                <span className="text-sm text-orange-800 dark:text-orange-200">Stop stuck jobs?</span>
+                <button onClick={handleClearStaleJobs} className="px-2 py-1 text-xs rounded bg-orange-600 text-white hover:bg-orange-700">Yes</button>
+                <button onClick={() => setShowClearConfirm(false)} className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300">No</button>
+              </div>
+            ) : clearStaleResult ? (
+              <span className="text-sm text-green-700 dark:text-green-300 px-3 py-2">
+                {clearStaleResult.found === 0 ? 'No stuck jobs found' : `Cleared ${clearStaleResult.stopped}/${clearStaleResult.found} stuck jobs`}
+              </span>
+            ) : (
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                disabled={clearingStaleJobs}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Stop and remove stale/stuck jobs"
+              >
+                <XCircle className={`h-4 w-4 ${clearingStaleJobs ? 'animate-spin' : ''}`} />
+                {clearingStaleJobs ? 'Clearing...' : 'Clear Stale Jobs'}
+              </button>
+            )}
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${

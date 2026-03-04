@@ -134,6 +134,25 @@ export function ClientSettings() {
       'C:\\Program Files (x86)',
       'C:\\ProgramData',
       'C:\\Windows\\Temp',
+      // Junction points — these are Windows compatibility symlinks that point to
+      // directories already included elsewhere, causing files to be counted twice
+      'C:\\Documents and Settings',           // → C:\Users
+      'C:\\Users\\All Users',                 // → C:\ProgramData
+      'C:\\Users\\Default User',              // → C:\Users\Default
+      'C:\\Users\\*\\Application Data',       // → AppData\Roaming
+      'C:\\Users\\*\\Local Settings',         // → AppData\Local
+      'C:\\Users\\*\\My Documents',           // → Documents
+      'C:\\Users\\*\\My Music',               // → Music
+      'C:\\Users\\*\\My Pictures',            // → Pictures
+      'C:\\Users\\*\\My Videos',              // → Videos
+      'C:\\Users\\*\\Cookies',                // → AppData\Roaming\Microsoft\Windows\Cookies
+      'C:\\Users\\*\\Recent',                 // → AppData\Roaming\Microsoft\Windows\Recent
+      'C:\\Users\\*\\NetHood',                // → AppData\Roaming\Microsoft\Windows\Network Shortcuts
+      'C:\\Users\\*\\PrintHood',              // → AppData\Roaming\Microsoft\Windows\Printer Shortcuts
+      'C:\\Users\\*\\SendTo',                 // → AppData\Roaming\Microsoft\Windows\SendTo
+      'C:\\Users\\*\\Start Menu',             // → AppData\Roaming\Microsoft\Windows\Start Menu
+      'C:\\Users\\*\\Templates',              // → AppData\Roaming\Microsoft\Windows\Templates
+      // Cache / temp
       'C:\\Users\\*\\AppData\\Local\\Temp',
       'C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files',
       'C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache',
