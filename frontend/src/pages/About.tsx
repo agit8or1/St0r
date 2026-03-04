@@ -163,33 +163,32 @@ export function About() {
     try {
       const installId = getInstallId();
 
-      // Track current version
-      await fetch(`/api/version?installId=${encodeURIComponent(installId)}`);
+      // Fetch both current and latest versions atomically to avoid race condition
+      const [currentResponse, latestResponse] = await Promise.all([
+        fetch(`/api/version?installId=${encodeURIComponent(installId)}`),
+        fetch(`/api/version/latest`),
+      ]);
 
-      // Check for latest version in update package
-      const response = await fetch(`/api/version/latest`);
-      if (!response.ok) {
-        if (response.status === 404) {
-          setUpdateError('No update package available');
-        } else {
-          throw new Error('Failed to check for updates');
-        }
+      const currentData = currentResponse.ok ? await currentResponse.json() : null;
+      if (currentData?.version) setCurrentVersion(currentData.version);
+      const installedVer = currentData?.version || currentVersion;
+
+      if (!latestResponse.ok) {
+        setUpdateAvailable(false);
+        if (latestResponse.status !== 404) throw new Error('Failed to check for updates');
         return;
       }
 
-      const data = await response.json();
+      const data = await latestResponse.json();
       setLatestVersion(data.version);
       setLastChecked(new Date());
 
-      // Set changelog if available
       if (data.changelog && Array.isArray(data.changelog)) {
         setChangelog(data.changelog);
       }
 
-      // Semantic version comparison
-      if (data.version && currentVersion && currentVersion !== 'Loading...' && currentVersion !== 'Unknown') {
-        const isNewer = compareVersions(data.version, currentVersion);
-        setUpdateAvailable(isNewer);
+      if (data.version && installedVer && installedVer !== 'Loading...' && installedVer !== 'Unknown') {
+        setUpdateAvailable(compareVersions(data.version, installedVer));
       } else {
         setUpdateAvailable(false);
       }
@@ -432,8 +431,10 @@ export function About() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {updateAvailable ? (
                       <>Latest version: <span className="text-green-600 dark:text-green-400 font-semibold">{latestVersion}</span></>
+                    ) : compareVersions(currentVersion, latestVersion) ? (
+                      <>Development build · latest release: {latestVersion}</>
                     ) : (
-                      <>You're running the latest version ({latestVersion})</>
+                      <>You're running the latest version</>
                     )}
                   </p>
                 )}
