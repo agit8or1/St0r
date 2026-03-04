@@ -292,7 +292,7 @@ class ApiService {
 
   // System Monitoring
   async getSystemMetrics(): Promise<SystemMetrics> {
-    const response = await this.api.get<SystemMetrics>('/system/metrics');
+    const response = await this.api.get<SystemMetrics>('/system-update/metrics');
     return response.data;
   }
 

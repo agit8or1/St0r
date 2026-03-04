@@ -11,8 +11,31 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { api } from '../services/api';
-import type { Client, Activity, ReplicationTargetStatus } from '../types';
+import type { Client, Activity, ReplicationTargetStatus, SystemMetrics } from '../types';
 import { formatBytes, formatTimeAgo } from '../utils/format';
+
+function Gauge({ pct, label, sublabel, color }: { pct: number; label: string; sublabel: string; color: string }) {
+  const r = 34;
+  const circ = 2 * Math.PI * r;
+  const clamped = Math.min(100, Math.max(0, pct));
+  const offset = circ * (1 - clamped / 100);
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <svg width="88" height="88" viewBox="0 0 88 88">
+        <circle cx="44" cy="44" r={r} fill="none" stroke="currentColor" strokeWidth="7"
+          className="text-gray-200 dark:text-gray-700" />
+        <circle cx="44" cy="44" r={r} fill="none" stroke={color} strokeWidth="7"
+          strokeDasharray={circ} strokeDashoffset={offset}
+          strokeLinecap="round" transform="rotate(-90 44 44)"
+          style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
+        <text x="44" y="40" textAnchor="middle" fontSize="15" fontWeight="bold" fill="currentColor"
+          className="fill-gray-900 dark:fill-gray-100">{clamped}%</text>
+        <text x="44" y="55" textAnchor="middle" fontSize="9" fill="#6b7280">{label}</text>
+      </svg>
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center leading-tight">{sublabel}</p>
+    </div>
+  );
+}
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -22,6 +45,7 @@ export function Dashboard() {
   const [error, setError] = useState('');
   const [diskUsage, setDiskUsage] = useState<{ used: number; available: number } | null>(null);
   const [replStatuses, setReplStatuses] = useState<ReplicationTargetStatus[]>([]);
+  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
 
   useEffect(() => {
     loadData();
@@ -31,11 +55,12 @@ export function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [clientsData, activitiesData, storageData, replData] = await Promise.all([
+      const [clientsData, activitiesData, storageData, replData, metricsData] = await Promise.all([
         api.getClients(),
         api.getCurrentActivities(),
         api.getTotalStorage().catch(() => ({ used: 0, available: 0, servers: [] })),
         api.getReplicationStatus().catch(() => []),
+        api.getSystemMetrics().catch(() => null),
       ]);
       setClients(clientsData);
       if (Array.isArray(activitiesData)) {
@@ -48,6 +73,7 @@ export function Dashboard() {
       }
       setDiskUsage({ used: storageData.used, available: storageData.available });
       setReplStatuses(replData);
+      setMetrics(metricsData);
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load data');
@@ -188,6 +214,33 @@ export function Dashboard() {
             </div>
           );
         })()}
+
+        {/* Server resource gauges */}
+        {metrics && (
+          <div className="card py-3 px-4">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Server Resources</h2>
+            <div className="grid grid-cols-3 gap-2">
+              <Gauge
+                pct={metrics.cpu.usage}
+                label="CPU"
+                sublabel={`${metrics.cpu.cores} cores`}
+                color="#3b82f6"
+              />
+              <Gauge
+                pct={metrics.memory.usagePercent}
+                label="Memory"
+                sublabel={`${formatBytes(metrics.memory.used)} / ${formatBytes(metrics.memory.total)}`}
+                color="#10b981"
+              />
+              <Gauge
+                pct={Math.min(100, Math.round(((metrics.network.rxBytesPerSec + metrics.network.txBytesPerSec) / (125 * 1024 * 1024)) * 100))}
+                label="Network"
+                sublabel={`↓${formatBytes(metrics.network.rxBytesPerSec)}/s ↑${formatBytes(metrics.network.txBytesPerSec)}/s`}
+                color="#f59e0b"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Storage + Charts row */}
         <div className="grid gap-4 lg:grid-cols-3">

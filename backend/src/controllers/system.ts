@@ -5,6 +5,112 @@ import { logger } from '../utils/logger.js';
 import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
 
+// --- /proc-based metrics helpers ---
+
+// CPU delta state
+let prevCpuStat: { total: number; idle: number } | null = null;
+let prevCpuTime = 0;
+
+// Network delta state
+let prevNetStat: { iface: string; rx: bigint; tx: bigint } | null = null;
+let prevNetTime = 0;
+
+async function readProcFile(path: string): Promise<string> {
+  return readFile(path, 'utf-8');
+}
+
+async function getCpuUsage(): Promise<{ usage: number; cores: number; model: string }> {
+  const [statRaw, cpuinfoRaw] = await Promise.all([
+    readProcFile('/proc/stat'),
+    readProcFile('/proc/cpuinfo'),
+  ]);
+
+  // Parse first cpu line: cpu user nice system idle iowait irq softirq steal ...
+  const cpuLine = statRaw.split('\n').find(l => l.startsWith('cpu '));
+  const fields = cpuLine!.trim().split(/\s+/).slice(1).map(Number);
+  const idle = fields[3] + (fields[4] || 0); // idle + iowait
+  const total = fields.reduce((a, b) => a + b, 0);
+
+  const now = Date.now();
+  let usage = 0;
+  if (prevCpuStat && now > prevCpuTime) {
+    const totalDelta = total - prevCpuStat.total;
+    const idleDelta = idle - prevCpuStat.idle;
+    usage = totalDelta > 0 ? Math.round(((totalDelta - idleDelta) / totalDelta) * 100) : 0;
+  }
+  prevCpuStat = { total, idle };
+  prevCpuTime = now;
+
+  const cores = (cpuinfoRaw.match(/^processor\s*:/gm) || []).length || 1;
+  const modelMatch = cpuinfoRaw.match(/^model name\s*:\s*(.+)/m);
+  const model = modelMatch ? modelMatch[1].trim() : 'Unknown';
+
+  return { usage: Math.min(100, Math.max(0, usage)), cores, model };
+}
+
+async function getMemoryUsage(): Promise<{ total: number; used: number; free: number; usagePercent: number }> {
+  const raw = await readProcFile('/proc/meminfo');
+  const get = (key: string) => {
+    const m = raw.match(new RegExp(`^${key}:\\s+(\\d+)`, 'm'));
+    return m ? parseInt(m[1], 10) * 1024 : 0; // kB → bytes
+  };
+  const total = get('MemTotal');
+  const available = get('MemAvailable');
+  const used = total - available;
+  const usagePercent = total > 0 ? Math.round((used / total) * 100) : 0;
+  return { total, used, free: available, usagePercent };
+}
+
+async function getNetworkUsage(): Promise<{ iface: string; rxBytesPerSec: number; txBytesPerSec: number }> {
+  const raw = await readProcFile('/proc/net/dev');
+  const now = Date.now();
+
+  // Parse all non-loopback interfaces
+  let bestIface = '';
+  let bestRx = BigInt(0);
+  let bestTx = BigInt(0);
+  for (const line of raw.split('\n').slice(2)) {
+    const m = line.match(/^\s*(\w+):\s*(\d+)(?:\s+\d+){7}\s+(\d+)/);
+    if (!m || m[1] === 'lo') continue;
+    const rx = BigInt(m[2]);
+    const tx = BigInt(m[3]);
+    if (!bestIface || rx + tx > bestRx + bestTx) {
+      bestIface = m[1]; bestRx = rx; bestTx = tx;
+    }
+  }
+
+  let rxRate = 0;
+  let txRate = 0;
+  const elapsed = (now - prevNetTime) / 1000; // seconds
+  if (prevNetStat && prevNetStat.iface === bestIface && elapsed > 0) {
+    rxRate = Math.max(0, Number(bestRx - prevNetStat.rx) / elapsed);
+    txRate = Math.max(0, Number(bestTx - prevNetStat.tx) / elapsed);
+  }
+  prevNetStat = { iface: bestIface, rx: bestRx, tx: bestTx };
+  prevNetTime = now;
+
+  return { iface: bestIface || 'eth0', rxBytesPerSec: Math.round(rxRate), txBytesPerSec: Math.round(txRate) };
+}
+
+export async function getSystemMetrics(req: Request, res: Response) {
+  try {
+    const [cpu, memory, network] = await Promise.all([
+      getCpuUsage(),
+      getMemoryUsage(),
+      getNetworkUsage(),
+    ]);
+
+    const uptimeRaw = await readProcFile('/proc/uptime');
+    const uptime = Math.floor(parseFloat(uptimeRaw.split(' ')[0]));
+    const hostname = (await readProcFile('/proc/sys/kernel/hostname')).trim();
+
+    res.json({ cpu, memory, network, uptime, hostname });
+  } catch (error: any) {
+    logger.error('Failed to get system metrics:', error);
+    res.status(500).json({ error: 'Failed to get system metrics', message: error.message });
+  }
+}
+
 const execFileAsync = promisify(execFile);
 
 export async function triggerUpdate(req: Request, res: Response) {

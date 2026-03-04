@@ -128,6 +128,11 @@ export interface SystemMetrics {
     free: number;
     usagePercent: number;
   };
+  network: {
+    iface: string;
+    rxBytesPerSec: number;
+    txBytesPerSec: number;
+  };
   uptime: number;
   hostname: string;
 }
