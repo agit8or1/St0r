@@ -130,14 +130,27 @@ export function Activities() {
     return '--';
   };
 
+  // Format ETA from UrBackup's own eta_ms field — matches what UrBackup server calculates
+  const formatEta = (ms: number): string => {
+    const s = Math.round(ms / 1000);
+    if (s < 60) return `${s}s`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  };
+
+  // Fallback ETA calculation when eta_ms is not available
   const estimateTimeRemaining = (doneBytes: number, totalBytes: number, speedBpms?: number): string => {
     if (!speedBpms || speedBpms <= 0 || doneBytes >= totalBytes) return '--';
     const remaining = totalBytes - doneBytes;
     const seconds = remaining / (speedBpms * 1000);
 
     if (seconds < 60) return `${Math.round(seconds)}s`;
-    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-    return `${Math.round(seconds / 3600)}h`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   };
 
   // Get unique client names from activities
@@ -563,6 +576,7 @@ export function Activities() {
                 const doneBytes = activityData.done_bytes || activity.done_bytes || 0;
                 const totalBytes = activityData.total_bytes || activity.total_bytes || 0;
                 const speed = activityData.speed_bpms || 0;
+                const etaMs: number | null = activityData.eta_ms || null;
                 const isPaused = activityData.paused || false;
                 const type = getActivityType(action);
 
@@ -658,7 +672,7 @@ export function Activities() {
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-500">ETA</p>
                             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              {estimateTimeRemaining(doneBytes, totalBytes, speed)}
+                              {etaMs && etaMs > 0 ? formatEta(etaMs) : estimateTimeRemaining(doneBytes, totalBytes, speed)}
                             </p>
                           </div>
                         </div>
