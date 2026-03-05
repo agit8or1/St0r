@@ -361,12 +361,16 @@ export class UrBackupDbService {
   }
 
   async forceCompleteStuckBackups(): Promise<number> {
-    const db = await getUrBackupDb();
-    await db.run(`UPDATE backups SET running = NULL, complete = 1 WHERE running IS NOT NULL AND complete = 0`);
-    const r1 = await db.get(`SELECT changes() as n`) as any;
-    await db.run(`UPDATE backup_images SET running = NULL, complete = 1 WHERE running IS NOT NULL AND complete = 0`);
-    const r2 = await db.get(`SELECT changes() as n`) as any;
-    return (r1?.n || 0) + (r2?.n || 0);
+    const db = await openUrBackupDbReadWrite();
+    try {
+      await db.run(`UPDATE backups SET running = NULL, complete = 1 WHERE running IS NOT NULL AND complete = 0`);
+      const r1 = await db.get(`SELECT changes() as n`) as any;
+      await db.run(`UPDATE backup_images SET running = NULL, complete = 1 WHERE running IS NOT NULL AND complete = 0`);
+      const r2 = await db.get(`SELECT changes() as n`) as any;
+      return (r1?.n || 0) + (r2?.n || 0);
+    } finally {
+      await db.close();
+    }
   }
 
   /**
@@ -693,7 +697,7 @@ export class UrBackupDbService {
       }
       logger.info(`Deleting backup directory: ${dirToDelete}`);
       // Backup dirs are owned by urbackup:urbackup — run rm as urbackup via sudo
-      await execFile('sudo', ['-u', 'urbackup', 'rm', '-rf', '--', dirToDelete]);
+      await execFile('sudo', ['-u', 'urbackup', 'rm', '-rf', '--', dirToDelete], { timeout: 120_000 });
       logger.info(`Deleted backup directory: ${dirToDelete}`);
 
       return { success: true, backupId, isImage };

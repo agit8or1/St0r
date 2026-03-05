@@ -1,9 +1,10 @@
 {
-  "version": "3.2.34",
+  "version": "3.2.35",
   "releaseDate": "2026-03-05",
   "changelog": [
+    "Fix: Delete backup no longer fails with 'database is locked' — added 8s SQLite busy_timeout on write connections",
+    "Fix: Clear Stale Jobs now correctly uses read-write DB connection (was using read-only, silently failing)",
     "Fix: Duplicate React key crash when file backup id and image backup id collide — now uses type-prefixed composite key",
-    "Fix: Clear Stale Jobs now force-completes stuck DB records (running=NULL, complete=1) instead of only sending stop signal",
-    "Fix: Cleared 5 stuck backup records that accumulated from failed cancel attempts"
+    "Fix: Clear Stale Jobs now force-completes stuck DB records (running=NULL, complete=1) instead of only sending stop signal"
   ]
 }

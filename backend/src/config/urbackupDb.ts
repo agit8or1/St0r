@@ -77,6 +77,9 @@ export async function openUrBackupDbReadWrite(): Promise<Database> {
       mode: sqlite3.OPEN_READWRITE, // Read-write mode for modifications
     });
 
+    // Wait up to 8 seconds if UrBackup holds the write lock
+    await rwDb.run('PRAGMA busy_timeout = 8000');
+
     logger.info(`Opened read-write connection to UrBackup database`);
     return rwDb;
   } catch (error) {
