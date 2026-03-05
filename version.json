@@ -1,10 +1,9 @@
 {
-  "version": "3.2.31",
+  "version": "3.2.32",
   "releaseDate": "2026-03-05",
   "changelog": [
-    "Fix: Dashboard Failed Backups count no longer counts image issues for clients that have never run an image backup",
-    "Fix: Backup Types chart now correctly excludes clients with no image backup history",
-    "Fix: Delete backup button is now clearly labeled with text instead of a hidden icon",
-    "Perf: Removed redundant UrBackup status API call from clients endpoint — faster dashboard load"
+    "Fix: Dashboard now correctly counts clients with no file backup history as needing attention (UrBackup defaults file_ok=1 for new clients)",
+    "Fix: Backup Types chart File column now shows never-backed-up clients as failed rather than successful",
+    "Fix: Endpoints Needing Attention badges now show 'No File Backup' vs 'File Failed' to distinguish the two cases"
   ]
 }
