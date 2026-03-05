@@ -135,7 +135,7 @@ export default function ServerSettings() {
   const loadBackups = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/server-config-backup/list', {
+      const response = await fetch('/api/database-backup/list', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -159,7 +159,7 @@ export default function ServerSettings() {
 
     try {
       setLoading(true);
-      const response = await fetch('/api/server-config-backup/create', {
+      const response = await fetch('/api/database-backup/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ export default function ServerSettings() {
   const viewBackup = async (backupId: number) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/server-config-backup/${backupId}`, {
+      const response = await fetch(`/api/database-backup/${backupId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -207,7 +207,7 @@ export default function ServerSettings() {
   const restoreBackup = async (backupId: number, backupName: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/server-config-backup/${backupId}/restore`, {
+      const response = await fetch(`/api/database-backup/${backupId}/restore`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -235,7 +235,7 @@ export default function ServerSettings() {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/server-config-backup/${backupId}`, {
+      const response = await fetch(`/api/database-backup/${backupId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

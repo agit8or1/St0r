@@ -1,7 +1,9 @@
 {
-  "version": "3.2.28",
+  "version": "3.2.29",
   "releaseDate": "2026-03-05",
   "changelog": [
-    "Feature: Job Logs — view recent backup job logs directly in Activities page, with error/warning counts and full expandable log entries color-coded by severity"
+    "Feature: Delete individual backups from the client detail page (trash icon per row with inline confirm)",
+    "Fix: Image Backup Status shows 'Never run' instead of 'OK' when no image backup has ever completed",
+    "Fix: Server Settings config backup calls were hitting a 404 (wrong URL prefix)"
   ]
 }

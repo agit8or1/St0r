@@ -1165,6 +1165,11 @@ export class UrBackupService {
     }
   }
 
+  async deleteBackup(backupId: string | number, isImage: boolean) {
+    const numericId = typeof backupId === 'string' ? parseInt(backupId) : backupId;
+    return this.dbService.deleteBackup(numericId, isImage);
+  }
+
   async getClientAuthkey(clientId: string | number) {
     try {
       logger.info(`Getting authentication key for client ID: ${clientId}`);

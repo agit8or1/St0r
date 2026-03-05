@@ -1,3 +1,5 @@
+import { rm } from 'fs/promises';
+import { resolve, dirname } from 'path';
 import { getUrBackupDb, openUrBackupDbReadWrite } from '../config/urbackupDb.js';
 import { logger } from '../utils/logger.js';
 
@@ -619,6 +621,72 @@ export class UrBackupDbService {
     } finally {
       if (mainDb) await mainDb.close();
       if (settingsDb) await settingsDb.close();
+    }
+  }
+
+  /**
+   * Delete an individual backup by marking it delete_pending and removing its directory.
+   */
+  async deleteBackup(backupId: number, isImage: boolean) {
+    let mainDb;
+    try {
+      mainDb = await openUrBackupDbReadWrite();
+      const table = isImage ? 'backup_images' : 'backups';
+
+      // Get backup record + client name
+      const backup = await mainDb.get(
+        `SELECT b.id, b.clientid, b.path, c.name as clientname
+         FROM ${table} b
+         JOIN clients c ON c.id = b.clientid
+         WHERE b.id = ?`,
+        [backupId]
+      );
+      if (!backup) throw new Error(`Backup ${backupId} not found`);
+
+      // Mark delete_pending so UrBackup knows it's gone
+      await mainDb.run(`UPDATE ${table} SET delete_pending = 1 WHERE id = ?`, [backupId]);
+      await mainDb.close();
+      mainDb = null;
+
+      // Determine directory to delete
+      let dirToDelete: string | null = null;
+      if (isImage) {
+        // Image path is full path to the .vhdz file — delete parent dir
+        dirToDelete = dirname(backup.path);
+      } else {
+        // File backup path is relative — look up backupfolder from settings DB
+        const { open } = await import('sqlite');
+        const sqlite3 = await import('sqlite3');
+        const settingsDb = await open({
+          filename: process.env.URBACKUP_DB_PATH?.replace('backup_server.db', 'backup_server_settings.db') || '/var/urbackup/backup_server_settings.db',
+          driver: sqlite3.default.Database,
+        });
+        const row = await settingsDb.get(`SELECT value FROM settings WHERE key='backupfolder'`);
+        await settingsDb.close();
+        const backupFolder = row?.value || '/home/administrator/urbackup-storage';
+        const candidate = resolve(backupFolder, backup.clientname, backup.path);
+        // Safety: must start with backupFolder
+        if (candidate.startsWith(resolve(backupFolder))) dirToDelete = candidate;
+      }
+
+      if (dirToDelete) {
+        const backupFolderCheck = isImage
+          ? '/home/administrator/urbackup-storage'
+          : resolve(dirToDelete, '../../..');
+        if (dirToDelete.includes('..') || !dirToDelete.startsWith('/')) {
+          throw new Error('Unsafe path detected, refusing to delete');
+        }
+        logger.info(`Deleting backup directory: ${dirToDelete}`);
+        await rm(dirToDelete, { recursive: true, force: true });
+        logger.info(`Deleted backup directory: ${dirToDelete}`);
+      }
+
+      return { success: true, backupId, isImage };
+    } catch (error) {
+      logger.error(`Failed to delete backup ${backupId}:`, error);
+      throw error;
+    } finally {
+      if (mainDb) await mainDb.close();
     }
   }
 

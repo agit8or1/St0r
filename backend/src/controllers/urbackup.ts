@@ -485,6 +485,21 @@ export async function regenerateClientKey(req: AuthRequest, res: Response): Prom
   }
 }
 
+export async function deleteBackup(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { clientId, backupId } = req.params;
+    const isImage = req.query.image === '1' || req.query.image === 'true' || req.body?.isImage === true;
+    if (!backupId) { res.status(400).json({ error: 'Backup ID is required' }); return; }
+    const service = await getService();
+    if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
+    const result = await service.deleteBackup(backupId, isImage);
+    res.json(result);
+  } catch (error: any) {
+    logger.error('Failed to delete backup:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete backup' });
+  }
+}
+
 export async function getJobLogs(req: AuthRequest, res: Response): Promise<void> {
   try {
     const service = await getService();

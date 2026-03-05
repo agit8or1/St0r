@@ -240,6 +240,11 @@ class ApiService {
     return response.data;
   }
 
+  async deleteBackup(clientId: string | number, backupId: string | number, isImage: boolean): Promise<{ success: boolean }> {
+    const response = await this.api.delete(`/urbackup/clients/${clientId}/backups/${backupId}`, { params: { image: isImage ? '1' : '0' } });
+    return response.data;
+  }
+
   async getJobLogs(clientId?: number, num = 50): Promise<{ logs: any[]; clients: any[] }> {
     const params: any = { num };
     if (clientId) params.clientId = clientId;

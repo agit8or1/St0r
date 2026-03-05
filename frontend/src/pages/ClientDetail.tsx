@@ -18,7 +18,8 @@ import {
   Server as ServerIcon,
   Apple,
   Eye,
-  EyeOff
+  EyeOff,
+  Trash2,
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
@@ -41,6 +42,8 @@ export function ClientDetail() {
   const [loadingAuthKey, setLoadingAuthKey] = useState(false);
   const [serverInfo, setServerInfo] = useState<{ serverIP: string; serverPort: string; serverUrl: string } | null>(null);
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [deletingBackupId, setDeletingBackupId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     loadClientData();
@@ -79,6 +82,23 @@ export function ClientDetail() {
       setBackups([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteBackup = async (backupId: string, isImage: boolean) => {
+    if (!client?.id) return;
+    setDeletingBackupId(backupId);
+    setConfirmDeleteId(null);
+    try {
+      await api.deleteBackup(client.id, backupId, isImage);
+      setBackups(prev => prev.filter(b => b.id !== backupId));
+      setBackupMessage({ type: 'success', text: 'Backup deleted successfully' });
+      setTimeout(() => setBackupMessage(null), 4000);
+    } catch (err: any) {
+      setBackupMessage({ type: 'error', text: err?.response?.data?.error || 'Failed to delete backup' });
+      setTimeout(() => setBackupMessage(null), 5000);
+    } finally {
+      setDeletingBackupId(null);
     }
   };
 
@@ -417,7 +437,9 @@ export function ClientDetail() {
 
           <div className="card">
             <div className="flex items-center gap-3">
-              {client.image_ok ? (
+              {imageBackups.length === 0 ? (
+                <XCircle className="h-8 w-8 text-gray-400" />
+              ) : client.image_ok ? (
                 <CheckCircle className="h-8 w-8 text-green-600" />
               ) : (
                 <XCircle className="h-8 w-8 text-red-600" />
@@ -425,7 +447,7 @@ export function ClientDetail() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Image Backup Status</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {client.image_ok ? 'OK' : 'Failed'}
+                  {imageBackups.length === 0 ? 'Never run' : client.image_ok ? 'OK' : 'Failed'}
                 </p>
               </div>
             </div>
@@ -562,43 +584,71 @@ export function ClientDetail() {
             </p>
           ) : (
             <div className="space-y-2">
-              {displayBackups.map((backup) => (
-                <div
-                  key={backup.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`rounded-full p-2 ${
-                      backup.incremental
-                        ? 'bg-blue-100 dark:bg-blue-900'
-                        : 'bg-green-100 dark:bg-green-900'
-                    }`}>
-                      <Database className={`h-5 w-5 ${
+              {displayBackups.map((backup) => {
+                const isConfirming = confirmDeleteId === backup.id;
+                const isDeleting = deletingBackupId === backup.id;
+                return (
+                  <div
+                    key={backup.id}
+                    className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`rounded-full p-2 ${
                         backup.incremental
-                          ? 'text-blue-600 dark:text-blue-400'
-                          : 'text-green-600 dark:text-green-400'
-                      }`} />
+                          ? 'bg-blue-100 dark:bg-blue-900'
+                          : 'bg-green-100 dark:bg-green-900'
+                      }`}>
+                        <Database className={`h-5 w-5 ${
+                          backup.incremental
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-green-600 dark:text-green-400'
+                        }`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                          {backup.incremental ? 'Incremental' : 'Full'} Backup
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {formatTimestamp(backup.backuptime)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {backup.incremental ? 'Incremental' : 'Full'} Backup
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {formatTimestamp(backup.backuptime)}
-                      </p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                          {formatBytes(backup.size_bytes)}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 justify-end">
+                          <Clock className="h-3 w-3" />
+                          {backup.duration && !isNaN(backup.duration) ? formatDuration(backup.duration) : 'N/A'}
+                        </p>
+                      </div>
+                      {isConfirming ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-red-600 dark:text-red-400 font-medium">Delete?</span>
+                          <button
+                            onClick={() => handleDeleteBackup(backup.id, !!backup.image)}
+                            className="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                          >Yes</button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300"
+                          >No</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(backup.id)}
+                          disabled={isDeleting}
+                          className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                          title="Delete this backup"
+                        >
+                          {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {formatBytes(backup.size_bytes)}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {backup.duration && !isNaN(backup.duration) ? formatDuration(backup.duration) : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

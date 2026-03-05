@@ -17,6 +17,7 @@ import {
   getClientAuthkey,
   updateClientName,
   regenerateClientKey,
+  deleteBackup,
   getJobLogs,
   getJobLog,
   browseClientFilesystem,
@@ -46,6 +47,7 @@ router.post('/activities/:activityId/stop', stopActivity);
 router.post('/activities/clear-stale', clearStaleJobs);
 router.get('/usage', getUsage);
 router.get('/clients/:clientId/browse', browseClientFilesystem);
+router.delete('/clients/:clientId/backups/:backupId', deleteBackup);
 router.get('/job-logs', getJobLogs);
 router.get('/job-logs/:logId', getJobLog);
 
