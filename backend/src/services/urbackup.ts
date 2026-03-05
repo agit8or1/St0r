@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger.js';
 import { UrBackupDbService } from './urbackupDb.js';
+import { openUrBackupSettingsDbReadWrite } from '../config/urbackupDb.js';
 import { execFileSync } from 'child_process';
 
 // For write operations, we still need to communicate with the UrBackup server
@@ -1035,10 +1036,10 @@ export class UrBackupService {
       saveParams.set('ses', session); // UrBackup requires ses in POST body AND URL
       saveParams.set('overwrite', 'true');
 
-      // Helper: convert any value to the string UrBackup expects
+      // Helper: booleans must be '1'/'0' for UrBackup (consistent with setGlobalSettings)
       const toUrBackupStr = (v: any): string => {
-        if (v === true || v === 'true') return 'true';
-        if (v === false || v === 'false') return 'false';
+        if (v === true || v === 'true') return '1';
+        if (v === false || v === 'false') return '0';
         return String(v);
       };
 
@@ -1061,6 +1062,62 @@ export class UrBackupService {
       // Apply user's changes — use=1 means client-specific override
       for (const [key, value] of Object.entries(newSettings)) {
         if (value !== null && value !== undefined) {
+          // client_set_settings is special: its `use` value IS the setting.
+          //   use=1 → this client manages its own settings (client-managed)
+          //   use=2 → inherit group default (False = server-managed)
+          // Sending a value for it has no effect; only the .use matters.
+          if (key === 'client_set_settings') {
+            const clientManaged = value === true || value === 1 || value === '1' || value === 'true';
+            const serverManaged = !clientManaged;
+            // UrBackup's clientsettings_save API silently ignores client_set_settings.
+            // The only way to set it is a direct write to backup_server_settings.db.
+            // UrBackup picks up per-client settings changes from the DB immediately (no restart needed).
+            // UrBackup settings table has no UNIQUE constraint — must DELETE then INSERT
+            const settingsDb = await openUrBackupSettingsDbReadWrite();
+            try {
+              const numId = parseInt(clientId);
+              await settingsDb.run(
+                `DELETE FROM settings WHERE key='client_set_settings' AND clientid=?`, [numId]
+              );
+              await settingsDb.run(
+                `INSERT INTO settings (key, value, clientid, use) VALUES ('client_set_settings', ?, ?, 1)`,
+                [serverManaged ? 'false' : 'true', numId]
+              );
+            } finally {
+              await settingsDb.close();
+            }
+            // Also persist in MariaDB for our own GET endpoint reliability
+            const { query: dbQuery } = await import('../config/database.js');
+            await dbQuery(
+              'INSERT INTO client_managed_mode (client_id, managed) VALUES (?, ?) ON DUPLICATE KEY UPDATE managed = VALUES(managed)',
+              [clientId, serverManaged ? 1 : 0]
+            );
+            // Tray locking mechanism (from UrBackup server_channel.cpp source):
+            // The server sends capability bits via "1CHANNEL capa=X" at connection init.
+            // allow_overwrite=false → DONT_SHOW_SETTINGS(1), allow_tray_exit=false → DONT_ALLOW_EXIT_TRAY_ICON(2048), etc.
+            // CRITICAL: capabilities only apply while the channel is OPEN.
+            // With internet_connect_always=0, the channel closes after each backup → tray reverts to unlocked.
+            // Solution: internet_connect_always=1 keeps a persistent channel → lock is enforced 24/7.
+            const lockVal = serverManaged ? '0' : '1';
+            const lockTargets = [
+              'allow_overwrite', // → DONT_SHOW_SETTINGS
+              'allow_config_paths', // → DONT_ALLOW_CONFIG_PATHS
+              'allow_tray_exit', // → DONT_ALLOW_EXIT_TRAY_ICON
+              'allow_pause', // → DONT_ALLOW_PAUSE
+              'allow_starting_full_file_backups', // → DONT_ALLOW_STARTING_FULL_FILE_BACKUPS
+              'allow_starting_incr_file_backups', // → DONT_ALLOW_STARTING_INCR_FILE_BACKUPS
+              'allow_starting_full_image_backups', // → DONT_ALLOW_STARTING_FULL_IMAGE_BACKUPS
+              'allow_starting_incr_image_backups', // → DONT_ALLOW_STARTING_INCR_IMAGE_BACKUPS
+            ];
+            // Also force persistent connection so capabilities stay enforced between backups
+            saveParams.set('internet_connect_always', serverManaged ? '1' : '0');
+            saveParams.set('internet_connect_always.use', '1');
+            for (const lt of lockTargets) {
+              saveParams.set(lt, lockVal);
+              saveParams.set(`${lt}.use`, '1');
+            }
+            continue;
+          }
           saveParams.set(key, toUrBackupStr(value));
           saveParams.set(`${key}.use`, '1'); // 1 = client-specific override
         }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
-import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch } from 'lucide-react';
+import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch, Loader2 } from 'lucide-react';
 import { ClientFileBrowser } from '../components/ClientFileBrowser';
 
 interface ClientSettings {
@@ -278,6 +278,30 @@ export function ClientSettings() {
     setVssComponents(cur.includes(id) ? cur.filter(c => c !== id) : [...cur, id]);
   };
 
+  const [managedSaving, setManagedSaving] = useState(false);
+
+  const toggleManaged = async (serverManaged: boolean) => {
+    set('client_set_settings', !serverManaged);
+    setManagedSaving(true);
+    try {
+      const response = await fetch(`/api/client-settings/${clientId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        // Backend handles locking/unlocking all allow_* settings automatically
+        body: JSON.stringify({ client_set_settings: !serverManaged }),
+      });
+      const data = await response.json();
+      if (!response.ok || data.success === false) throw new Error(data.error || 'Save failed');
+      setMessage({ type: 'success', text: serverManaged ? 'Managed mode enabled.' : 'Managed mode disabled.' });
+      setTimeout(() => { setMessage(null); loadSettings(); }, 2000);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Failed to save managed mode' });
+    } finally {
+      setManagedSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -349,23 +373,21 @@ export function ClientSettings() {
             }
             <div>
               <p className={`text-sm font-semibold ${!bool('client_set_settings') ? 'text-green-800 dark:text-green-200' : 'text-yellow-800 dark:text-yellow-200'}`}>
-                {!bool('client_set_settings') ? 'Server-managed — all settings pushed to client' : 'Client-managed — client controls its own settings'}
+                {!bool('client_set_settings') ? 'Server-managed' : 'Client-managed'}
               </p>
               <p className={`text-xs mt-0.5 ${!bool('client_set_settings') ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
                 {!bool('client_set_settings')
-                  ? 'Schedule, backup paths, and all options are defined here and sent to the client on every connection.'
-                  : 'The client can override settings via its tray icon. Enable server-managed mode to push all settings from this page.'}
+                  ? 'Server controls backup settings. Client cannot change paths, pause, or trigger manual backups.'
+                  : 'Client controls its own backup settings via the tray app.'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {managedSaving && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
             <span className={`text-xs font-medium ${!bool('client_set_settings') ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
               {!bool('client_set_settings') ? 'Managed' : 'Unmanaged'}
             </span>
-            <Toggle checked={!bool('client_set_settings')} onChange={v => {
-              set('client_set_settings', !v);
-              if (v) set('allow_config_paths', false); // also lock paths when enabling server-managed
-            }} />
+            <Toggle checked={!bool('client_set_settings')} onChange={v => toggleManaged(v)} />
           </div>
         </div>
 

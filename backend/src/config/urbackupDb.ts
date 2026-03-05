@@ -6,6 +6,7 @@ let db: Database | null = null;
 
 // Default UrBackup database path on Linux
 const URBACKUP_DB_PATH = process.env.URBACKUP_DB_PATH || '/var/urbackup/backup_server.db';
+const URBACKUP_SETTINGS_DB_PATH = URBACKUP_DB_PATH.replace('backup_server.db', 'backup_server_settings.db');
 
 /**
  * Open a connection to the UrBackup SQLite database
@@ -62,6 +63,26 @@ export async function testUrBackupDbConnection(): Promise<boolean> {
   } catch (error) {
     logger.error('UrBackup database connection test failed:', error);
     return false;
+  }
+}
+
+/**
+ * Open a read-write connection to the UrBackup SETTINGS database (backup_server_settings.db).
+ * UrBackup picks up writes to per-client settings immediately without restart.
+ * Always close the returned connection after use.
+ */
+export async function openUrBackupSettingsDbReadWrite(): Promise<Database> {
+  try {
+    const rwDb = await open({
+      filename: URBACKUP_SETTINGS_DB_PATH,
+      driver: sqlite3.Database,
+      mode: sqlite3.OPEN_READWRITE,
+    });
+    await rwDb.run('PRAGMA busy_timeout = 8000');
+    return rwDb;
+  } catch (error) {
+    logger.error('Failed to open read-write connection to UrBackup settings database:', error);
+    throw new Error(`Failed to open settings DB: ${error}`);
   }
 }
 

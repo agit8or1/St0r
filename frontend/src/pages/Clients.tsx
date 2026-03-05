@@ -92,7 +92,7 @@ export function Clients() {
       result = result.filter(c =>
         filterStatus === 'online' ? c.online :
         filterStatus === 'offline' ? !c.online :
-        (!c.file_ok || !c.image_ok)
+        (hasFileProblem(c) || hasImageProblem(c))
       );
     }
     if (selectedCustomer !== 'all') {
@@ -113,8 +113,10 @@ export function Clients() {
     return result;
   }, [clients, searchQuery, filterStatus, selectedCustomer, sortField, sortOrder, clientCustomers]);
 
+  const hasFileProblem = (c: Client) => !c.file_ok || !(c as any).lastbackup;
+  const hasImageProblem = (c: Client) => !(c as any).lastbackup_image || !c.image_ok;
   const onlineCount = clients.filter(c => c.online).length;
-  const failedCount = clients.filter(c => !c.file_ok || !c.image_ok).length;
+  const failedCount = clients.filter(c => hasFileProblem(c) || hasImageProblem(c)).length;
 
   const SortIcon = ({ field }: { field: SortField }) => (
     sortField === field
@@ -260,10 +262,10 @@ export function Clients() {
                         <td className="px-3 py-2">
                           <div className="flex gap-1">
                             <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              client.file_ok ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                              !hasFileProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                             }`}>F</span>
                             <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              client.image_ok ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                              !hasImageProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                             }`}>I</span>
                           </div>
                         </td>

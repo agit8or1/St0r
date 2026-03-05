@@ -110,6 +110,19 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
+// Ensure ancillary tables exist (idempotent)
+async function ensureTables() {
+  const { query } = await import('./config/database.js');
+  await query(`
+    CREATE TABLE IF NOT EXISTS client_managed_mode (
+      client_id VARCHAR(20) NOT NULL,
+      managed TINYINT(1) NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (client_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+}
+
 // Initialize default admin user if none exists
 async function initializeDefaultUser() {
   const { getAllUsers } = await import('./models/user.js');
@@ -142,6 +155,9 @@ async function startServer() {
       logger.error('Failed to connect to database. Exiting...');
       process.exit(1);
     }
+
+    // Ensure ancillary tables exist
+    await ensureTables();
 
     // Initialize default user if needed
     await initializeDefaultUser();

@@ -580,6 +580,18 @@ export function Activities() {
           </div>
         </div>
 
+        {/* Cancel notification — shown outside the running-backups block so it persists after the backup stops */}
+        {cancelNotify && (filter === 'all' || filter === 'running') && (
+          <div className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
+            cancelNotify.ok
+              ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+              : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+          }`}>
+            {cancelNotify.ok ? <CheckCircle className="h-4 w-4 flex-shrink-0" /> : <XCircle className="h-4 w-4 flex-shrink-0" />}
+            {cancelNotify.msg}
+          </div>
+        )}
+
         {/* Current Activities */}
         {(filter === 'all' || filter === 'running') && filteredCurrentActivities.length > 0 && (
           <div className="space-y-4">
@@ -594,17 +606,6 @@ export function Activities() {
                 {filteredCurrentActivities.length}
               </span>
             </div>
-
-            {cancelNotify && (
-              <div className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
-                cancelNotify.ok
-                  ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
-                  : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
-              }`}>
-                {cancelNotify.ok ? <CheckCircle className="h-4 w-4 flex-shrink-0" /> : <XCircle className="h-4 w-4 flex-shrink-0" />}
-                {cancelNotify.msg}
-              </div>
-            )}
 
             <div className="grid gap-4">
               {filteredCurrentActivities.map((activity, index) => {

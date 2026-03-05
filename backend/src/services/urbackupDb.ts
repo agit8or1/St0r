@@ -426,7 +426,7 @@ export class UrBackupDbService {
         .slice(0, limit);
 
       return activities.map(activity => ({
-        id: activity.id,
+        id: `${activity.backup_type}-${activity.id}`,
         clientid: activity.clientid,
         clientName: activity.client_name,
         backuptime: activity.backuptime * 1000,

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import { UrBackupService } from '../services/urbackup.js';
 import { logger } from '../utils/logger.js';
+import { query } from '../config/database.js';
 
 const urbackupService = new UrBackupService();
 
@@ -35,6 +36,28 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
         settings[key] = val;
       }
     }
+
+    // Read managed mode state from MariaDB (reliable — UrBackup does not return custom keys via API).
+    // Fall back to tray password check if no MariaDB record exists yet.
+    try {
+      const rows = await query<any[]>(
+        'SELECT managed FROM client_managed_mode WHERE client_id = ?',
+        [clientId]
+      );
+      if (rows.length > 0) {
+        const serverManaged = rows[0].managed === 1 || rows[0].managed === true;
+        settings['client_set_settings'] = !serverManaged;
+      } else {
+        // Legacy fallback: no MariaDB record → check tray password
+        const trayPw = settings['client_settings_tray_access_pw'];
+        settings['client_set_settings'] = !(typeof trayPw === 'string' && trayPw.length > 0);
+      }
+    } catch {
+      // If table doesn't exist yet (first boot before migration), fall back gracefully
+      const trayPw = settings['client_settings_tray_access_pw'];
+      settings['client_set_settings'] = !(typeof trayPw === 'string' && trayPw.length > 0);
+    }
+
     res.json({ settings, useValues });
   } catch (error: any) {
     // UrBackup API "error: 1" means unknown client or unauthenticated — not a server crash

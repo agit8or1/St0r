@@ -1,10 +1,11 @@
 {
-  "version": "3.2.35",
+  "version": "3.2.41",
   "releaseDate": "2026-03-05",
   "changelog": [
-    "Fix: Delete backup no longer fails with 'database is locked' — added 8s SQLite busy_timeout on write connections",
-    "Fix: Clear Stale Jobs now correctly uses read-write DB connection (was using read-only, silently failing)",
-    "Fix: Duplicate React key crash when file backup id and image backup id collide — now uses type-prefixed composite key",
-    "Fix: Clear Stale Jobs now force-completes stuck DB records (running=NULL, complete=1) instead of only sending stop signal"
+    "Fix: Managed mode now sets internet_connect_always=1 — keeps a persistent server channel so tray capability restrictions (DONT_SHOW_SETTINGS, DONT_ALLOW_EXIT, etc.) remain enforced 24/7 instead of only during active backups",
+    "Fix: Managed mode now locks all client actions — disables allow_tray_exit, allow_pause, allow_starting_* alongside allow_config_paths and client_set_settings",
+    "Fix: Managed mode direct DB write uses DELETE+INSERT (not INSERT OR REPLACE) to avoid duplicate rows in settings table",
+    "Fix: Managed mode description updated to accurately reflect what server-side control can achieve",
+    "Fix: Cancel backup notification persists even after backup stops"
   ]
 }
