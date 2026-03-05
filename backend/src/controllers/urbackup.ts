@@ -43,94 +43,15 @@ export async function getClients(req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // Get both client list and status for comprehensive information
-    const [clients, status] = await Promise.all([
-      service.getClients(),
-      service.getStatus()
-    ]);
+    // getClients() already merges live status (online, ip, os, delete_pending) from UrBackup API
+    const allClients = await service.getClients();
 
-    logger.info(`[${username}] Retrieved ${clients?.length || 0} clients from UrBackup API`);
-
-    // Create a map of client status data from the status response
-    const statusMap = new Map();
-    if (status && Array.isArray(status)) {
-      status.forEach((clientStatus: any) => {
-        const clientId = clientStatus.id || clientStatus.clientid;
-        if (clientId) {
-          statusMap.set(clientId, {
-            online: clientStatus.online === true,
-            ip: clientStatus.ip || clientStatus.lastip || null,
-            os_simple: clientStatus.os_simple,
-            os_version_string: clientStatus.os_version_string,
-            delete_pending: clientStatus.delete_pending === '1' || clientStatus.delete_pending === 1,
-            no_backup_paths: clientStatus.no_backup_paths === true || clientStatus.no_backup_paths === 1
-          });
-        }
-      });
-    }
-
-    // Get current timestamp for online status calculation
-    const now = Math.floor(Date.now() / 1000);
-    const ONLINE_THRESHOLD = 10 * 60; // 10 minutes
-
-    // Normalize and enrich client data
-    const normalizedClients = clients.map((client: any) => {
-      const clientId = client.id || client.clientid || client.client_id;
-      const statusInfo = statusMap.get(clientId) || {};
-
-      // Get IP address and filter out invalid values
-      let ipAddress = statusInfo.ip || client.ip || client.lastip || null;
-      if (ipAddress === '-' || ipAddress === '' || ipAddress === 'null') {
-        ipAddress = null;
-      }
-
-      // Determine online status with proper validation
-      // 1. First check if status API explicitly says client is online
-      // 2. Then check lastseen timestamp as fallback
-      // 3. Consider online ONLY if seen within last 10 minutes AND lastseen is not in future
-      let isOnline = false;
-      let onlineReason = 'offline';
-
-      // Check status API first
-      if (statusInfo.online === true) {
-        isOnline = true;
-        onlineReason = 'status_api';
-      }
-      // Fallback to lastseen check
-      else if (client.lastseen && typeof client.lastseen === 'number') {
-        // lastseen is in milliseconds, convert to seconds for comparison
-        const lastseenSeconds = Math.floor(client.lastseen / 1000);
-        const timeSinceLastSeen = now - lastseenSeconds;
-        // Only consider online if: within threshold AND not in future (sanity check)
-        if (timeSinceLastSeen >= 0 && timeSinceLastSeen <= ONLINE_THRESHOLD) {
-          isOnline = true;
-          onlineReason = 'lastseen_recent';
-        } else {
-          onlineReason = `offline_${Math.floor(timeSinceLastSeen / 60)}min_ago`;
-        }
-      }
-
-      // Log client status for debugging
-      if (isOnline) {
-        logger.info(`  Client "${client.name}" (ID: ${clientId}) is ONLINE via ${onlineReason}, lastseen: ${client.lastseen ? new Date(client.lastseen).toISOString() : 'never'}, IP: ${ipAddress || 'none'}`);
-      }
-
-      return {
-        ...client,
-        id: clientId,
-        online: isOnline,
-        ip: ipAddress,
-        os_simple: statusInfo.os_simple || client.os_simple,
-        os_version_string: statusInfo.os_version_string || client.os_version_string,
-        delete_pending: statusInfo.delete_pending || false,
-        no_backup_paths: statusInfo.no_backup_paths || false
-      };
-    });
+    logger.info(`[${username}] Retrieved ${allClients?.length || 0} clients from UrBackup API`);
 
     // Filter out clients pending deletion
-    const activeClients = normalizedClients.filter(client => !client.delete_pending);
+    const activeClients = (allClients as any[]).filter((c: any) => !c.delete_pending);
 
-    const onlineCount = activeClients.filter(c => c.online).length;
+    const onlineCount = activeClients.filter((c: any) => c.online).length;
     logger.info(`[${username}] Returning ${activeClients.length} clients (${onlineCount} online, ${activeClients.length - onlineCount} offline)`);
 
     res.json(activeClients);

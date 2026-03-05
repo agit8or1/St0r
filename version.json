@@ -1,9 +1,10 @@
 {
-  "version": "3.2.30",
+  "version": "3.2.31",
   "releaseDate": "2026-03-05",
   "changelog": [
-    "Fix: Delete backup now works — uses sudo to remove urbackup-owned directories",
-    "Fix: Backup history only shows completed backups (complete=1) for both file and image types",
-    "Fix: Image Backup Status uses lastbackup_image timestamp instead of incomplete record count"
+    "Fix: Dashboard Failed Backups count no longer counts image issues for clients that have never run an image backup",
+    "Fix: Backup Types chart now correctly excludes clients with no image backup history",
+    "Fix: Delete backup button is now clearly labeled with text instead of a hidden icon",
+    "Perf: Removed redundant UrBackup status API call from clients endpoint — faster dashboard load"
   ]
 }

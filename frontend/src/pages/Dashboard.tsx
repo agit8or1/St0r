@@ -88,7 +88,7 @@ export function Dashboard() {
 
   const onlineClients = clients.filter((c) => c.online).length;
   const offlineClients = clients.filter((c) => !c.online).length;
-  const failedClients = clients.filter((c) => !c.file_ok || !c.image_ok).length;
+  const failedClients = clients.filter((c) => !c.file_ok || ((c as any).lastbackup_image && !c.image_ok)).length;
 
   const statusData = [
     { name: 'Online', value: onlineClients, color: '#10b981' },
@@ -103,8 +103,8 @@ export function Dashboard() {
     },
     {
       name: 'Image',
-      successful: clients.filter(c => c.image_ok).length,
-      failed: clients.filter(c => !c.image_ok).length,
+      successful: clients.filter(c => (c as any).lastbackup_image && c.image_ok).length,
+      failed: clients.filter(c => (c as any).lastbackup_image && !c.image_ok).length,
     },
   ];
 
@@ -361,7 +361,7 @@ export function Dashboard() {
               <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-6">All backups are healthy</p>
             ) : (
               <div className="space-y-2">
-                {clients.filter((c) => !c.file_ok || !c.image_ok).slice(0, 5).map((client) => (
+                {clients.filter((c) => !c.file_ok || ((c as any).lastbackup_image && !c.image_ok)).slice(0, 5).map((client) => (
                   <div key={client.id}
                     className="flex items-center justify-between rounded border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-3 py-2 cursor-pointer hover:shadow transition-shadow"
                     onClick={() => navigate(`/clients/${encodeURIComponent(client.name)}`)}>
@@ -374,7 +374,7 @@ export function Dashboard() {
                     </div>
                     <div className="flex gap-1">
                       {!client.file_ok && <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">File</span>}
-                      {!client.image_ok && <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">Image</span>}
+                      {(client as any).lastbackup_image && !client.image_ok && <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">Image</span>}
                     </div>
                   </div>
                 ))}

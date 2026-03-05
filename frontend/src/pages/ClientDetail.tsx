@@ -639,10 +639,11 @@ export function ClientDetail() {
                         <button
                           onClick={() => setConfirmDeleteId(backup.id)}
                           disabled={isDeleting}
-                          className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                          className="flex items-center gap-1 px-2 py-1.5 rounded text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-colors disabled:opacity-50 text-xs font-medium"
                           title="Delete this backup"
                         >
-                          {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          Delete
                         </button>
                       )}
                     </div>
