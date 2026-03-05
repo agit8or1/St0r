@@ -12,6 +12,8 @@ export class UrBackupService {
   private dbService: UrBackupDbService;
   private sessionId: string = '';
   private sessionExpiry: number = 0;
+  private statusCache: { data: any[]; ts: number } | null = null;
+  private readonly STATUS_TTL = 15_000; // 15 seconds
 
   constructor() {
     this.dbService = new UrBackupDbService();
@@ -463,13 +465,21 @@ export class UrBackupService {
       // status from the API and merge it so connected clients show as online
       try {
         const session = await this.login();
-        const statusResult = await fetch(`${URBACKUP_API_URL}?a=status&ses=${session}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
-          body: `ses=${session}`
-        });
-        const statusData: any = await statusResult.json();
-        const apiClients: any[] = statusData?.status || [];
+        // Use cached status to avoid hammering UrBackup's API on every request
+        const now = Date.now();
+        let apiClients: any[];
+        if (this.statusCache && (now - this.statusCache.ts) < this.STATUS_TTL) {
+          apiClients = this.statusCache.data;
+        } else {
+          const statusResult = await fetch(`${URBACKUP_API_URL}?a=status&ses=${session}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+            body: `ses=${session}`
+          });
+          const statusData: any = await statusResult.json();
+          apiClients = statusData?.status || [];
+          this.statusCache = { data: apiClients, ts: now };
+        }
 
         if (apiClients.length > 0) {
           const apiMap = new Map(apiClients.map((c: any) => [c.id, c]));
@@ -567,9 +577,16 @@ export class UrBackupService {
         const progressResult = await this.apiCall('progress', {});
         const progressData: any[] = progressResult?.progress || [];
 
-        // If the progress API succeeded (even with empty list), it is authoritative.
-        // An empty list means nothing is running — don't fall back to stale DB records.
+        // If the progress API succeeded with empty list, cross-check against DB.
+        // DB records started within the last 2 hours are likely still running (or just stopped).
+        // Return them with a "(stopping...)" indicator so the user knows the signal was sent.
         if (progressData && Array.isArray(progressData) && progressData.length === 0) {
+          const recentCutoff = Date.now() / 1000 - 7200; // 2 hours
+          const recentDb = dbActivities.filter((a: any) => (a.backuptime || 0) > recentCutoff);
+          if (recentDb.length > 0) {
+            logger.info(`[getCurrentActivities] Progress API empty but DB has ${recentDb.length} recent activities — showing as stopping`);
+            return recentDb.map((a: any) => ({ ...a, action: (a.action || 'Backup') + ' (stopping...)', pcdone: 0, process_id: null }));
+          }
           logger.info('[getCurrentActivities] Progress API returned empty — no active backups');
           return [];
         }

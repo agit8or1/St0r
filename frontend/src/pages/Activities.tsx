@@ -125,7 +125,7 @@ export function Activities() {
     setCancelNotify(null);
     try {
       await api.stopActivity(activityId, clientId);
-      setCancelNotify({ id: activityId, msg: `Cancelled backup for ${clientName}`, ok: true });
+      setCancelNotify({ id: activityId, msg: `Stop signal sent for ${clientName} — backup may take a moment to stop`, ok: true });
       setTimeout(() => setCancelNotify(null), 4000);
       // Give UrBackup a moment to remove the job from its progress list before refreshing
       await new Promise(r => setTimeout(r, 1500));

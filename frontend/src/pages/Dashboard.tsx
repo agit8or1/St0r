@@ -91,7 +91,7 @@ export function Dashboard() {
   // A client needs attention if: file backup failed, OR never backed up (UrBackup defaults file_ok=1 for new clients),
   // OR had image backups that failed
   const hasFileProblem = (c: Client) => !c.file_ok || !(c as any).lastbackup;
-  const hasImageProblem = (c: Client) => (c as any).lastbackup_image && !c.image_ok;
+  const hasImageProblem = (c: Client) => !(c as any).lastbackup_image || !c.image_ok;
   const failedClients = clients.filter((c) => hasFileProblem(c) || hasImageProblem(c)).length;
 
   const statusData = [
@@ -108,7 +108,7 @@ export function Dashboard() {
     {
       name: 'Image',
       successful: clients.filter(c => (c as any).lastbackup_image && c.image_ok).length,
-      failed: clients.filter(c => (c as any).lastbackup_image && !c.image_ok).length,
+      failed: clients.filter(c => !(c as any).lastbackup_image || !c.image_ok).length,
     },
   ];
 
@@ -378,7 +378,7 @@ export function Dashboard() {
                     </div>
                     <div className="flex gap-1">
                       {hasFileProblem(client) && <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">{!(client as any).lastbackup ? 'No File Backup' : 'File Failed'}</span>}
-                      {hasImageProblem(client) && <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">Image Failed</span>}
+                      {hasImageProblem(client) && <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">{!(client as any).lastbackup_image ? 'No Image Backup' : 'Image Failed'}</span>}
                     </div>
                   </div>
                 ))}
