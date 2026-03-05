@@ -1,6 +1,8 @@
-import { rm } from 'fs/promises';
+import { execFile as execFileCb } from 'child_process';
+import { promisify } from 'util';
 import { resolve, dirname } from 'path';
 import { getUrBackupDb, openUrBackupDbReadWrite } from '../config/urbackupDb.js';
+const execFile = promisify(execFileCb);
 import { logger } from '../utils/logger.js';
 
 /**
@@ -184,7 +186,7 @@ export class UrBackupDbService {
           archived,
           resumed
         FROM backups
-        WHERE clientid = ? AND (delete_pending = 0 OR delete_pending IS NULL)
+        WHERE clientid = ? AND (delete_pending = 0 OR delete_pending IS NULL) AND complete = 1
         ORDER BY backuptime DESC
       `, clientId);
 
@@ -224,7 +226,7 @@ export class UrBackupDbService {
           letter,
           archived
         FROM backup_images
-        WHERE clientid = ? AND (delete_pending = 0 OR delete_pending IS NULL)
+        WHERE clientid = ? AND (delete_pending = 0 OR delete_pending IS NULL) AND complete = 1
         ORDER BY backuptime DESC
       `, clientId);
 
@@ -648,38 +650,35 @@ export class UrBackupDbService {
       await mainDb.close();
       mainDb = null;
 
+      // Look up backup storage folder from settings DB
+      const { open } = await import('sqlite');
+      const sqlite3 = await import('sqlite3');
+      const settingsDb = await open({
+        filename: process.env.URBACKUP_DB_PATH?.replace('backup_server.db', 'backup_server_settings.db') || '/var/urbackup/backup_server_settings.db',
+        driver: sqlite3.default.Database,
+      });
+      const row = await settingsDb.get(`SELECT value FROM settings WHERE key='backupfolder'`);
+      await settingsDb.close();
+      const backupFolder = resolve(row?.value || '/home/administrator/urbackup-storage');
+
       // Determine directory to delete
       let dirToDelete: string | null = null;
       if (isImage) {
-        // Image path is full path to the .vhdz file — delete parent dir
-        dirToDelete = dirname(backup.path);
+        // Image path is full absolute path to the .vhdz file — delete parent dir
+        dirToDelete = resolve(dirname(backup.path));
       } else {
-        // File backup path is relative — look up backupfolder from settings DB
-        const { open } = await import('sqlite');
-        const sqlite3 = await import('sqlite3');
-        const settingsDb = await open({
-          filename: process.env.URBACKUP_DB_PATH?.replace('backup_server.db', 'backup_server_settings.db') || '/var/urbackup/backup_server_settings.db',
-          driver: sqlite3.default.Database,
-        });
-        const row = await settingsDb.get(`SELECT value FROM settings WHERE key='backupfolder'`);
-        await settingsDb.close();
-        const backupFolder = row?.value || '/home/administrator/urbackup-storage';
-        const candidate = resolve(backupFolder, backup.clientname, backup.path);
-        // Safety: must start with backupFolder
-        if (candidate.startsWith(resolve(backupFolder))) dirToDelete = candidate;
+        // File backup path is relative to <backupfolder>/<clientname>/
+        dirToDelete = resolve(backupFolder, backup.clientname, backup.path);
       }
 
-      if (dirToDelete) {
-        const backupFolderCheck = isImage
-          ? '/home/administrator/urbackup-storage'
-          : resolve(dirToDelete, '../../..');
-        if (dirToDelete.includes('..') || !dirToDelete.startsWith('/')) {
-          throw new Error('Unsafe path detected, refusing to delete');
-        }
-        logger.info(`Deleting backup directory: ${dirToDelete}`);
-        await rm(dirToDelete, { recursive: true, force: true });
-        logger.info(`Deleted backup directory: ${dirToDelete}`);
+      // Security: path must be strictly inside the backup storage folder
+      if (!dirToDelete.startsWith(backupFolder + '/')) {
+        throw new Error(`Refusing to delete path outside backup storage: ${dirToDelete}`);
       }
+      logger.info(`Deleting backup directory: ${dirToDelete}`);
+      // Backup dirs are owned by urbackup:urbackup — run rm as urbackup via sudo
+      await execFile('sudo', ['-u', 'urbackup', 'rm', '-rf', '--', dirToDelete]);
+      logger.info(`Deleted backup directory: ${dirToDelete}`);
 
       return { success: true, backupId, isImage };
     } catch (error) {

@@ -437,7 +437,7 @@ export function ClientDetail() {
 
           <div className="card">
             <div className="flex items-center gap-3">
-              {imageBackups.length === 0 ? (
+              {!(client as any).lastbackup_image ? (
                 <XCircle className="h-8 w-8 text-gray-400" />
               ) : client.image_ok ? (
                 <CheckCircle className="h-8 w-8 text-green-600" />
@@ -447,7 +447,7 @@ export function ClientDetail() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Image Backup Status</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {imageBackups.length === 0 ? 'Never run' : client.image_ok ? 'OK' : 'Failed'}
+                  {!(client as any).lastbackup_image ? 'Never run' : client.image_ok ? 'OK' : 'Failed'}
                 </p>
               </div>
             </div>
