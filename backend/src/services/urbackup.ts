@@ -893,24 +893,45 @@ export class UrBackupService {
     }
   }
 
-  async getLogs() {
+  async getJobLogs(clientId?: number, num = 50) {
     try {
-      logger.warn('getLogs: Reading logs from API');
-      const result = await this.apiCall('logs');
-      return result;
+      const session = await this.login();
+      const params = new URLSearchParams({ ses: session, num: String(num) });
+      if (clientId) params.set('clientid', String(clientId));
+      const response = await fetch(`${URBACKUP_API_URL}?a=logs&ses=${session}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+        body: params.toString()
+      });
+      const result: any = await response.json();
+      return { logs: result?.logs || [], clients: result?.clients || [] };
     } catch (error) {
-      logger.error('Failed to get logs:', error);
-      return [];
+      logger.error('Failed to get job logs:', error);
+      return { logs: [], clients: [] };
     }
   }
 
-  async getLiveLog() {
+  async getJobLog(logId: number) {
     try {
-      logger.warn('getLiveLog: Not implemented yet');
-      return [];
+      const session = await this.login();
+      const params = new URLSearchParams({ ses: session, logid: String(logId) });
+      const response = await fetch(`${URBACKUP_API_URL}?a=logs&ses=${session}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+        body: params.toString()
+      });
+      const result: any = await response.json();
+      const logData = result?.log;
+      if (!logData?.data) return { clientname: logData?.clientname || '', entries: [] };
+      const entries = logData.data.split('\n').filter(Boolean).map((line: string) => {
+        const m = line.match(/^(\d+)-(\d+)-(.*)$/);
+        if (!m) return { severity: 0, time: 0, message: line };
+        return { severity: parseInt(m[1]), time: parseInt(m[2]), message: m[3] };
+      });
+      return { clientname: logData.clientname, entries };
     } catch (error) {
-      logger.error('Failed to get live log:', error);
-      return [];
+      logger.error('Failed to get job log:', error);
+      return { clientname: '', entries: [] };
     }
   }
 

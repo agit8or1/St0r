@@ -17,6 +17,8 @@ import {
   getClientAuthkey,
   updateClientName,
   regenerateClientKey,
+  getJobLogs,
+  getJobLog,
   browseClientFilesystem,
 } from '../controllers/urbackup.js';
 import { authenticate } from '../middleware/auth.js';
@@ -44,6 +46,8 @@ router.post('/activities/:activityId/stop', stopActivity);
 router.post('/activities/clear-stale', clearStaleJobs);
 router.get('/usage', getUsage);
 router.get('/clients/:clientId/browse', browseClientFilesystem);
+router.get('/job-logs', getJobLogs);
+router.get('/job-logs/:logId', getJobLog);
 
 // Proxy endpoint to UrBackup progress API (bypasses our auth issues)
 router.get('/proxy/progress', async (req, res) => {

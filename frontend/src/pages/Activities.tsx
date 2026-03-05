@@ -14,6 +14,9 @@ import {
   RefreshCw,
   ChevronDown,
   StopCircle,
+  FileText,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
@@ -41,10 +44,17 @@ export function Activities() {
   const [cancelNotify, setCancelNotify] = useState<{ id: string; msg: string; ok: boolean } | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearStaleResult, setClearStaleResult] = useState<{ found: number; stopped: number } | null>(null);
+  const [jobLogs, setJobLogs] = useState<any[]>([]);
+  const [jobLogsLoading, setJobLogsLoading] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
+  const [logDetail, setLogDetail] = useState<Record<number, { clientname: string; entries: { severity: number; time: number; message: string }[] }>>({});
+  const [logDetailLoading, setLogDetailLoading] = useState<number | null>(null);
+  const [showErrorsOnly, setShowErrorsOnly] = useState(true);
 
   useEffect(() => {
     loadActivities();
     loadClients();
+    loadJobLogs();
     if (autoRefresh) {
       const interval = setInterval(() => {
         loadActivities();
@@ -78,6 +88,35 @@ export function Activities() {
       setClients(data || []);
     } catch (err) {
       console.error('Failed to load clients:', err);
+    }
+  };
+
+  const loadJobLogs = async () => {
+    setJobLogsLoading(true);
+    try {
+      const result = await api.getJobLogs(undefined, 50);
+      setJobLogs(result.logs || []);
+    } catch (err) {
+      console.error('Failed to load job logs:', err);
+    } finally {
+      setJobLogsLoading(false);
+    }
+  };
+
+  const loadLogDetail = async (logId: number) => {
+    if (logDetail[logId]) {
+      setExpandedLogId(expandedLogId === logId ? null : logId);
+      return;
+    }
+    setLogDetailLoading(logId);
+    setExpandedLogId(logId);
+    try {
+      const detail = await api.getJobLog(logId);
+      setLogDetail(prev => ({ ...prev, [logId]: detail }));
+    } catch (err) {
+      console.error('Failed to load log detail:', err);
+    } finally {
+      setLogDetailLoading(null);
     }
   };
 
@@ -824,6 +863,134 @@ export function Activities() {
             </div>
           </div>
         )}
+
+        {/* Job Logs */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-600 rounded-lg">
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Job Logs</h2>
+              {jobLogs.length > 0 && (
+                <span className="px-2 py-1 text-xs font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 rounded-full">
+                  {jobLogs.length}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showErrorsOnly}
+                  onChange={e => setShowErrorsOnly(e.target.checked)}
+                  className="rounded"
+                />
+                Errors only
+              </label>
+              <button
+                onClick={loadJobLogs}
+                disabled={jobLogsLoading}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3 w-3 ${jobLogsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          {jobLogsLoading && jobLogs.length === 0 ? (
+            <div className="card py-8 text-center text-sm text-gray-500 dark:text-gray-400">Loading job logs...</div>
+          ) : (
+            <div className="space-y-1">
+              {(() => {
+                const filtered = showErrorsOnly ? jobLogs.filter(j => j.errors > 0) : jobLogs;
+                if (filtered.length === 0) return (
+                  <div className="card py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    {showErrorsOnly ? 'No failed jobs found' : 'No job logs available'}
+                  </div>
+                );
+                return filtered.map((job: any) => {
+                  const isExpanded = expandedLogId === job.id;
+                  const detail = logDetail[job.id];
+                  const isLoading = logDetailLoading === job.id;
+                  const hasErrors = job.errors > 0;
+                  const jobTime = job.time ? new Date(job.time * 1000) : null;
+                  const timeStr = jobTime ? jobTime.toLocaleString() : '';
+                  const typeStr = job.image ? 'Image' : (job.incremental ? 'Incremental File' : 'Full File');
+
+                  return (
+                    <div key={job.id} className={`rounded-lg border overflow-hidden ${
+                      hasErrors
+                        ? 'border-red-200 dark:border-red-800'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}>
+                      <button
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                          hasErrors
+                            ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20'
+                            : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750'
+                        }`}
+                        onClick={() => loadLogDetail(job.id)}
+                      >
+                        <div className="flex-shrink-0">
+                          {hasErrors
+                            ? <XCircle className="h-4 w-4 text-red-500" />
+                            : job.warnings > 0
+                              ? <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                              : <CheckCircle className="h-4 w-4 text-green-500" />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{job.name}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{typeStr}</span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{timeStr}</span>
+                            {hasErrors && <span className="text-xs font-medium text-red-600 dark:text-red-400">{job.errors} error{job.errors !== 1 ? 's' : ''}</span>}
+                            {job.warnings > 0 && <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">{job.warnings} warning{job.warnings !== 1 ? 's' : ''}</span>}
+                          </div>
+                        </div>
+                        <ChevronDown className={`h-4 w-4 text-gray-400 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-3 max-h-96 overflow-y-auto">
+                          {isLoading ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 py-2">Loading log...</p>
+                          ) : detail ? (
+                            <div className="space-y-0.5 font-mono text-xs">
+                              {detail.entries.map((entry, i) => (
+                                <div key={i} className={`flex gap-2 py-0.5 ${
+                                  entry.severity === 2 ? 'text-red-700 dark:text-red-400' :
+                                  entry.severity === 1 ? 'text-yellow-700 dark:text-yellow-400' :
+                                  'text-gray-700 dark:text-gray-400'
+                                }`}>
+                                  <span className="flex-shrink-0 w-4">
+                                    {entry.severity === 2 ? <XCircle className="h-3 w-3 mt-0.5" /> :
+                                     entry.severity === 1 ? <AlertTriangle className="h-3 w-3 mt-0.5" /> :
+                                     <Info className="h-3 w-3 mt-0.5" />}
+                                  </span>
+                                  <span className="break-words whitespace-pre-wrap">{entry.message}</span>
+                                </div>
+                              ))}
+                              {detail.entries.length === 0 && (
+                                <p className="text-gray-500 dark:text-gray-400 py-2">No log entries found.</p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 py-2">Failed to load log.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
+        </div>
 
         {/* Empty State */}
         {currentActivities.length === 0 && lastActivities.length === 0 && !loading && (

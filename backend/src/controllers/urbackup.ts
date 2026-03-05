@@ -485,6 +485,34 @@ export async function regenerateClientKey(req: AuthRequest, res: Response): Prom
   }
 }
 
+export async function getJobLogs(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const service = await getService();
+    if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
+    const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
+    const num = req.query.num ? parseInt(req.query.num as string) : 50;
+    const result = await service.getJobLogs(clientId, num);
+    res.json(result);
+  } catch (error) {
+    logger.error('Failed to get job logs:', error);
+    res.status(500).json({ error: 'Failed to get job logs' });
+  }
+}
+
+export async function getJobLog(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { logId } = req.params;
+    if (!logId) { res.status(400).json({ error: 'Log ID is required' }); return; }
+    const service = await getService();
+    if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
+    const result = await service.getJobLog(parseInt(logId));
+    res.json(result);
+  } catch (error) {
+    logger.error('Failed to get job log:', error);
+    res.status(500).json({ error: 'Failed to get job log' });
+  }
+}
+
 export async function browseClientFilesystem(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;

@@ -56,8 +56,8 @@ export function Dashboard() {
   const loadData = async () => {
     try {
       const [clientsData, activitiesData, storageData, replData, metricsData] = await Promise.all([
-        api.getClients(),
-        api.getCurrentActivities(),
+        api.getClients().catch(() => []),
+        api.getCurrentActivities().catch(() => []),
         api.getTotalStorage().catch(() => ({ used: 0, available: 0, servers: [] })),
         api.getReplicationStatus().catch(() => []),
         api.getSystemMetrics().catch(() => null),

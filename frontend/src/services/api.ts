@@ -28,6 +28,7 @@ class ApiService {
     this.api = axios.create({
       baseURL: '/api',
       withCredentials: true,
+      timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -236,6 +237,18 @@ class ApiService {
 
   async browseClientFilesystem(clientId: string, path: string = '') {
     const response = await this.api.get(`/urbackup/clients/${clientId}/browse`, { params: { path } });
+    return response.data;
+  }
+
+  async getJobLogs(clientId?: number, num = 50): Promise<{ logs: any[]; clients: any[] }> {
+    const params: any = { num };
+    if (clientId) params.clientId = clientId;
+    const response = await this.api.get('/urbackup/job-logs', { params });
+    return response.data;
+  }
+
+  async getJobLog(logId: number): Promise<{ clientname: string; entries: { severity: number; time: number; message: string }[] }> {
+    const response = await this.api.get(`/urbackup/job-logs/${logId}`);
     return response.data;
   }
 
