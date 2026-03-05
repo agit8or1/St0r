@@ -325,7 +325,7 @@ export class UrBackupDbService {
         }
 
         return {
-          id: activity.id,
+          id: `${activity.backup_type}-${activity.id}`,
           clientid: activity.clientid,
           clientName: activity.client_name,
           name: activity.client_name,
@@ -351,6 +351,22 @@ export class UrBackupDbService {
       logger.error('Failed to get current activities:', error);
       throw error;
     }
+  }
+
+  async getStuckBackups() {
+    const db = await getUrBackupDb();
+    const files = await db.all(`SELECT id, 'file' as type FROM backups WHERE running IS NOT NULL AND complete = 0`);
+    const images = await db.all(`SELECT id, 'image' as type FROM backup_images WHERE running IS NOT NULL AND complete = 0`);
+    return [...files, ...images];
+  }
+
+  async forceCompleteStuckBackups(): Promise<number> {
+    const db = await getUrBackupDb();
+    await db.run(`UPDATE backups SET running = NULL, complete = 1 WHERE running IS NOT NULL AND complete = 0`);
+    const r1 = await db.get(`SELECT changes() as n`) as any;
+    await db.run(`UPDATE backup_images SET running = NULL, complete = 1 WHERE running IS NOT NULL AND complete = 0`);
+    const r2 = await db.get(`SELECT changes() as n`) as any;
+    return (r1?.n || 0) + (r2?.n || 0);
   }
 
   /**

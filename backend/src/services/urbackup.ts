@@ -838,59 +838,31 @@ export class UrBackupService {
     try {
       logger.info('[clearStaleJobs] Starting stale job cleanup...');
 
-      // Get current activities from database and API
-      const dbActivities: any[] = await this.dbService.getCurrentActivities();
+      // Find DB records stuck with complete=0 and running IS NOT NULL
+      const stuckDb = await this.dbService.getStuckBackups();
+      logger.info(`[clearStaleJobs] Found ${stuckDb.length} stuck DB records`);
 
-      // Get progress from API
-      let staleJobs: any[] = [];
-
+      // Also try to stop anything in the progress API list
+      let progressStopped = 0;
       try {
         const progressResult = await this.apiCall('progress', {});
         const progressData: any[] = progressResult?.progress || [];
-
-        // Find stale jobs (negative progress or no activity)
-        staleJobs = progressData.filter(progress => {
-          if (progress.pcdone < 0) {
-            logger.info(`[clearStaleJobs] Found stale job: ${progress.name} (ID: ${progress.id}, pcdone: ${progress.pcdone})`);
-            return true;
-          }
-          return false;
-        });
-
-        logger.info(`[clearStaleJobs] Found ${staleJobs.length} stale jobs to stop`);
-
-        // Stop each stale job
-        const results: Array<{id: any; name: any; success: boolean; error?: string}> = [];
-        for (const job of staleJobs) {
+        for (const job of progressData) {
           try {
-            logger.info(`[clearStaleJobs] Stopping stale job: ${job.name} (ID: ${job.id})`);
-            const result = await this.stopActivity(job.id.toString());
-            results.push({
-              id: job.id,
-              name: job.name,
-              success: true
-            });
-          } catch (error) {
-            logger.error(`[clearStaleJobs] Failed to stop job ${job.id}:`, error);
-            results.push({
-              id: job.id,
-              name: job.name,
-              success: false,
-              error: error instanceof Error ? error.message : 'Unknown error'
-            });
-          }
+            await this.stopActivity(String(job.id));
+            progressStopped++;
+          } catch { /* ignore */ }
         }
+      } catch { /* progress API unavailable */ }
 
-        return {
-          staleJobsFound: staleJobs.length,
-          staleJobsStopped: results.filter(r => r.success).length,
-          results
-        };
+      // Force-complete all stuck DB records (stop signal may not be received by client)
+      const cleared = await this.dbService.forceCompleteStuckBackups();
+      logger.info(`[clearStaleJobs] Force-completed ${cleared} stuck DB records`);
 
-      } catch (apiError) {
-        logger.error('[clearStaleJobs] Failed to get progress from API:', apiError);
-        throw new Error('Failed to get current activities from UrBackup API');
-      }
+      return {
+        staleJobsFound: stuckDb.length,
+        staleJobsStopped: cleared,
+      };
     } catch (error) {
       logger.error('[clearStaleJobs] Failed to clear stale jobs:', error);
       throw error;
