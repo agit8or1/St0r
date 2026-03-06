@@ -235,8 +235,10 @@ class ApiService {
     return response.data;
   }
 
-  async browseClientFilesystem(clientId: string, path: string = '') {
-    const response = await this.api.get(`/urbackup/clients/${clientId}/browse`, { params: { path } });
+  async browseClientFilesystem(clientId: string, path: string = '/', backupId?: string) {
+    const params: any = { path };
+    if (backupId) params.backupId = backupId;
+    const response = await this.api.get(`/urbackup/clients/${clientId}/browse`, { params });
     return response.data;
   }
 

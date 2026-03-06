@@ -1,10 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import { UrBackupService } from '../services/urbackup.js';
-import { UrBackupDbService } from '../services/urbackupDb.js';
 import { logger } from '../utils/logger.js';
-import { promises as fs } from 'fs';
-import { join, normalize } from 'path';
 
 // Since st0r runs on the same server as UrBackup, we always use a single local service instance
 const urbackupService = new UrBackupService();
@@ -469,50 +466,35 @@ export async function getFailedPaths(req: AuthRequest, res: Response): Promise<v
 export async function browseClientFilesystem(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;
-    // subPath is relative to the backup root (e.g. "" = drives, "C" = C drive root, "C/Users" = C:\Users)
-    const subPath = (req.query.path as string) || '';
+    const path = (req.query.path as string) || '/';
+    const service = await getService();
+    if (!service) { res.status(503).json({ error: 'UrBackup service unavailable' }); return; }
 
-    const dbService = new UrBackupDbService();
-    const fileBackups = await dbService.getFileBackups(Number(clientId));
-    const latestBackup = fileBackups
-      .filter((b: any) => b.complete)
-      .sort((a: any, b: any) => b.backuptime - a.backuptime)[0];
+    let backupId = req.query.backupId as string | undefined;
 
-    if (!latestBackup) {
-      res.status(404).json({ error: 'No completed backups found. Run at least one backup to enable folder browsing.' });
-      return;
+    // On first call (no backupId), find the most recent complete backup
+    if (!backupId) {
+      const latest = await service.getLatestFileBackupId(clientId);
+      if (!latest) {
+        res.status(404).json({ error: 'No completed backups found for this client. Complete at least one backup to enable folder browsing.' });
+        return;
+      }
+      backupId = latest.backupId;
     }
 
-    const clients = await dbService.getClients();
-    const client = clients.find((c: any) => c.id === Number(clientId));
-    if (!client) { res.status(404).json({ error: 'Client not found' }); return; }
+    const result = await service.browseClientFilesystem(clientId, backupId, path);
+    // Filter to directories only for browsing, return with consistent shape
+    const dirs = (result.files || [])
+      .filter((f: any) => f.dir)
+      .map((f: any) => ({ name: f.name, isdir: true }));
 
-    let backupFolder = '/home/administrator/urbackup-storage';
-    try {
-      backupFolder = (await fs.readFile('/var/urbackup/backupfolder', 'utf-8')).trim();
-    } catch { /* use default */ }
-
-    const backupRoot = join(backupFolder, client.name, latestBackup.path);
-    // Prevent path traversal
-    const fullPath = subPath ? normalize(join(backupRoot, subPath)) : backupRoot;
-    if (!fullPath.startsWith(backupRoot)) {
-      res.status(403).json({ error: 'Invalid path' });
-      return;
-    }
-
-    const entries = await fs.readdir(fullPath, { withFileTypes: true });
-    const dirs = entries
-      .filter(e => e.isDirectory())
-      .map(e => ({ name: e.name, isdir: true }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    res.json({ files: dirs, backupTime: latestBackup.backuptime });
+    res.json({
+      files: dirs,
+      backupId,
+      backupTime: result.backuptime,
+    });
   } catch (error: any) {
-    if (error.code === 'ENOENT') {
-      res.status(404).json({ error: 'Path not found in backup archive' });
-      return;
-    }
     logger.error('Failed to browse client filesystem:', error);
-    res.status(500).json({ error: 'Failed to browse client filesystem' });
+    res.status(500).json({ error: error.message || 'Failed to browse client filesystem' });
   }
 }

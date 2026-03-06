@@ -1174,15 +1174,55 @@ export class UrBackupService {
     }
   }
 
-  async browseClientFilesystem(clientId: string, path: string = '') {
+  async browseClientFilesystem(clientId: string, backupId: string, path: string = '/') {
     try {
-      return await this.apiCall('dir', {
+      const session = await this.login();
+      const params = new URLSearchParams({
+        a: 'backups',
+        sa: 'files',
         clientid: clientId,
-        path: path
+        backupid: backupId,
+        path: path || '/',
+        ses: session,
       });
+      const response = await fetch(`${URBACKUP_API_URL}?a=backups&ses=${session}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+        body: params.toString(),
+      });
+      const result: any = await response.json();
+      if (result.error === 1) throw new Error('Access denied or backup not found');
+      return result;
     } catch (error) {
       logger.error('Failed to browse client filesystem:', error);
       throw error;
+    }
+  }
+
+  async getLatestFileBackupId(clientId: string): Promise<{ backupId: string; backupTime: number } | null> {
+    try {
+      const session = await this.login();
+      // Calling without backupid returns list of available backups
+      const params = new URLSearchParams({
+        a: 'backups',
+        sa: 'files',
+        clientid: clientId,
+        path: '/',
+        ses: session,
+      });
+      const response = await fetch(`${URBACKUP_API_URL}?a=backups&ses=${session}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+        body: params.toString(),
+      });
+      const result: any = await response.json();
+      if (!result.files || result.files.length === 0) return null;
+      // Result is list of backup timestamps sorted newest first
+      const latest = result.files.sort((a: any, b: any) => b.backuptime - a.backuptime)[0];
+      return { backupId: String(latest.backupid), backupTime: latest.backuptime };
+    } catch (error) {
+      logger.error('Failed to get latest backup ID:', error);
+      return null;
     }
   }
 

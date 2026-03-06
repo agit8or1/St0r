@@ -1,8 +1,8 @@
 {
-  "version": "3.2.48",
+  "version": "3.2.49",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Improvement: Client folder browser redesigned with Common Paths tab and From Last Backup tab",
+    "Fix: Client folder browser now uses UrBackup's native backup browse API (same as UrBackup web UI)",
     "Fix: Auto-update now runs npm audit fix and rebuilds frontend"
   ]
 }
