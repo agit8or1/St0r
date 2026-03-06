@@ -612,7 +612,7 @@ export class UrBackupService {
             const pcdone = (typeof progress.pcdone === 'number' && progress.pcdone >= 0) ? progress.pcdone : 0;
 
             mergedActivities.push({
-              id: dbMatch?.id || progress.id || `progress-${progress.clientid}`,
+              id: progress.id != null ? `${progressType}-${progress.id}` : (dbMatch?.id || `progress-${progress.clientid}`),
               clientid: progress.clientid,
               clientName: dbMatch?.clientName || progress.name || progress.client,
               name: dbMatch?.name || progress.name || progress.client,
