@@ -54,13 +54,11 @@ export function Dashboard() {
   }, []);
 
   const loadData = async () => {
+    // Load fast data first so the dashboard renders immediately
     try {
-      const [clientsData, activitiesData, storageData, replData, metricsData] = await Promise.all([
-        api.getClients().catch(() => []),
-        api.getCurrentActivities().catch(() => []),
-        api.getTotalStorage().catch(() => ({ used: 0, available: 0, servers: [] })),
-        api.getReplicationStatus().catch(() => []),
-        api.getSystemMetrics().catch(() => null),
+      const [clientsData, activitiesData] = await Promise.all([
+        api.getClients().catch(() => [] as Client[]),
+        api.getCurrentActivities().catch(() => [] as Activity[]),
       ]);
       setClients(clientsData);
       if (Array.isArray(activitiesData)) {
@@ -71,15 +69,17 @@ export function Dashboard() {
       } else {
         setActivities([]);
       }
-      setDiskUsage({ used: storageData.used, available: storageData.available });
-      setReplStatuses(replData);
-      setMetrics(metricsData);
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load data');
     } finally {
       setLoading(false);
     }
+
+    // Load slow data in background — updates cards when ready
+    api.getTotalStorage().then(s => setDiskUsage({ used: s.used, available: s.available })).catch(() => {});
+    api.getReplicationStatus().then(setReplStatuses).catch(() => {});
+    api.getSystemMetrics().then(setMetrics).catch(() => {});
   };
 
   if (loading) {
