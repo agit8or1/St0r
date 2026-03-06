@@ -316,8 +316,8 @@ export function ClientSettings() {
       });
       const data = await response.json();
       if (!response.ok || data.success === false) throw new Error(data.error || 'Save failed');
-      setMessage({ type: 'success', text: serverManaged ? 'Managed mode enabled.' : 'Managed mode disabled.' });
-      setTimeout(() => { setMessage(null); loadSettings(); }, 2000);
+      setMessage({ type: 'success', text: serverManaged ? 'Managed mode enabled. Tray will lock after the client reconnects or completes its next backup.' : 'Managed mode disabled.' });
+      setTimeout(() => { setMessage(null); loadSettings(); }, 5000);
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to save managed mode' });
     } finally {
@@ -400,7 +400,7 @@ export function ClientSettings() {
               </p>
               <p className={`text-xs mt-0.5 ${!bool('client_set_settings') ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
                 {!bool('client_set_settings')
-                  ? 'Server controls backup settings. Client cannot change paths, pause, or trigger manual backups.'
+                  ? 'Server controls backup settings. Tray lock enforced after client reconnects or next backup.'
                   : 'Client controls its own backup settings via the tray app.'}
               </p>
             </div>

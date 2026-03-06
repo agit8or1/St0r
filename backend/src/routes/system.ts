@@ -4,7 +4,10 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
-// All routes require authentication
+// update-log is unauthenticated — needed during restarts when the session cookie may be invalid
+router.get('/update-log', getUpdateLog);
+
+// All other routes require authentication
 router.use(authenticate);
 
 // System resource metrics (CPU, memory, network)
@@ -12,8 +15,5 @@ router.get('/metrics', getSystemMetrics);
 
 // Trigger system update
 router.post('/update', triggerUpdate);
-
-// Get update log (for live progress)
-router.get('/update-log', getUpdateLog);
 
 export default router;

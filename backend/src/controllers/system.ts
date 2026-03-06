@@ -160,6 +160,15 @@ export async function triggerUpdate(req: Request, res: Response) {
     // 5. Restart service
     // 6. Restore backup if anything fails
 
+    // If a previous update is still running, return success rather than failing
+    try {
+      const { stdout } = await execFileAsync('systemctl', ['is-active', 'urbackup-gui-update']);
+      if (['active', 'activating'].includes(stdout.trim())) {
+        res.json({ success: true, alreadyRunning: true, message: 'Update is already in progress' });
+        return;
+      }
+    } catch (_e) { /* non-zero exit = not active, continue */ }
+
     // Reset any previous failed update unit to avoid conflicts
     try {
       await execFileAsync('sudo', ['systemctl', 'reset-failed', 'urbackup-gui-update.service']);
