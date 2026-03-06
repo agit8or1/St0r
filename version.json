@@ -1,7 +1,7 @@
 {
-  "version": "3.2.57",
+  "version": "3.2.58",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: Ghost active job — filter out UrBackup progress items with pcdone=100 and no speed that haven't been flushed yet"
+    "Fix: Bare Metal Restore page always showed 'No image backups available' — getBackups returns {file,image} object not an array"
   ]
 }

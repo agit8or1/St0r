@@ -56,17 +56,19 @@ export function BareMetalRestore() {
       setLoadingBackups(true);
       const backups = await api.getBackups(clientId.toString());
 
-      // Filter image backups
-      const imageBackupsList: ImageBackup[] = Array.isArray(backups)
-        ? backups.filter((b: any) => b.image).map((b: any) => ({
-            id: b.id,
-            backuptime: b.backuptime,
-            size_bytes: b.size_bytes || 0,
-            incremental: b.incremental,
-            path: b.path,
-            letter: b.letter,
-          }))
-        : [];
+      // getBackups returns { file: [...], image: [...] }
+      const rawImage: any[] = Array.isArray((backups as any).image)
+        ? (backups as any).image
+        : Array.isArray(backups) ? backups.filter((b: any) => b.image) : [];
+
+      const imageBackupsList: ImageBackup[] = rawImage.map((b: any) => ({
+        id: b.id,
+        backuptime: b.backuptime,
+        size_bytes: b.size_bytes || 0,
+        incremental: b.incremental,
+        path: b.path,
+        letter: b.letter,
+      }));
 
       setImageBackups(imageBackupsList);
     } catch (err) {
