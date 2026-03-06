@@ -29,19 +29,35 @@ export function UpdateNotification() {
   };
 
   useEffect(() => {
-    checkForUpdates();
-    // Check for updates every 30 minutes
-    const interval = setInterval(checkForUpdates, 30 * 60 * 1000);
-    return () => clearInterval(interval);
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const run = async () => {
+      const success = await checkForUpdates();
+      if (!success && !cancelled) {
+        // Retry in 2 minutes if the check failed (e.g. service was restarting)
+        retryTimeout = setTimeout(run, 2 * 60 * 1000);
+      }
+    };
+
+    run();
+    // Re-check every 30 minutes regardless
+    const interval = setInterval(run, 30 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
   }, []);
 
-  const checkForUpdates = async () => {
+  // Returns true if the check succeeded (even if no update), false if it failed
+  const checkForUpdates = async (): Promise<boolean> => {
     try {
       const installId = getInstallId();
 
       // Fetch current version
       const currentResponse = await fetch(`/api/version?installId=${encodeURIComponent(installId)}`);
-      if (!currentResponse.ok) return;
+      if (!currentResponse.ok) return false;
 
       const currentInfo: VersionInfo = await currentResponse.json();
       setCurrentVersion(currentInfo.version);
@@ -51,7 +67,7 @@ export function UpdateNotification() {
       if (!latestResponse.ok) {
         // No release found on GitHub — we're on the latest
         setUpdateAvailable(false);
-        return;
+        return true;
       }
 
       const latestInfo: VersionInfo = await latestResponse.json();
@@ -60,8 +76,10 @@ export function UpdateNotification() {
       // Compare versions
       const isNewer = compareVersions(latestInfo.version, currentInfo.version);
       setUpdateAvailable(isNewer);
+      return true;
     } catch (error) {
       console.debug('Could not check for updates:', error);
+      return false;
     }
   };
 

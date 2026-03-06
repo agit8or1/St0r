@@ -1,8 +1,8 @@
 {
-  "version": "3.2.49",
+  "version": "3.2.50",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: Client folder browser now uses UrBackup's native backup browse API (same as UrBackup web UI)",
-    "Fix: Auto-update now runs npm audit fix and rebuilds frontend"
+    "Fix: Update notification retries in 2 minutes if initial check fails (e.g. after service restart)",
+    "Fix: Client folder browser uses UrBackup's native backup browse API"
   ]
 }
