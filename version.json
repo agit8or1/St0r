@@ -1,8 +1,8 @@
 {
-  "version": "3.2.54",
+  "version": "3.2.55",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Improvement: Folder browser redesigned as expandable drive/folder tree (C through H drives with common subfolders)",
-    "Fix: npm audit now shows 0 vulnerabilities"
+    "Fix: Default backup exclusions no longer exclude ProgramData, Program Files, or Program Files (x86) — only specific volatile subfolders are excluded",
+    "Improvement: Folder browser 'Browse Drives' renamed to 'Common Paths' with honest note that live client filesystem browsing is not supported by UrBackup API"
   ]
 }

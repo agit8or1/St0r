@@ -131,7 +131,7 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
               mode === 'quick' ? 'border-b-2 border-primary-600 text-primary-600 dark:text-primary-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
-            <HardDrive className="h-4 w-4" /> Browse Drives
+            <HardDrive className="h-4 w-4" /> Common Paths
           </button>
           <button
             onClick={() => setMode('archive')}
@@ -146,9 +146,14 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
         {/* ── Browse Drives tab ─────────────────────────────────────── */}
         {mode === 'quick' && (
           <div className="flex-1 overflow-y-auto">
-            <p className="px-4 pt-3 pb-1 text-xs text-gray-500 dark:text-gray-400">
-              Select a drive or folder to back up. Click a drive to expand common subfolders.
-            </p>
+            <div className="px-4 pt-3 pb-2 space-y-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Common Windows paths — click to expand drives and pick a folder to back up.
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Note: UrBackup does not support live client filesystem browsing. These are common path templates. Use <strong>Last Backup</strong> to browse folders from an actual completed backup.
+              </p>
+            </div>
 
             {/* Drive tree */}
             <div className="px-2 pb-2">
@@ -321,7 +326,7 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
                 <div className="p-4 space-y-3">
                   <p className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">{error}</p>
                   <button onClick={() => setMode('quick')} className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
-                    ← Back to Browse Drives
+                    ← Back to Common Paths
                   </button>
                 </div>
               )}

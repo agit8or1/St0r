@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
-import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch, Loader2, ScanSearch } from 'lucide-react';
+import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch, Loader2, ScanSearch, Pencil, Check, X } from 'lucide-react';
 import { ClientFileBrowser } from '../components/ClientFileBrowser';
 
 interface ClientSettings {
@@ -92,6 +92,8 @@ export function ClientSettings() {
   const [showImageBrowser, setShowImageBrowser] = useState(false);
   const [failedPaths, setFailedPaths] = useState<{ path: string; count: number }[] | null>(null);
   const [failedPathsLoading, setFailedPathsLoading] = useState(false);
+  const [editingExcludeIdx, setEditingExcludeIdx] = useState<number | null>(null);
+  const [editingExcludeVal, setEditingExcludeVal] = useState('');
 
   useEffect(() => { loadSettings(); }, [clientName]);
 
@@ -126,23 +128,22 @@ export function ClientSettings() {
   const getDefaults = (): ClientSettings => ({
     // UrBackup default backup path for Windows
     default_dirs: 'C:\\Users',
-    // UrBackup's standard Windows exclusions (matches client defaults)
+    // Standard Windows exclusions: only junction points, OS files, and cache dirs.
+    // Does NOT exclude whole dirs like ProgramData or Program Files — add those
+    // manually if you don't want them backed up.
     exclude_files: [
+      // OS virtual / swap files (no backup value)
       ':\\pagefile.sys',
       ':\\hiberfil.sys',
       ':\\swapfile.sys',
       ':\\$Recycle.Bin',
       ':\\System Volume Information',
+      // Windows OS dirs (rarely needed in a restore)
       'C:\\Windows',
       'C:\\Windows.old',
       'C:\\$Windows.~BT',
       'C:\\$GetCurrent',
-      'C:\\Program Files',
-      'C:\\Program Files (x86)',
-      'C:\\ProgramData',
-      'C:\\Windows\\Temp',
-      // Junction points — these are Windows compatibility symlinks that point to
-      // directories already included elsewhere, causing files to be counted twice
+      // Junction points — Windows compatibility symlinks that duplicate content
       'C:\\Documents and Settings',           // → C:\Users
       'C:\\Users\\All Users',                 // → C:\ProgramData
       'C:\\Users\\Default User',              // → C:\Users\Default
@@ -152,14 +153,15 @@ export function ClientSettings() {
       'C:\\Users\\*\\My Music',               // → Music
       'C:\\Users\\*\\My Pictures',            // → Pictures
       'C:\\Users\\*\\My Videos',              // → Videos
-      'C:\\Users\\*\\Cookies',                // → AppData\Roaming\Microsoft\Windows\Cookies
-      'C:\\Users\\*\\Recent',                 // → AppData\Roaming\Microsoft\Windows\Recent
-      'C:\\Users\\*\\NetHood',                // → AppData\Roaming\Microsoft\Windows\Network Shortcuts
-      'C:\\Users\\*\\PrintHood',              // → AppData\Roaming\Microsoft\Windows\Printer Shortcuts
-      'C:\\Users\\*\\SendTo',                 // → AppData\Roaming\Microsoft\Windows\SendTo
-      'C:\\Users\\*\\Start Menu',             // → AppData\Roaming\Microsoft\Windows\Start Menu
-      'C:\\Users\\*\\Templates',              // → AppData\Roaming\Microsoft\Windows\Templates
-      // Cache / temp
+      'C:\\Users\\*\\Cookies',
+      'C:\\Users\\*\\Recent',
+      'C:\\Users\\*\\NetHood',
+      'C:\\Users\\*\\PrintHood',
+      'C:\\Users\\*\\SendTo',
+      'C:\\Users\\*\\Start Menu',
+      'C:\\Users\\*\\Templates',
+      // Cache / temp files
+      'C:\\Windows\\Temp',
       'C:\\Users\\*\\AppData\\Local\\Temp',
       'C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files',
       'C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache',
@@ -168,10 +170,11 @@ export function ClientSettings() {
       'C:\\Users\\*\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\*\\cache2',
       'C:\\Users\\*\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\*\\cache',
       'C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache*',
+      // ProgramData — large volatile files not worth backing up
       'C:\\ProgramData\\Microsoft\\Windows Defender\\Scans\\mpcache-*',
       'C:\\ProgramData\\Microsoft\\Network\\Downloader\\*',
-      'C:\\Windows\\softwaredistribution\\*.*',
       'C:\\ProgramData\\Microsoft\\Windows\\WER\\*',
+      'C:\\Windows\\softwaredistribution\\*.*',
     ].join(';'),
     include_files: '',
     backup_dirs_optional: false,
@@ -494,10 +497,48 @@ export function ClientSettings() {
                     ? <p className="text-sm text-gray-400 italic">No exclusions configured.</p>
                     : getExcludes().map((pat, i) => (
                       <div key={i} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded px-3 py-1.5">
-                        <span className="flex-1 font-mono text-xs truncate">{pat}</span>
-                        <button onClick={() => setExcludes(getExcludes().filter((_, j) => j !== i))} className="text-red-500 hover:text-red-700 flex-shrink-0">
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                        {editingExcludeIdx === i ? (
+                          <>
+                            <input
+                              autoFocus
+                              type="text"
+                              value={editingExcludeVal}
+                              onChange={e => setEditingExcludeVal(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  const v = editingExcludeVal.trim();
+                                  if (v) { const arr = getExcludes(); arr[i] = v; setExcludes(arr); }
+                                  setEditingExcludeIdx(null);
+                                } else if (e.key === 'Escape') {
+                                  setEditingExcludeIdx(null);
+                                }
+                              }}
+                              className="input flex-1 font-mono text-xs py-0.5 h-6"
+                            />
+                            <button
+                              onClick={() => {
+                                const v = editingExcludeVal.trim();
+                                if (v) { const arr = getExcludes(); arr[i] = v; setExcludes(arr); }
+                                setEditingExcludeIdx(null);
+                              }}
+                              className="text-green-600 hover:text-green-800 flex-shrink-0" title="Save"
+                            ><Check className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => setEditingExcludeIdx(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0" title="Cancel">
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex-1 font-mono text-xs truncate">{pat}</span>
+                            <button
+                              onClick={() => { setEditingExcludeIdx(i); setEditingExcludeVal(pat); }}
+                              className="text-gray-400 hover:text-primary-600 flex-shrink-0" title="Edit"
+                            ><Pencil className="h-3 w-3" /></button>
+                            <button onClick={() => setExcludes(getExcludes().filter((_, j) => j !== i))} className="text-red-500 hover:text-red-700 flex-shrink-0" title="Remove">
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     ))
                   }
