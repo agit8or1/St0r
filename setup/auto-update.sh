@@ -174,6 +174,11 @@ cd "$INSTALL_DIR/backend"
 npm install 2>&1
 echo "$(timestamp) Dependencies installed successfully"
 
+# Fix non-breaking npm vulnerabilities (no --force to avoid breaking changes)
+echo "$(timestamp) Running npm audit fix (backend)..."
+npm audit fix 2>&1 || true
+echo "$(timestamp) npm audit fix complete"
+
 echo "$(timestamp) Building backend..."
 # Clean previous compiled output to avoid stale files causing tsc errors
 rm -rf dist
@@ -182,6 +187,20 @@ echo "$(timestamp) Backend build successful"
 
 # Prune devDependencies after successful build
 npm prune --omit=dev 2>&1
+
+# ── 6b. Build frontend ────────────────────────────────────────────────────
+echo "$(timestamp) Installing frontend dependencies..."
+cd "$INSTALL_DIR/frontend"
+npm install 2>&1
+echo "$(timestamp) Frontend dependencies installed"
+
+echo "$(timestamp) Running npm audit fix (frontend)..."
+npm audit fix 2>&1 || true
+echo "$(timestamp) npm audit fix complete"
+
+echo "$(timestamp) Building frontend..."
+npm run build 2>&1
+echo "$(timestamp) Frontend build successful"
 
 # ── 7. Run DB migrations ───────────────────────────────────────────────────
 echo "$(timestamp) Running database migrations..."

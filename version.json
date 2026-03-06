@@ -1,8 +1,8 @@
 {
-  "version": "3.2.46",
+  "version": "3.2.47",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: Update notification now shows loading spinner and dismisses itself after confirming",
-    "Fix: Update progress modal now opens correctly even when already on the About page"
+    "Fix: Client folder browser now works by browsing the most recent backup archive",
+    "Fix: Auto-update now runs npm audit fix and rebuilds frontend during updates"
   ]
 }
