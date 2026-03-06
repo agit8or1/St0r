@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, X, RefreshCw, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Download, X, RefreshCw, AlertTriangle, AlertCircle, Loader2 } from 'lucide-react';
 
 interface VersionInfo {
   version: string;
@@ -16,6 +16,7 @@ export function UpdateNotification() {
   const [dismissed, setDismissed] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
 
   // Generate or retrieve installation ID
   const getInstallId = () => {
@@ -91,6 +92,7 @@ export function UpdateNotification() {
   const handleConfirmUpdate = async () => {
     setConfirming(false);
     setUpdateError(null);
+    setUpdating(true);
     try {
       const response = await fetch('/api/system-update/update', {
         method: 'POST',
@@ -100,11 +102,13 @@ export function UpdateNotification() {
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         setUpdateError(data.error || `Failed to start update (${response.status})`);
+        setUpdating(false);
         return;
       }
     } catch (_e) {
-      // Network error — service may be starting the update; navigate anyway
+      // Network error — service may be restarting; navigate anyway
     }
+    setDismissed(true);
     navigate('/about?autoUpdate=true');
   };
 
@@ -158,7 +162,12 @@ export function UpdateNotification() {
               </div>
             )}
 
-            {confirming ? (
+            {updating ? (
+              <div className="flex items-center gap-2 text-sm text-white/90">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Starting update...
+              </div>
+            ) : confirming ? (
               <div className="bg-white/10 rounded-lg p-3 mb-2">
                 <div className="flex items-center gap-2 mb-2 text-sm font-semibold">
                   <AlertTriangle className="h-4 w-4 text-yellow-300" />

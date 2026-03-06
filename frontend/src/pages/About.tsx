@@ -61,14 +61,17 @@ export function About() {
     fetchCurrentVersion();
     checkForUpdates();
     fetchInstallStats();
+  }, []);
 
-    // Only open the progress modal when explicitly navigated from the update notification
-    if (searchParams.get('autoUpdate') === 'true') {
+  // Open progress modal whenever ?autoUpdate=true is in the URL — including
+  // when already on the About page (e.g. navigated from the update notification)
+  useEffect(() => {
+    if (searchParams.get('autoUpdate') === 'true' && !showProgressModal) {
       setShowProgressModal(true);
       setUpdateInProgress(true);
       setUpdateLog('Starting update...\n');
     }
-  }, []);
+  }, [searchParams]);
 
   const fetchCurrentVersion = async () => {
     try {

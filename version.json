@@ -1,11 +1,8 @@
 {
-  "version": "3.2.44",
+  "version": "3.2.46",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: Update button no longer errors when update is already running",
-    "Fix: Update progress log works after service restart (no longer requires auth)",
-    "Fix: Managed mode toggle explains tray lock requires client reconnect",
-    "Fix: Dashboard no longer blocks on slow storage/metrics calls",
-    "Add: Detect failed backup paths and add to exclusions with one click"
+    "Fix: Update notification now shows loading spinner and dismisses itself after confirming",
+    "Fix: Update progress modal now opens correctly even when already on the About page"
   ]
 }
