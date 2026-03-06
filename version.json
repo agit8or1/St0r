@@ -1,8 +1,8 @@
 {
-  "version": "3.2.51",
+  "version": "3.2.52",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: Folder browser now defaults to Common Paths tab (no backup required)",
-    "Fix: Update notification retries in 2 minutes if initial check fails"
+    "Fix: Folder browser now correctly finds completed backups (was using POST instead of GET for UrBackup browse API)",
+    "Fix: Folder browser defaults to Common Paths tab"
   ]
 }
