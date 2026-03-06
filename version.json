@@ -1,7 +1,11 @@
 {
-  "version": "3.2.42",
+  "version": "3.2.44",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Add: Detect failed backup paths — scan the last backup log and add error-prone directories to exclusions with one click"
+    "Fix: Update button no longer errors when update is already running",
+    "Fix: Update progress log works after service restart (no longer requires auth)",
+    "Fix: Managed mode toggle explains tray lock requires client reconnect",
+    "Fix: Dashboard no longer blocks on slow storage/metrics calls",
+    "Add: Detect failed backup paths and add to exclusions with one click"
   ]
 }
