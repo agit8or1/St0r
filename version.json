@@ -1,8 +1,8 @@
 {
-  "version": "3.2.50",
+  "version": "3.2.51",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: Update notification retries in 2 minutes if initial check fails (e.g. after service restart)",
-    "Fix: Client folder browser uses UrBackup's native backup browse API"
+    "Fix: Folder browser now defaults to Common Paths tab (no backup required)",
+    "Fix: Update notification retries in 2 minutes if initial check fails"
   ]
 }

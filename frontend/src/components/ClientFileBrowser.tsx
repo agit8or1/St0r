@@ -40,7 +40,7 @@ function toApiPath(parts: string[]): string {
 type Mode = 'archive' | 'quick';
 
 export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }: Props) {
-  const [mode, setMode] = useState<Mode>('archive');
+  const [mode, setMode] = useState<Mode>('quick');
   const [customPath, setCustomPath] = useState('');
 
   // Archive browse state — pathParts tracks current location as array of dir names
@@ -50,9 +50,10 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [archiveLoaded, setArchiveLoaded] = useState(false);
 
   useEffect(() => {
-    if (mode === 'archive') browse([], null);
+    if (mode === 'archive' && !archiveLoaded) browse([], null);
   }, [mode]);
 
   const browse = async (parts: string[], bkId: string | null) => {
@@ -64,6 +65,7 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
       setPathParts(parts);
       if (result?.backupId) setBackupId(result.backupId);
       if (result?.backupTime) setBackupTime(result.backupTime);
+      setArchiveLoaded(true);
     } catch (e: any) {
       setError(e?.response?.data?.error || 'Failed to browse backup');
     } finally {
@@ -106,16 +108,6 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
         {/* Mode tabs */}
         <div className="flex border-b border-gray-200 dark:border-gray-700">
           <button
-            onClick={() => setMode('archive')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              mode === 'archive'
-                ? 'border-b-2 border-primary-600 text-primary-600 dark:text-primary-400'
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            <Archive className="h-4 w-4" /> Browse Backup
-          </button>
-          <button
             onClick={() => setMode('quick')}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
               mode === 'quick'
@@ -124,6 +116,17 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
             }`}
           >
             <HardDrive className="h-4 w-4" /> Common Paths
+          </button>
+          <button
+            onClick={() => setMode('archive')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              mode === 'archive'
+                ? 'border-b-2 border-primary-600 text-primary-600 dark:text-primary-400'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Archive className="h-4 w-4" /> Browse Backup
+            {error && mode !== 'archive' && <span className="text-xs text-gray-400">(needs backup)</span>}
           </button>
         </div>
 
@@ -179,7 +182,12 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
               {error && (
                 <div className="p-4 space-y-3">
                   <p className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">{error}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Use the <strong>Common Paths</strong> tab to add folders manually.</p>
+                  <button
+                    onClick={() => setMode('quick')}
+                    className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                  >
+                    ← Back to Common Paths
+                  </button>
                 </div>
               )}
               {!loading && !error && entries.length === 0 && (
