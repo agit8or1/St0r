@@ -1,7 +1,8 @@
 {
-  "version": "3.2.59",
+  "version": "3.2.60",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Feature: Convert & Download VHD — converts .vhdz image backup to standard .vhd and streams it to browser (uses urbackupsrv decompress-file on a temp copy, original backup is never modified)"
+    "Feature: Endpoints table now shows IP Address, Online/Offline status badge, and Last Seen time for each client",
+    "Screenshots updated to reflect all current features"
   ]
 }

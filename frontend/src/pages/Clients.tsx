@@ -189,7 +189,7 @@ export function Clients() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                   <tr>
-                    <th className="w-6 px-3 py-2" />
+                    <th className="w-4 px-1 py-2" />
                     <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100" onClick={() => handleSort('name')}>
                       Endpoint <SortIcon field="name" />
                     </th>
@@ -201,7 +201,11 @@ export function Clients() {
                     </th>
                     <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Last Image</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Storage</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Status</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">IP Address</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100" onClick={() => handleSort('status')}>
+                      Status <SortIcon field="status" />
+                    </th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Last Seen</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -258,16 +262,32 @@ export function Clients() {
                         <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                           {storage > 0 ? formatBytes(storage) : '—'}
                         </td>
+                        {/* IP Address */}
+                        <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono text-xs">
+                          {client.ip || '—'}
+                        </td>
                         {/* Status badges */}
                         <td className="px-3 py-2">
-                          <div className="flex gap-1">
-                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              !hasFileProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                            }`}>F</span>
-                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              !hasImageProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                            }`}>I</span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium w-fit ${
+                              client.online ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${client.online ? 'bg-green-500' : 'bg-gray-400'}`} />
+                              {client.online ? 'Online' : 'Offline'}
+                            </span>
+                            <div className="flex gap-1">
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                !hasFileProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                              }`}>F</span>
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                !hasImageProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                              }`}>I</span>
+                            </div>
                           </div>
+                        </td>
+                        {/* Last Seen */}
+                        <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
+                          {client.lastseen ? formatTimeAgo(client.lastseen) : '—'}
                         </td>
                       </tr>
                     );
