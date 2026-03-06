@@ -925,6 +925,40 @@ export class UrBackupService {
     }
   }
 
+  async getFailedPaths(clientId: number) {
+    try {
+      // Get the most recent file backup log for this client
+      const { logs } = await this.getJobLogs(clientId, 10);
+      // Only file backups (image=0), pick the most recent
+      const fileLog = logs.find((l: any) => l.image === 0);
+      if (!fileLog) return { paths: [] };
+
+      const { entries } = await this.getJobLog(fileLog.id);
+
+      // Parse error entries: "Error getting complete file "SESSION|Path/To/File" from ... Errorcode: ..."
+      const dirCounts = new Map<string, number>();
+      for (const entry of entries) {
+        if (entry.severity !== 2) continue;
+        const m = entry.message.match(/Error getting.*?"[^|]*\|([^"]+)"/);
+        if (!m) continue;
+        // Convert forward-slash path to Windows backslash and get parent dir
+        const parts = m[1].split('/');
+        if (parts.length < 2) continue;
+        const dir = parts.slice(0, -1).join('\\');
+        dirCounts.set(dir, (dirCounts.get(dir) || 0) + 1);
+      }
+
+      const paths = Array.from(dirCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([path, count]) => ({ path, count }));
+
+      return { paths, logId: fileLog.id, logTime: fileLog.time };
+    } catch (error) {
+      logger.error('Failed to get failed paths:', error);
+      return { paths: [] };
+    }
+  }
+
   async getSettings() {
     try {
       const response = await this.apiCall('settings', { sa: 'general' });

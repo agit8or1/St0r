@@ -21,6 +21,7 @@ import {
   getJobLogs,
   getJobLog,
   browseClientFilesystem,
+  getFailedPaths,
 } from '../controllers/urbackup.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -47,6 +48,7 @@ router.post('/activities/:activityId/stop', stopActivity);
 router.post('/activities/clear-stale', clearStaleJobs);
 router.get('/usage', getUsage);
 router.get('/clients/:clientId/browse', browseClientFilesystem);
+router.get('/clients/:clientId/failed-paths', getFailedPaths);
 router.delete('/clients/:clientId/backups/:backupId', deleteBackup);
 router.get('/job-logs', getJobLogs);
 router.get('/job-logs/:logId', getJobLog);

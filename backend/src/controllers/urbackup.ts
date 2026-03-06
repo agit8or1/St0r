@@ -449,6 +449,20 @@ export async function getJobLog(req: AuthRequest, res: Response): Promise<void> 
   }
 }
 
+export async function getFailedPaths(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { clientId } = req.params;
+    if (!clientId) { res.status(400).json({ error: 'Client ID is required' }); return; }
+    const service = await getService();
+    if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
+    const result = await service.getFailedPaths(parseInt(clientId));
+    res.json(result);
+  } catch (error) {
+    logger.error('Failed to get failed paths:', error);
+    res.status(500).json({ error: 'Failed to get failed paths' });
+  }
+}
+
 export async function browseClientFilesystem(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;

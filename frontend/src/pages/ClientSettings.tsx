@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
-import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch, Loader2, ScanSearch } from 'lucide-react';
 import { ClientFileBrowser } from '../components/ClientFileBrowser';
 
 interface ClientSettings {
@@ -90,6 +90,8 @@ export function ClientSettings() {
   const [newExcludePattern, setNewExcludePattern] = useState('');
   const [showFileBrowser, setShowFileBrowser] = useState(false);
   const [showImageBrowser, setShowImageBrowser] = useState(false);
+  const [failedPaths, setFailedPaths] = useState<{ path: string; count: number }[] | null>(null);
+  const [failedPathsLoading, setFailedPathsLoading] = useState(false);
 
   useEffect(() => { loadSettings(); }, [clientName]);
 
@@ -262,6 +264,27 @@ export function ClientSettings() {
     const t = newExcludePattern.trim();
     if (t && !getExcludes().includes(t)) setExcludes([...getExcludes(), t]);
     setNewExcludePattern('');
+  };
+
+  const detectFailedPaths = async () => {
+    setFailedPathsLoading(true);
+    setFailedPaths(null);
+    try {
+      const res = await fetch(`/api/urbackup/clients/${clientId}/failed-paths`, { credentials: 'include' });
+      const data = await res.json();
+      setFailedPaths(data.paths || []);
+    } catch {
+      setFailedPaths([]);
+    } finally {
+      setFailedPathsLoading(false);
+    }
+  };
+
+  const addFailedPathsToExcludes = (paths: { path: string; count: number }[]) => {
+    const current = getExcludes();
+    const toAdd = paths.map(p => p.path).filter(p => !current.includes(p));
+    if (toAdd.length > 0) setExcludes([...current, ...toAdd]);
+    setFailedPaths(null);
   };
 
   // VSS components
@@ -491,6 +514,56 @@ export function ClientSettings() {
                 >
                   Apply default Windows exclusions (junction points, temp files, Windows dir)
                 </button>
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Detect from last backup</p>
+                    <button
+                      onClick={detectFailedPaths}
+                      disabled={failedPathsLoading || !clientId}
+                      className="btn btn-secondary flex items-center gap-1 text-sm py-1"
+                    >
+                      {failedPathsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ScanSearch className="h-3.5 w-3.5" />}
+                      Scan for failed paths
+                    </button>
+                  </div>
+                  {failedPaths !== null && (
+                    failedPaths.length === 0
+                      ? <p className="text-sm text-gray-400 italic">No failed paths found in the last backup.</p>
+                      : <>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                            These directories had files that couldn't be read during the last backup. Add them to exclusions to suppress errors.
+                          </p>
+                          <div className="space-y-1 max-h-40 overflow-y-auto mb-2">
+                            {failedPaths.map(({ path, count }) => {
+                              const alreadyExcluded = getExcludes().includes(path);
+                              return (
+                                <div key={path} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded px-3 py-1.5">
+                                  <span className={`flex-1 font-mono text-xs truncate ${alreadyExcluded ? 'text-gray-400 line-through' : ''}`}>{path}</span>
+                                  <span className="text-xs text-gray-400 flex-shrink-0">{count} {count === 1 ? 'error' : 'errors'}</span>
+                                  {!alreadyExcluded && (
+                                    <button
+                                      onClick={() => setExcludes([...getExcludes(), path])}
+                                      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 flex-shrink-0"
+                                      title="Add to exclusions"
+                                    >
+                                      <Plus className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {failedPaths.some(p => !getExcludes().includes(p.path)) && (
+                            <button
+                              onClick={() => addFailedPathsToExcludes(failedPaths)}
+                              className="btn btn-primary text-sm py-1"
+                            >
+                              Add all to exclusions
+                            </button>
+                          )}
+                        </>
+                  )}
+                </div>
                 <div className="pt-2">
                   <Row label="Backup paths are optional" hint="If enabled, the backup will succeed even if backup paths don't exist on the client.">
                     <Toggle checked={bool('backup_dirs_optional')} onChange={v => set('backup_dirs_optional', v)} />
