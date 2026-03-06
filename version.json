@@ -1,8 +1,8 @@
 {
-  "version": "3.2.53",
+  "version": "3.2.54",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: npm audit now shows 0 vulnerabilities (tar, @tootallnate/once overrides corrected)",
-    "Fix: Folder browser correctly finds completed backups"
+    "Improvement: Folder browser redesigned as expandable drive/folder tree (C through H drives with common subfolders)",
+    "Fix: npm audit now shows 0 vulnerabilities"
   ]
 }
