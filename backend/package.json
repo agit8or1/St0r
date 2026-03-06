@@ -42,7 +42,8 @@
   },
   "overrides": {
     "minimatch": ">=9.0.5",
-    "tar": ">=7.5.8"
+    "tar": ">=7.5.10",
+    "@tootallnate/once": "^3.0.1"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",

@@ -1,8 +1,8 @@
 {
-  "version": "3.2.52",
+  "version": "3.2.53",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: Folder browser now correctly finds completed backups (was using POST instead of GET for UrBackup browse API)",
-    "Fix: Folder browser defaults to Common Paths tab"
+    "Fix: npm audit now shows 0 vulnerabilities (tar, @tootallnate/once overrides corrected)",
+    "Fix: Folder browser correctly finds completed backups"
   ]
 }
