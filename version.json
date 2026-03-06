@@ -1,8 +1,8 @@
 {
-  "version": "3.2.47",
+  "version": "3.2.48",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: Client folder browser now works by browsing the most recent backup archive",
-    "Fix: Auto-update now runs npm audit fix and rebuilds frontend during updates"
+    "Improvement: Client folder browser redesigned with Common Paths tab and From Last Backup tab",
+    "Fix: Auto-update now runs npm audit fix and rebuilds frontend"
   ]
 }
