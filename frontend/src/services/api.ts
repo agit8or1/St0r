@@ -235,6 +235,10 @@ class ApiService {
     return response.data;
   }
 
+  getImageBackupConvertUrl(clientId: string | number, backupId: number): string {
+    return `/api/urbackup/clients/${clientId}/image-backups/${backupId}/convert-download`;
+  }
+
   async browseClientFilesystem(clientId: string, path: string = '/', backupId?: string) {
     const params: any = { path };
     if (backupId) params.backupId = backupId;

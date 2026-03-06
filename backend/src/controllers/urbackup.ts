@@ -2,6 +2,11 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import { UrBackupService } from '../services/urbackup.js';
 import { logger } from '../utils/logger.js';
+import fs from 'fs';
+import path from 'path';
+import { spawn } from 'child_process';
+import { randomUUID } from 'crypto';
+import { getUrBackupDb } from '../config/urbackupDb.js';
 
 // Since st0r runs on the same server as UrBackup, we always use a single local service instance
 const urbackupService = new UrBackupService();
@@ -496,5 +501,103 @@ export async function browseClientFilesystem(req: AuthRequest, res: Response): P
   } catch (error: any) {
     logger.error('Failed to browse client filesystem:', error);
     res.status(500).json({ error: error.message || 'Failed to browse client filesystem' });
+  }
+}
+
+export async function convertAndDownloadImageBackup(req: AuthRequest, res: Response): Promise<void> {
+  const { clientId, backupId } = req.params;
+  const tmpDir = `/tmp/urbackup-export-${randomUUID()}`;
+  let tmpFile: string | null = null;
+
+  try {
+    const db = await getUrBackupDb();
+    const backup = await db.get(
+      'SELECT id, path, size_bytes, letter FROM backup_images WHERE id = ? AND clientid = ? AND complete = 1',
+      [parseInt(backupId), parseInt(clientId)]
+    );
+
+    if (!backup || !backup.path) {
+      res.status(404).json({ error: 'Image backup not found' });
+      return;
+    }
+
+    const srcPath: string = backup.path;
+    if (!fs.existsSync(srcPath)) {
+      res.status(404).json({ error: 'Backup file not found on disk' });
+      return;
+    }
+
+    const srcStat = fs.statSync(srcPath);
+    const isCompressed = srcPath.endsWith('.vhdz');
+
+    if (!isCompressed) {
+      // Already a plain VHD — stream directly
+      const fileName = path.basename(srcPath).replace(/\.vhd$/, '') + '.vhd';
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Length', String(srcStat.size));
+      fs.createReadStream(srcPath).pipe(res);
+      return;
+    }
+
+    // Estimate decompressed size (VHD = full disk size, typically 3-5x compressed)
+    const estimatedVhdBytes = srcStat.size * 5;
+
+    // Check free space in /tmp
+    const dfResult = await new Promise<string>((resolve, reject) => {
+      const p = spawn('df', ['-B1', '--output=avail', '/tmp']);
+      let out = '';
+      p.stdout.on('data', (d: Buffer) => { out += d.toString(); });
+      p.on('close', (code: number) => code === 0 ? resolve(out) : reject(new Error('df failed')));
+    });
+    const availBytes = parseInt(dfResult.trim().split('\n')[1] || '0');
+    const needBytes = srcStat.size + estimatedVhdBytes;
+
+    if (availBytes < needBytes) {
+      res.status(507).json({
+        error: `Not enough disk space to convert. Need ~${(needBytes / 1e9).toFixed(1)} GB free in /tmp, have ${(availBytes / 1e9).toFixed(1)} GB.`
+      });
+      return;
+    }
+
+    // Copy to temp dir so decompress-file doesn't touch the original backup
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const fileName = path.basename(srcPath);
+    tmpFile = path.join(tmpDir, fileName);
+
+    logger.info(`[convertVhd] Copying ${srcPath} → ${tmpFile} (${(srcStat.size / 1e9).toFixed(1)} GB)`);
+    fs.copyFileSync(srcPath, tmpFile);
+
+    // Decompress in-place inside tmpDir
+    logger.info(`[convertVhd] Decompressing ${tmpFile}`);
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn('sudo', ['urbackupsrv', 'decompress-file', '-f', tmpFile!]);
+      proc.stderr.on('data', (d: Buffer) => logger.debug(`[decompress-file] ${d.toString().trim()}`));
+      proc.on('close', (code: number) => code === 0 ? resolve() : reject(new Error(`decompress-file exited ${code}`)));
+    });
+
+    if (!fs.existsSync(tmpFile)) {
+      throw new Error('Decompressed file not found after conversion');
+    }
+
+    const vhdStat = fs.statSync(tmpFile);
+    const downloadName = fileName.replace(/\.vhdz$/, '.vhd');
+
+    logger.info(`[convertVhd] Streaming ${downloadName} (${(vhdStat.size / 1e9).toFixed(1)} GB)`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+    res.setHeader('Content-Length', String(vhdStat.size));
+
+    const stream = fs.createReadStream(tmpFile);
+    stream.pipe(res);
+    res.on('finish', () => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
+    res.on('close', () => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
+
+  } catch (error: any) {
+    logger.error('[convertVhd] Failed:', error);
+    try { if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Conversion failed' });
+    }
   }
 }

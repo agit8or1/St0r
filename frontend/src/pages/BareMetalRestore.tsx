@@ -343,8 +343,21 @@ export function BareMetalRestore() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Backup ID: {backup.id}
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={api.getImageBackupConvertUrl(selectedClient.id, backup.id)}
+                        download
+                        title={`Convert .vhdz → .vhd and download (~${backup.size_bytes ? (backup.size_bytes * 5 / 1e9).toFixed(0) : '?'} GB uncompressed)`}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                        onClick={e => {
+                          const gb = backup.size_bytes ? backup.size_bytes * 5 / 1e9 : 0;
+                          if (gb > 100 && !window.confirm(`This will decompress ~${gb.toFixed(0)} GB on the server then stream it to your browser. This may take a long time. Continue?`)) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5" /> Convert &amp; Download VHD
+                      </a>
                     </div>
                   </div>
                 ))}
