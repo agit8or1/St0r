@@ -1,7 +1,7 @@
 {
-  "version": "3.2.56",
+  "version": "3.2.57",
   "releaseDate": "2026-03-06",
   "changelog": [
-    "Fix: Duplicate React key warning 'image-5' on Dashboard when multiple progress items matched same DB activity — now uses UrBackup process ID as primary key"
+    "Fix: Ghost active job — filter out UrBackup progress items with pcdone=100 and no speed that haven't been flushed yet"
   ]
 }

@@ -599,6 +599,9 @@ export class UrBackupService {
           const mergedActivities: any[] = [];
 
           for (const progress of progressData) {
+            // Skip completed items UrBackup hasn't flushed yet
+            if (progress.pcdone === 100 && (progress.speed_bpms === 0 || progress.speed_bpms == null)) continue;
+
             const actionStr = this.getActionString(progress.action);
             const isImageBackup = this.isImageAction(progress.action);
             const progressType = isImageBackup ? 'image' : 'file';
