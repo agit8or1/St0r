@@ -13,6 +13,8 @@ import type {
   SystemMetrics,
   ServerLatency,
   StorageInfo,
+  StorageLimit,
+  StorageLimitStatus,
   ReplicationSettings,
   ReplicationTarget,
   ReplicationRun,
@@ -458,6 +460,26 @@ class ApiService {
 
   async getReplicationSetupInstructions(): Promise<{ steps: Array<{ title: string; description: string; commands: string[] }> }> {
     const response = await this.api.get('/replication/targets/setup-instructions');
+    return response.data;
+  }
+
+  // Storage Limits
+  async getStorageLimits(): Promise<StorageLimit[]> {
+    const response = await this.api.get<StorageLimit[]>('/storage-limits');
+    return response.data;
+  }
+
+  async upsertStorageLimit(clientName: string, limit: { limit_bytes: number; warn_threshold_pct?: number; critical_threshold_pct?: number }): Promise<StorageLimit> {
+    const response = await this.api.put<StorageLimit>(`/storage-limits/${encodeURIComponent(clientName)}`, limit);
+    return response.data;
+  }
+
+  async deleteStorageLimit(clientName: string): Promise<void> {
+    await this.api.delete(`/storage-limits/${encodeURIComponent(clientName)}`);
+  }
+
+  async getStorageLimitStatuses(clients: { name: string; bytes_used: number }[]): Promise<StorageLimitStatus[]> {
+    const response = await this.api.post<StorageLimitStatus[]>('/storage-limits/status', { clients });
     return response.data;
   }
 }

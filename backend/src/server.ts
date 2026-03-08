@@ -28,6 +28,7 @@ import clientInstallerRoutes from './routes/clientInstaller.js';
 import storageRoutes from './routes/storage.js';
 import browseRoutes from './routes/browse.js';
 import replicationRoutes from './routes/replication.js';
+import storageLimitsRoutes from './routes/storageLimits.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -96,6 +97,7 @@ app.use('/api/client-installer', clientInstallerRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/browse', browseRoutes);
 app.use('/api/replication', replicationRoutes);
+app.use('/api/storage-limits', storageLimitsRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -120,6 +122,18 @@ async function ensureTables() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (client_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS client_storage_limits (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      client_name VARCHAR(255) NOT NULL UNIQUE,
+      limit_bytes BIGINT NOT NULL,
+      warn_threshold_pct TINYINT NOT NULL DEFAULT 80,
+      critical_threshold_pct TINYINT NOT NULL DEFAULT 95,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_client_name (client_name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 }
 

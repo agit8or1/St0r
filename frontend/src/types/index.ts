@@ -158,6 +158,25 @@ export interface StorageInfo {
   }>;
 }
 
+// Storage limits
+export interface StorageLimit {
+  client_name: string;
+  limit_bytes: number;
+  warn_threshold_pct: number;
+  critical_threshold_pct: number;
+}
+
+export interface StorageLimitStatus {
+  name: string;
+  has_limit: boolean;
+  limit_bytes?: number;
+  used_bytes?: number;
+  pct?: number;
+  status?: 'ok' | 'warning' | 'critical' | 'exceeded';
+  warn_threshold_pct?: number;
+  critical_threshold_pct?: number;
+}
+
 // Replication types
 export interface ReplicationSettings {
   id: number;

@@ -1,15 +1,65 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HardDrive, Search, Settings, Users, ChevronUp, ChevronDown } from 'lucide-react';
+import { HardDrive, Search, Settings, Users, ChevronUp, ChevronDown, AlertTriangle, XCircle, Edit2 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { ClientManagementModal } from '../components/ClientManagementModal';
 import { api } from '../services/api';
-import type { Client, Customer, CustomerClient } from '../types';
+import type { Client, Customer, CustomerClient, StorageLimitStatus } from '../types';
 import { formatTimeAgo, formatBytes } from '../utils/format';
 
 type SortField = 'name' | 'lastBackup' | 'status' | 'customer';
 type SortOrder = 'asc' | 'desc';
+
+function StorageLimitCell({ storage, limitStatus, onEdit }: {
+  storage: number;
+  limitStatus?: StorageLimitStatus;
+  onEdit: (e: React.MouseEvent) => void;
+}) {
+  const usedStr = storage > 0 ? formatBytes(storage) : '—';
+
+  if (!limitStatus?.has_limit || !limitStatus.limit_bytes) {
+    return (
+      <div className="flex items-center gap-1 group">
+        <span className="text-gray-600 dark:text-gray-400 text-sm">{usedStr}</span>
+        <button onClick={onEdit} title="Set storage limit" className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+          <Edit2 className="h-3 w-3 text-gray-400" />
+        </button>
+      </div>
+    );
+  }
+
+  const { pct = 0, status, limit_bytes } = limitStatus;
+  const barColor = status === 'exceeded' || status === 'critical'
+    ? 'bg-red-500'
+    : status === 'warning'
+    ? 'bg-yellow-400'
+    : 'bg-green-500';
+  const textColor = status === 'exceeded' || status === 'critical'
+    ? 'text-red-600 dark:text-red-400'
+    : status === 'warning'
+    ? 'text-yellow-600 dark:text-yellow-400'
+    : 'text-gray-600 dark:text-gray-400';
+
+  return (
+    <div className="flex items-center gap-1.5 min-w-[120px] group">
+      <div className="flex-1 min-w-[60px]">
+        <div className="flex items-center justify-between mb-0.5">
+          <span className={`text-xs font-medium ${textColor}`}>{usedStr}</span>
+          <span className="text-xs text-gray-400">/ {formatBytes(limit_bytes)}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+        </div>
+      </div>
+      {(status === 'warning') && <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />}
+      {(status === 'critical' || status === 'exceeded') && <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
+      <button onClick={onEdit} title="Edit storage limit" className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+        <Edit2 className="h-3 w-3 text-gray-400" />
+      </button>
+    </div>
+  );
+}
 
 export function Clients() {
   const navigate = useNavigate();
@@ -24,8 +74,17 @@ export function Clients() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState<Set<string>>(new Set());
+  const [storageLimitStatuses, setStorageLimitStatuses] = useState<Map<string, StorageLimitStatus>>(new Map());
+  const [limitModal, setLimitModal] = useState<{ client: Client } | null>(null);
+  const [limitInput, setLimitInput] = useState('');
+  const [limitUnit, setLimitUnit] = useState<'GB' | 'TB'>('GB');
+  const [limitWarn, setLimitWarn] = useState(80);
+  const [limitCritical, setLimitCritical] = useState(95);
+  const [savingLimit, setSavingLimit] = useState(false);
+  const limitInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadData(); }, []);
+  useEffect(() => { if (clients.length > 0) loadStorageLimitStatuses(); }, [clients]);
 
   const loadData = async () => {
     setLoading(true);
@@ -49,6 +108,78 @@ export function Clients() {
       console.error('Failed to load clients:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStorageLimitStatuses = async () => {
+    try {
+      const clientsPayload = clients.map(c => ({
+        name: c.name,
+        bytes_used: (c.bytes_used_files || 0) + (c.bytes_used_images || 0),
+      }));
+      const statuses = await api.getStorageLimitStatuses(clientsPayload);
+      const map = new Map<string, StorageLimitStatus>();
+      statuses.forEach(s => map.set(s.name, s));
+      setStorageLimitStatuses(map);
+    } catch {}
+  };
+
+  const openLimitModal = (client: Client, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const existing = storageLimitStatuses.get(client.name);
+    if (existing?.has_limit && existing.limit_bytes) {
+      const gb = existing.limit_bytes / 1e9;
+      if (gb >= 1000) {
+        setLimitUnit('TB');
+        setLimitInput(String(+(gb / 1000).toFixed(2)));
+      } else {
+        setLimitUnit('GB');
+        setLimitInput(String(+gb.toFixed(2)));
+      }
+      setLimitWarn(existing.warn_threshold_pct ?? 80);
+      setLimitCritical(existing.critical_threshold_pct ?? 95);
+    } else {
+      setLimitInput('');
+      setLimitUnit('GB');
+      setLimitWarn(80);
+      setLimitCritical(95);
+    }
+    setLimitModal({ client });
+    setTimeout(() => limitInputRef.current?.focus(), 50);
+  };
+
+  const saveLimit = async () => {
+    if (!limitModal) return;
+    const val = parseFloat(limitInput);
+    if (!val || val <= 0) return;
+    setSavingLimit(true);
+    try {
+      const bytes = Math.round(val * (limitUnit === 'TB' ? 1e12 : 1e9));
+      await api.upsertStorageLimit(limitModal.client.name, {
+        limit_bytes: bytes,
+        warn_threshold_pct: limitWarn,
+        critical_threshold_pct: limitCritical,
+      });
+      setLimitModal(null);
+      await loadStorageLimitStatuses();
+    } catch (err) {
+      console.error('Failed to save storage limit:', err);
+    } finally {
+      setSavingLimit(false);
+    }
+  };
+
+  const removeLimit = async () => {
+    if (!limitModal) return;
+    setSavingLimit(true);
+    try {
+      await api.deleteStorageLimit(limitModal.client.name);
+      setLimitModal(null);
+      await loadStorageLimitStatuses();
+    } catch (err) {
+      console.error('Failed to remove storage limit:', err);
+    } finally {
+      setSavingLimit(false);
     }
   };
 
@@ -177,6 +308,23 @@ export function Clients() {
           </select>
         </div>
 
+        {/* Storage limit warnings */}
+        {(() => {
+          const warnings = [...storageLimitStatuses.values()].filter(s => s.has_limit && (s.status === 'warning' || s.status === 'critical' || s.status === 'exceeded'));
+          if (warnings.length === 0) return null;
+          const critical = warnings.filter(s => s.status === 'critical' || s.status === 'exceeded');
+          const warn = warnings.filter(s => s.status === 'warning');
+          return (
+            <div className={`flex items-start gap-2 px-3 py-2 rounded-lg text-sm ${critical.length > 0 ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800' : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800'}`}>
+              {critical.length > 0 ? <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" /> : <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+              <span>
+                {critical.length > 0 && <><strong>{critical.map(s => s.name).join(', ')}</strong> {critical.length === 1 ? 'has' : 'have'} exceeded or critically exceeded storage limits. </>}
+                {warn.length > 0 && <><strong>{warn.map(s => s.name).join(', ')}</strong> {warn.length === 1 ? 'is' : 'are'} approaching storage limits.</>}
+              </span>
+            </div>
+          );
+        })()}
+
         {/* Table */}
         {loading ? <Loading /> : filtered.length === 0 ? (
           <div className="card text-center py-10">
@@ -200,7 +348,7 @@ export function Clients() {
                       Last File Backup <SortIcon field="lastBackup" />
                     </th>
                     <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Last Image</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Storage</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Storage / Limit</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">IP Address</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100" onClick={() => handleSort('status')}>
                       Status <SortIcon field="status" />
@@ -258,9 +406,13 @@ export function Clients() {
                             {client.lastbackup_image ? formatTimeAgo(client.lastbackup_image) : '—'}
                           </span>
                         </td>
-                        {/* Storage */}
-                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                          {storage > 0 ? formatBytes(storage) : '—'}
+                        {/* Storage / Limit */}
+                        <td className="px-3 py-2 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                          <StorageLimitCell
+                            storage={storage}
+                            limitStatus={storageLimitStatuses.get(client.name)}
+                            onEdit={e => openLimitModal(client, e)}
+                          />
                         </td>
                         {/* IP Address */}
                         <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono text-xs">
@@ -309,6 +461,62 @@ export function Clients() {
         onClientAdded={loadData}
         onClientRemoved={loadData}
       />
+
+      {/* Storage Limit Modal */}
+      {limitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setLimitModal(null)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              Storage Limit — {limitModal.client.name}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Limit</label>
+                <div className="flex gap-2">
+                  <input
+                    ref={limitInputRef}
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={limitInput}
+                    onChange={e => setLimitInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && saveLimit()}
+                    placeholder="e.g. 500"
+                    className="input flex-1 text-sm"
+                  />
+                  <select value={limitUnit} onChange={e => setLimitUnit(e.target.value as 'GB' | 'TB')} className="input w-20 text-sm">
+                    <option value="GB">GB</option>
+                    <option value="TB">TB</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Warn at %</label>
+                  <input type="number" min="1" max="99" value={limitWarn} onChange={e => setLimitWarn(Number(e.target.value))} className="input text-sm w-full" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Critical at %</label>
+                  <input type="number" min="1" max="100" value={limitCritical} onChange={e => setLimitCritical(Number(e.target.value))} className="input text-sm w-full" />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={saveLimit} disabled={savingLimit || !limitInput} className="btn bg-primary-600 hover:bg-primary-700 text-white flex-1 text-sm disabled:opacity-50">
+                  {savingLimit ? 'Saving…' : 'Save Limit'}
+                </button>
+                {storageLimitStatuses.get(limitModal.client.name)?.has_limit && (
+                  <button onClick={removeLimit} disabled={savingLimit} className="btn bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-300 text-sm disabled:opacity-50">
+                    Remove
+                  </button>
+                )}
+                <button onClick={() => setLimitModal(null)} className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

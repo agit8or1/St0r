@@ -1,8 +1,7 @@
 {
-  "version": "3.2.60",
-  "releaseDate": "2026-03-06",
+  "version": "3.2.61",
+  "releaseDate": "2026-03-08",
   "changelog": [
-    "Feature: Endpoints table now shows IP Address, Online/Offline status badge, and Last Seen time for each client",
-    "Screenshots updated to reflect all current features"
+    "Feature: Client storage limits with warning system — set per-client quotas with configurable warn/critical thresholds, progress bars, and alert banners on the Endpoints page"
   ]
 }
