@@ -6,6 +6,8 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import { testConnection } from './config/database.js';
 import { logger } from './utils/logger.js';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -99,9 +101,14 @@ app.use('/api/browse', browseRoutes);
 app.use('/api/replication', replicationRoutes);
 app.use('/api/storage-limits', storageLimitsRoutes);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
+// Serve frontend static files in production
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const frontendDist = resolve(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDist));
+
+// SPA fallback — serve index.html for all non-API routes
+app.get('*', (req, res) => {
+  res.sendFile(resolve(frontendDist, 'index.html'));
 });
 
 // Error handler
