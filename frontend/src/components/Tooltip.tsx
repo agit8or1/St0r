@@ -43,9 +43,13 @@ export function Tooltip({ text, children, position = 'top', className = '' }: To
 
   const offsetY = position === 'bottom' ? 16 : -40;
 
+  // display: contents makes this wrapper invisible to the layout engine
+  // so it never breaks grid, flex, or table layouts.
+  // React's synthetic event delegation still fires the handlers correctly.
   return (
     <div
-      className={`relative inline-flex ${className}`}
+      style={{ display: 'contents' }}
+      className={className}
       onMouseEnter={show}
       onMouseLeave={hide}
       onMouseMove={move}
