@@ -1,14 +1,9 @@
 {
-  "version": "3.2.65",
+  "version": "3.2.66",
   "releaseDate": "2026-03-08",
   "changelog": [
-    "Feature: Tooltips extended to all main content pages — Activities, Logs, Alerts, Users, Customers, Dashboard",
-    "Feature: Tooltip system — helpful hover tooltips on buttons, icons, and nav items throughout the UI",
-    "Feature: Tooltip toggle in Settings > General > Interface — enabled by default, persisted in localStorage",
-    "Feature: Storage Limit tab in Client Settings — view and manage per-client storage quotas directly from the endpoint settings page",
-    "Fix: Service startup now retries DB connection up to 30s to survive slow MariaDB boot",
-    "Fix: Systemd service hardened with Requires=mariadb.service and network-online.target dependency",
-    "Fix: Express serves frontend static files (eliminates dependency on Vite dev server across reboots)",
-    "UX: Endpoints list customer column is now read-only — edit via device settings or Customers page"
+    "Feature: Comprehensive tooltips on every interactive element and stat display across all pages",
+    "Fix: Tooltip component rewritten with cursor-following approach — no more measurement/positioning failures",
+    "Feature: Tooltips on Activities, Logs, Alerts, Users, Customers, Dashboard, Clients, ClientDetail, Reports, Replication, ServerSettings, ClientSettings, Profile"
   ]
 }

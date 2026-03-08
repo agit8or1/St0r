@@ -185,8 +185,13 @@ export function Alerts() {
 
         {/* Active Alerts */}
         <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Active Alerts ({activeAlerts.filter(a => !a.acknowledged).length})
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            Active Alerts{' '}
+            <Tooltip text="Number of unacknowledged alerts currently requiring attention">
+              <span className="inline-flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-sm font-bold text-red-700 dark:text-red-300 cursor-default">
+                {activeAlerts.filter(a => !a.acknowledged).length}
+              </span>
+            </Tooltip>
           </h2>
 
           {activeAlerts.filter(a => !a.acknowledged).length === 0 ? (
@@ -212,9 +217,15 @@ export function Alerts() {
                           <span className="font-semibold">
                             {getTypeLabel(alert.type)}
                           </span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-white dark:bg-gray-800">
-                            {alert.severity.toUpperCase()}
-                          </span>
+                          <Tooltip text={
+                            alert.severity === 'critical' ? 'CRITICAL — immediate action required; backup or service is failing' :
+                            alert.severity === 'warning' ? 'WARNING — something needs attention soon but is not yet critical' :
+                            'INFO — informational notice; no immediate action required'
+                          }>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-white dark:bg-gray-800 cursor-default">
+                              {alert.severity.toUpperCase()}
+                            </span>
+                          </Tooltip>
                         </div>
                         <p className="text-sm">{alert.message}</p>
                         <p className="text-xs mt-1 opacity-75">
@@ -262,19 +273,39 @@ export function Alerts() {
                 className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
               >
                 <div className="flex items-center gap-4 flex-1">
-                  <input
-                    type="checkbox"
-                    checked={rule.enabled}
-                    onChange={() => handleToggleRule(rule.id)}
-                    className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
+                  <Tooltip text={rule.enabled ? 'Rule is enabled — click to disable' : 'Rule is disabled — click to enable'}>
+                    <input
+                      type="checkbox"
+                      checked={rule.enabled}
+                      onChange={() => handleToggleRule(rule.id)}
+                      className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </Tooltip>
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100">
-                      {rule.name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                        {rule.name}
+                      </h3>
+                      <Tooltip text={
+                        rule.type === 'backup_failure' ? 'Triggers when a client backup job fails' :
+                        rule.type === 'client_offline' ? 'Triggers when a client has not been seen for the specified number of hours' :
+                        rule.type === 'storage_low' ? 'Triggers when backup storage usage exceeds the specified percentage' :
+                        'Triggers when no successful backup exists within the specified number of days'
+                      }>
+                        <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-default">
+                          {getTypeLabel(rule.type)}
+                        </span>
+                      </Tooltip>
+                    </div>
                     <div className="flex gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
                       {rule.threshold && (
-                        <span>Threshold: {rule.threshold} {rule.type === 'storage_low' ? '%' : rule.type === 'client_offline' ? 'hours' : 'days'}</span>
+                        <Tooltip text={
+                          rule.type === 'storage_low' ? `Alert fires when storage usage exceeds ${rule.threshold}%` :
+                          rule.type === 'client_offline' ? `Alert fires when a client has been offline for more than ${rule.threshold} hours` :
+                          `Alert fires when the most recent backup is older than ${rule.threshold} days`
+                        }>
+                          <span className="cursor-default">Threshold: {rule.threshold} {rule.type === 'storage_low' ? '%' : rule.type === 'client_offline' ? 'hours' : 'days'}</span>
+                        </Tooltip>
                       )}
                       <span>
                         {rule.notifyEmail && '📧 Email'}

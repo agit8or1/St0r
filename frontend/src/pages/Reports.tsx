@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
+import { Tooltip } from '../components/Tooltip';
 import { FileText, Download, Calendar, TrendingUp, HardDrive, Clock, Filter } from 'lucide-react';
 import { api } from '../services/api';
 import type { Client } from '../types';
@@ -283,20 +284,24 @@ export function Reports() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={exportToCSV}
-              className="btn btn-secondary flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export CSV
-            </button>
-            <button
-              onClick={exportToPDF}
-              className="btn btn-primary flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export PDF
-            </button>
+            <Tooltip text="Download all client backup data as a CSV spreadsheet">
+              <button
+                onClick={exportToCSV}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </button>
+            </Tooltip>
+            <Tooltip text="Open a printable HTML report — use browser Print to save as PDF">
+              <button
+                onClick={exportToPDF}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export PDF
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -308,222 +313,278 @@ export function Reports() {
           </div>
           <div className="grid gap-4 md:grid-cols-4">
             <div>
-              <label className="label">Report Type</label>
-              <select
-                value={reportType}
-                onChange={(e) => setReportType(e.target.value as any)}
-                className="input"
-              >
-                <option value="summary">Summary</option>
-                <option value="detailed">Detailed</option>
-                <option value="client">Per Client</option>
-              </select>
+              <Tooltip text="Choose the level of detail shown in the report" className="block w-full">
+                <label className="label">Report Type</label>
+              </Tooltip>
+              <Tooltip text="Summary: totals only · Detailed: per-backup rows · Per Client: grouped by client" className="block w-full">
+                <select
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value as any)}
+                  className="input"
+                >
+                  <option value="summary">Summary</option>
+                  <option value="detailed">Detailed</option>
+                  <option value="client">Per Client</option>
+                </select>
+              </Tooltip>
             </div>
             <div>
-              <label className="label">Start Date</label>
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="input"
-              />
+              <Tooltip text="Include backups on or after this date" className="block w-full">
+                <label className="label">Start Date</label>
+              </Tooltip>
+              <Tooltip text="Report start date — data before this date is excluded" className="block w-full">
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                  className="input"
+                />
+              </Tooltip>
             </div>
             <div>
-              <label className="label">End Date</label>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="input"
-              />
+              <Tooltip text="Include backups on or before this date" className="block w-full">
+                <label className="label">End Date</label>
+              </Tooltip>
+              <Tooltip text="Report end date — data after this date is excluded" className="block w-full">
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                  className="input"
+                />
+              </Tooltip>
             </div>
             <div className="flex items-end">
-              <button
-                onClick={loadReportData}
-                className="btn btn-primary w-full"
-              >
-                Generate Report
-              </button>
+              <Tooltip text="Reload report statistics using the selected filters" className="block w-full">
+                <button
+                  onClick={loadReportData}
+                  className="btn btn-primary w-full"
+                >
+                  Generate Report
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <div
-            className="card cursor-pointer hover:shadow-lg hover:border-blue-500 dark:hover:border-blue-400 transition-all"
-            onClick={() => navigate('/clients')}
-          >
-            <div className="flex items-center gap-3">
-              <HardDrive className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Clients</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{reportData.totalClients}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Click to view →</p>
+          <Tooltip text="All registered backup clients — click to manage clients" className="block">
+            <div
+              className="card cursor-pointer hover:shadow-lg hover:border-blue-500 dark:hover:border-blue-400 transition-all"
+              onClick={() => navigate('/clients')}
+            >
+              <div className="flex items-center gap-3">
+                <HardDrive className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Clients</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{reportData.totalClients}</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Click to view →</p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
 
-          <div
-            className="card cursor-pointer hover:shadow-lg hover:border-green-500 dark:hover:border-green-400 transition-all"
-            onClick={() => navigate('/clients')}
-          >
-            <div className="flex items-center gap-3">
-              <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Successful Backups</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{reportData.successfulBackups}</p>
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">Click to view →</p>
+          <Tooltip text="Clients with at least one successful file or image backup" className="block">
+            <div
+              className="card cursor-pointer hover:shadow-lg hover:border-green-500 dark:hover:border-green-400 transition-all"
+              onClick={() => navigate('/clients')}
+            >
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-400" />
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Successful Backups</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{reportData.successfulBackups}</p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">Click to view →</p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
 
-          <div
-            className="card cursor-pointer hover:shadow-lg hover:border-red-500 dark:hover:border-red-400 transition-all"
-            onClick={() => navigate('/clients')}
-          >
-            <div className="flex items-center gap-3">
-              <TrendingUp className="h-8 w-8 text-red-600 dark:text-red-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Failed Backups</p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{reportData.failedBackups}</p>
-                <p className="text-xs text-red-600 dark:text-red-400 mt-1">Click to view →</p>
+          <Tooltip text="Clients with no successful file or image backup — needs attention" className="block">
+            <div
+              className="card cursor-pointer hover:shadow-lg hover:border-red-500 dark:hover:border-red-400 transition-all"
+              onClick={() => navigate('/clients')}
+            >
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-8 w-8 text-red-600 dark:text-red-400" />
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Failed Backups</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{reportData.failedBackups}</p>
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">Click to view →</p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
 
-          <div
-            className="card cursor-pointer hover:shadow-lg hover:border-purple-500 dark:hover:border-purple-400 transition-all"
-            onClick={() => navigate('/servers')}
-          >
-            <div className="flex items-center gap-3">
-              <HardDrive className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Storage Used</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {formatBytes(reportData.totalStorage)}
-                </p>
-                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Click to view servers →</p>
+          <Tooltip text="Combined disk space used by all stored backup data" className="block">
+            <div
+              className="card cursor-pointer hover:shadow-lg hover:border-purple-500 dark:hover:border-purple-400 transition-all"
+              onClick={() => navigate('/servers')}
+            >
+              <div className="flex items-center gap-3">
+                <HardDrive className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Storage Used</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {formatBytes(reportData.totalStorage)}
+                  </p>
+                  <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Click to view servers →</p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
 
-          <div
-            className="card cursor-pointer hover:shadow-lg hover:border-orange-500 dark:hover:border-orange-400 transition-all"
-            onClick={() => navigate('/dashboard')}
-          >
-            <div className="flex items-center gap-3">
-              <HardDrive className="h-8 w-8 text-orange-600 dark:text-orange-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Average Backup Size</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {formatBytes(reportData.averageBackupSize)}
-                </p>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Click to view dashboard →</p>
+          <Tooltip text="Mean size of individual backup snapshots across all clients" className="block">
+            <div
+              className="card cursor-pointer hover:shadow-lg hover:border-orange-500 dark:hover:border-orange-400 transition-all"
+              onClick={() => navigate('/dashboard')}
+            >
+              <div className="flex items-center gap-3">
+                <HardDrive className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Average Backup Size</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {formatBytes(reportData.averageBackupSize)}
+                  </p>
+                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Click to view dashboard →</p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
 
-          <div
-            className="card cursor-pointer hover:shadow-lg hover:border-gray-500 dark:hover:border-gray-400 transition-all"
-            onClick={() => navigate('/clients')}
-          >
-            <div className="flex items-center gap-3">
-              <Clock className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Active Clients</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{reportData.activeClients}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Click to view →</p>
+          <Tooltip text="Clients currently online and reachable by the backup server" className="block">
+            <div
+              className="card cursor-pointer hover:shadow-lg hover:border-gray-500 dark:hover:border-gray-400 transition-all"
+              onClick={() => navigate('/clients')}
+            >
+              <div className="flex items-center gap-3">
+                <Clock className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Active Clients</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{reportData.activeClients}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Click to view →</p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
         </div>
 
         {/* Backup Timeline */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <Calendar className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Backup Timeline</h2>
+            <Tooltip text="Date range of the earliest and most recent backup snapshots">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Backup Timeline</h2>
+            </Tooltip>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Oldest Backup</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-1">
-                {formatDate(reportData.oldestBackup)}
-              </p>
-            </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Newest Backup</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-1">
-                {formatDate(reportData.newestBackup)}
-              </p>
-            </div>
+            <Tooltip text="Date of the earliest backup snapshot across all clients" className="block">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Oldest Backup</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-1">
+                  {formatDate(reportData.oldestBackup)}
+                </p>
+              </div>
+            </Tooltip>
+            <Tooltip text="Date of the most recent backup snapshot across all clients" className="block">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Newest Backup</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-1">
+                  {formatDate(reportData.newestBackup)}
+                </p>
+              </div>
+            </Tooltip>
           </div>
         </div>
 
         {/* Success Rate */}
         <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Backup Success Rate</h2>
+          <Tooltip text="Percentage of clients with at least one good backup vs. total">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Backup Success Rate</h2>
+          </Tooltip>
           <div className="relative pt-1">
             <div className="flex mb-2 items-center justify-between">
               <div>
-                <span className="text-xs font-semibold inline-block text-primary-600 dark:text-primary-400">
-                  Success Rate
-                </span>
+                <Tooltip text="Proportion of clients whose last backup completed successfully">
+                  <span className="text-xs font-semibold inline-block text-primary-600 dark:text-primary-400">
+                    Success Rate
+                  </span>
+                </Tooltip>
               </div>
               <div className="text-right">
-                <span className="text-xs font-semibold inline-block text-primary-600 dark:text-primary-400">
-                  {reportData.totalBackups > 0
-                    ? Math.round((reportData.successfulBackups / reportData.totalBackups) * 100)
-                    : 0}%
-                </span>
+                <Tooltip text="Successful clients ÷ total clients × 100">
+                  <span className="text-xs font-semibold inline-block text-primary-600 dark:text-primary-400">
+                    {reportData.totalBackups > 0
+                      ? Math.round((reportData.successfulBackups / reportData.totalBackups) * 100)
+                      : 0}%
+                  </span>
+                </Tooltip>
               </div>
             </div>
-            <div className="overflow-hidden h-4 mb-4 text-xs flex rounded bg-gray-200 dark:bg-gray-700">
-              <div
-                style={{
-                  width: `${reportData.totalBackups > 0
-                    ? (reportData.successfulBackups / reportData.totalBackups) * 100
-                    : 0}%`
-                }}
-                className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary-600 dark:bg-primary-500 transition-all duration-500"
-              ></div>
-            </div>
+            <Tooltip text="Green bar fill represents the backup success rate" className="block">
+              <div className="overflow-hidden h-4 mb-4 text-xs flex rounded bg-gray-200 dark:bg-gray-700">
+                <div
+                  style={{
+                    width: `${reportData.totalBackups > 0
+                      ? (reportData.successfulBackups / reportData.totalBackups) * 100
+                      : 0}%`
+                  }}
+                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary-600 dark:bg-primary-500 transition-all duration-500"
+                ></div>
+              </div>
+            </Tooltip>
           </div>
         </div>
 
         {/* Recent Backup History */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Backup History</h2>
-            <Link
-              to="/clients"
-              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
-            >
-              View All Clients →
-            </Link>
+            <Tooltip text="Latest known file and image backup status for each client">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Backup History</h2>
+            </Tooltip>
+            <Tooltip text="Go to the Clients page to see full details for every client">
+              <Link
+                to="/clients"
+                className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+              >
+                View All Clients →
+              </Link>
+            </Tooltip>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Client
+                    <Tooltip text="Registered name of the backup client machine">
+                      <span>Client</span>
+                    </Tooltip>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Last File Backup
+                    <Tooltip text="Timestamp of the most recent file backup run">
+                      <span>Last File Backup</span>
+                    </Tooltip>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Last Image Backup
+                    <Tooltip text="Timestamp of the most recent image (disk) backup run">
+                      <span>Last Image Backup</span>
+                    </Tooltip>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    File Status
+                    <Tooltip text="Whether the last file backup completed without errors">
+                      <span>File Status</span>
+                    </Tooltip>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Image Status
+                    <Tooltip text="Whether the last image backup completed without errors">
+                      <span>Image Status</span>
+                    </Tooltip>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
+                    <Tooltip text="Open the client detail page for backups and settings">
+                      <span>Actions</span>
+                    </Tooltip>
                   </th>
                 </tr>
               </thead>
@@ -540,30 +601,36 @@ export function Reports() {
                       {client.lastbackup_image ? new Date(client.lastbackup_image * 1000).toLocaleString() : 'Never'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                        client.file_ok
-                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                          : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                      }`}>
-                        {client.file_ok ? 'OK' : 'Failed'}
-                      </span>
+                      <Tooltip text={client.file_ok ? 'Last file backup completed successfully' : 'Last file backup failed or never ran'}>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                          client.file_ok
+                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                            : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                        }`}>
+                          {client.file_ok ? 'OK' : 'Failed'}
+                        </span>
+                      </Tooltip>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                        client.image_ok
-                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                          : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                      }`}>
-                        {client.image_ok ? 'OK' : 'Failed'}
-                      </span>
+                      <Tooltip text={client.image_ok ? 'Last image backup completed successfully' : 'Last image backup failed or never ran'}>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                          client.image_ok
+                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                            : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                        }`}>
+                          {client.image_ok ? 'OK' : 'Failed'}
+                        </span>
+                      </Tooltip>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link
-                        to={`/clients/${encodeURIComponent(client.name)}`}
-                        className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
-                      >
-                        View Details
-                      </Link>
+                      <Tooltip text={`Open backup history and settings for ${client.name}`}>
+                        <Link
+                          to={`/clients/${encodeURIComponent(client.name)}`}
+                          className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                        >
+                          View Details
+                        </Link>
+                      </Tooltip>
                     </td>
                   </tr>
                 ))}

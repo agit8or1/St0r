@@ -235,29 +235,35 @@ export function Dashboard() {
           <div className="card py-3 px-4">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Server Resources</h2>
             <div className="grid grid-cols-3 gap-2">
-              <Gauge
-                pct={metrics.cpu.usage}
-                label="CPU"
-                sublabel={`${metrics.cpu.cores} cores`}
-                color="#3b82f6"
-              />
-              <Gauge
-                pct={metrics.memory.usagePercent}
-                label="Memory"
-                sublabel={`${formatBytes(metrics.memory.used)} / ${formatBytes(metrics.memory.total)}`}
-                color="#10b981"
-              />
+              <Tooltip text="Server processor usage across all cores">
+                <Gauge
+                  pct={metrics.cpu.usage}
+                  label="CPU"
+                  sublabel={`${metrics.cpu.cores} cores`}
+                  color="#3b82f6"
+                />
+              </Tooltip>
+              <Tooltip text="RAM used vs total available on the server">
+                <Gauge
+                  pct={metrics.memory.usagePercent}
+                  label="Memory"
+                  sublabel={`${formatBytes(metrics.memory.used)} / ${formatBytes(metrics.memory.total)}`}
+                  color="#10b981"
+                />
+              </Tooltip>
               {(() => {
                 const linkBytesPerSec = (metrics.network.linkSpeedMbps * 1_000_000) / 8;
                 const totalRate = metrics.network.rxBytesPerSec + metrics.network.txBytesPerSec;
                 const netPct = Math.min(100, Math.round((totalRate / linkBytesPerSec) * 100));
                 return (
-                  <Gauge
-                    pct={netPct}
-                    label="Network"
-                    sublabel={`↓${formatBytes(metrics.network.rxBytesPerSec)}/s ↑${formatBytes(metrics.network.txBytesPerSec)}/s`}
-                    color="#f59e0b"
-                  />
+                  <Tooltip text="Current network bandwidth usage vs link speed">
+                    <Gauge
+                      pct={netPct}
+                      label="Network"
+                      sublabel={`↓${formatBytes(metrics.network.rxBytesPerSec)}/s ↑${formatBytes(metrics.network.txBytesPerSec)}/s`}
+                      color="#f59e0b"
+                    />
+                  </Tooltip>
                 );
               })()}
             </div>
@@ -312,7 +318,9 @@ export function Dashboard() {
 
           {/* Client Status Pie */}
           <div className="card py-3 px-4">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Endpoint Status</h2>
+            <Tooltip text="Proportion of endpoints that are currently online vs offline">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 cursor-default inline-block">Endpoint Status</h2>
+            </Tooltip>
             <ResponsiveContainer width="100%" height={160}>
               <PieChart>
                 <Pie data={statusData} cx="50%" cy="50%" labelLine={false}
@@ -327,7 +335,9 @@ export function Dashboard() {
 
           {/* Backup Types Bar */}
           <div className="card py-3 px-4">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Backup Types</h2>
+            <Tooltip text="Count of successful vs failed file and image backups across all endpoints">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 cursor-default inline-block">Backup Types</h2>
+            </Tooltip>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={backupTypeData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
@@ -346,7 +356,9 @@ export function Dashboard() {
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="card py-3 px-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Current Activities</h2>
+              <Tooltip text="Backup and restore jobs currently in progress on connected endpoints">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 cursor-default">Current Activities</h2>
+              </Tooltip>
               <Tooltip text="Go to Activities page"><Link to="/activities" className="text-xs text-primary-600 hover:text-primary-700">View all</Link></Tooltip>
             </div>
             {activities.length === 0 ? (
@@ -371,7 +383,9 @@ export function Dashboard() {
 
           <div className="card py-3 px-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Endpoints Needing Attention</h2>
+              <Tooltip text="Endpoints with failed, missing, or overdue backups that require review">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 cursor-default">Endpoints Needing Attention</h2>
+              </Tooltip>
               <Tooltip text="Go to Clients page"><Link to="/clients" className="text-xs text-primary-600 hover:text-primary-700">View all</Link></Tooltip>
             </div>
             {failedClients === 0 ? (
@@ -379,21 +393,35 @@ export function Dashboard() {
             ) : (
               <div className="space-y-2">
                 {clients.filter((c) => hasFileProblem(c) || hasImageProblem(c)).slice(0, 5).map((client) => (
-                  <div key={client.id}
-                    className="flex items-center justify-between rounded border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-3 py-2 cursor-pointer hover:shadow transition-shadow"
-                    onClick={() => navigate(`/clients/${encodeURIComponent(client.name)}`)}>
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
-                      <div>
-                        <p className="text-xs font-medium text-gray-900 dark:text-gray-100">{client.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Last seen: {formatTimeAgo(client.lastseen || 0)}</p>
+                  <Tooltip key={client.id} text="Click to view client details and trigger a backup" position="top">
+                    <div
+                      className="flex items-center justify-between rounded border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-3 py-2 cursor-pointer hover:shadow transition-shadow"
+                      onClick={() => navigate(`/clients/${encodeURIComponent(client.name)}`)}>
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs font-medium text-gray-900 dark:text-gray-100">{client.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Last seen: {formatTimeAgo(client.lastseen || 0)}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        {hasFileProblem(client) && (
+                          <Tooltip text={!(client as any).lastbackup ? 'No file backup has ever been completed for this endpoint' : 'The most recent file backup job failed'}>
+                            <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                              {!(client as any).lastbackup ? 'No File Backup' : 'File Failed'}
+                            </span>
+                          </Tooltip>
+                        )}
+                        {hasImageProblem(client) && (
+                          <Tooltip text={!(client as any).lastbackup_image ? 'No image (bare-metal) backup has ever been completed for this endpoint' : 'The most recent image backup job failed'}>
+                            <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                              {!(client as any).lastbackup_image ? 'No Image Backup' : 'Image Failed'}
+                            </span>
+                          </Tooltip>
+                        )}
                       </div>
                     </div>
-                    <div className="flex gap-1">
-                      {hasFileProblem(client) && <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">{!(client as any).lastbackup ? 'No File Backup' : 'File Failed'}</span>}
-                      {hasImageProblem(client) && <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">{!(client as any).lastbackup_image ? 'No Image Backup' : 'Image Failed'}</span>}
-                    </div>
-                  </div>
+                  </Tooltip>
                 ))}
               </div>
             )}

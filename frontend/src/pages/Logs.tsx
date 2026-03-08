@@ -180,30 +180,34 @@ export function Logs() {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="label">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search logs..."
-                  className="input pl-10"
-                />
-              </div>
+              <Tooltip text="Filter log entries by text content">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search logs..."
+                    className="input pl-10"
+                  />
+                </div>
+              </Tooltip>
             </div>
             <div>
               <label className="label">Level Filter</label>
-              <select
-                value={levelFilter}
-                onChange={(e) => setLevelFilter(e.target.value)}
-                className="input"
-              >
-                <option value="all">All Levels</option>
-                <option value="error">Error</option>
-                <option value="warning">Warning</option>
-                <option value="info">Info</option>
-                <option value="debug">Debug</option>
-              </select>
+              <Tooltip text="Filter log entries by severity level">
+                <select
+                  value={levelFilter}
+                  onChange={(e) => setLevelFilter(e.target.value)}
+                  className="input"
+                >
+                  <option value="all">All Levels</option>
+                  <option value="error">Error</option>
+                  <option value="warning">Warning</option>
+                  <option value="info">Info</option>
+                  <option value="debug">Debug</option>
+                </select>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -211,9 +215,11 @@ export function Logs() {
         {/* Log Results */}
         <div className="card">
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Showing {filteredLogs.length} of {logs.length} log entries
-            </p>
+            <Tooltip text={`${filteredLogs.length === logs.length ? 'All log entries are shown' : `${logs.length - filteredLogs.length} entries hidden by current filters`}`}>
+              <p className="text-sm text-gray-600 dark:text-gray-400 cursor-default">
+                Showing {filteredLogs.length} of {logs.length} log entries
+              </p>
+            </Tooltip>
           </div>
 
           {filteredLogs.length === 0 ? (
@@ -228,9 +234,16 @@ export function Logs() {
                   key={index}
                   className="flex items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3 font-mono text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 >
-                  <span className={`rounded px-2 py-1 text-xs font-semibold ${getLevelColor(log.level)}`}>
-                    {log.level.toUpperCase()}
-                  </span>
+                  <Tooltip text={
+                    log.level.toLowerCase() === 'error' ? 'ERROR — a failure occurred that needs attention' :
+                    log.level.toLowerCase() === 'warning' ? 'WARNING — something unexpected happened but operation continued' :
+                    log.level.toLowerCase() === 'info' ? 'INFO — normal operational message' :
+                    'DEBUG — detailed diagnostic information'
+                  }>
+                    <span className={`rounded px-2 py-1 text-xs font-semibold ${getLevelColor(log.level)}`}>
+                      {log.level.toUpperCase()}
+                    </span>
+                  </Tooltip>
                   <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
                     {new Date(log.time).toLocaleString()}
                   </span>

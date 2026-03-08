@@ -5,6 +5,7 @@ import { Loading } from '../components/Loading';
 import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch, Loader2, ScanSearch, Pencil, Check, X, AlertTriangle, XCircle, HardDrive } from 'lucide-react';
 import { ClientFileBrowser } from '../components/ClientFileBrowser';
 import type { StorageLimitStatus } from '../types';
+import { Tooltip } from '../components/Tooltip';
 
 interface ClientSettings {
   [key: string]: any;
@@ -435,19 +436,23 @@ export function ClientSettings() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <button
-              onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}`)}
-              className="mb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-            >
-              <ArrowLeft className="h-4 w-4" /> Back to Endpoint
-            </button>
+            <Tooltip text="Return to the endpoint detail page">
+              <button
+                onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}`)}
+                className="mb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back to Endpoint
+              </button>
+            </Tooltip>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
               <SettingsIcon className="h-8 w-8" /> Endpoint Settings — {clientName}
             </h1>
           </div>
-          <button onClick={handleSave} disabled={saving} className="btn btn-primary flex items-center gap-2">
-            <Save className="h-4 w-4" /> {saving ? 'Saving…' : 'Save Settings'}
-          </button>
+          <Tooltip text="Save all setting changes to the UrBackup server for this endpoint">
+            <button onClick={handleSave} disabled={saving} className="btn btn-primary flex items-center gap-2">
+              <Save className="h-4 w-4" /> {saving ? 'Saving…' : 'Save Settings'}
+            </button>
+          </Tooltip>
         </div>
 
         {message && (
@@ -480,27 +485,43 @@ export function ClientSettings() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {managedSaving && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
-            <span className={`text-xs font-medium ${!bool('client_set_settings') ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
-              {!bool('client_set_settings') ? 'Managed' : 'Unmanaged'}
-            </span>
-            <Toggle checked={!bool('client_set_settings')} onChange={v => toggleManaged(v)} />
+            <Tooltip text={!bool('client_set_settings') ? 'Server enforces all backup settings; client tray is locked' : 'Client can change its own backup settings via the tray icon'}>
+              <span className={`text-xs font-medium ${!bool('client_set_settings') ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
+                {!bool('client_set_settings') ? 'Managed' : 'Unmanaged'}
+              </span>
+            </Tooltip>
+            <Tooltip text="Toggle server-managed mode — when ON the client tray is locked and server settings take effect">
+              <Toggle checked={!bool('client_set_settings')} onChange={v => toggleManaged(v)} />
+            </Tooltip>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex gap-6 overflow-x-auto">
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  tab === t.id
-                    ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+            {tabs.map(t => {
+              const tabTooltips: Record<string, string> = {
+                paths: 'Which folders and files on this client to include or exclude from backups',
+                schedule: 'How often backups run and how many snapshots to keep',
+                transfer: 'Compression, encryption, speed limits, and data-plan caps',
+                image: 'Bare-metal disk image backup volumes, VSS writers, and image style',
+                permissions: 'What the client tray app is allowed to show or do',
+                storage: 'Set a soft storage quota and alert thresholds for this endpoint',
+              };
+              return (
+                <Tooltip key={t.id} text={tabTooltips[t.id] || t.label}>
+                  <button onClick={() => setTab(t.id)}
+                    className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                      tab === t.id
+                        ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                </Tooltip>
+              );
+            })}
           </nav>
         </div>
 
@@ -520,7 +541,9 @@ export function ClientSettings() {
               )}
               <Section title="Folders to Back Up">
                 <Row label="Server-managed paths" hint="When ON, the server's path list below is used. When OFF, the client decides its own backup paths via the tray icon.">
-                  <Toggle checked={!bool('allow_config_paths')} onChange={v => set('allow_config_paths', !v)} />
+                  <Tooltip text="When ON, the server's path list is pushed to the client. When OFF, the client manages its own paths via the tray icon.">
+                    <Toggle checked={!bool('allow_config_paths')} onChange={v => set('allow_config_paths', !v)} />
+                  </Tooltip>
                 </Row>
                 {!bool('allow_config_paths') && (
                   <p className="text-xs text-green-600 dark:text-green-400">Server-managed paths active — the list below controls what gets backed up.</p>
@@ -534,21 +557,29 @@ export function ClientSettings() {
                     : getPaths().map(path => (
                       <div key={path} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
                         <span className="flex-1 font-mono text-sm">{path}</span>
-                        <button onClick={() => setPaths(getPaths().filter(p => p !== path))} className="text-red-500 hover:text-red-700">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <Tooltip text={`Remove ${path} from the backup path list`}>
+                          <button onClick={() => setPaths(getPaths().filter(p => p !== path))} className="text-red-500 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </Tooltip>
                       </div>
                     ))
                   }
                 </div>
                 <div className="flex gap-2">
-                  <input type="text" value={newIncludePath} onChange={e => setNewIncludePath(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && addPath()}
-                    placeholder="e.g. C:\Users or %USERPROFILE%" className="input flex-1 font-mono text-sm" />
-                  <button onClick={addPath} className="btn btn-primary flex items-center gap-1"><Plus className="h-4 w-4" /> Add</button>
-                  <button onClick={() => setShowFileBrowser(true)} className="btn btn-secondary flex items-center gap-1" title="Browse client filesystem">
-                    <FolderSearch className="h-4 w-4" /> Browse
-                  </button>
+                  <Tooltip text="Type a Windows path to add — e.g. C:\Users or %USERPROFILE%" position="bottom">
+                    <input type="text" value={newIncludePath} onChange={e => setNewIncludePath(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addPath()}
+                      placeholder="e.g. C:\Users or %USERPROFILE%" className="input flex-1 font-mono text-sm" />
+                  </Tooltip>
+                  <Tooltip text="Add this path to the backup list">
+                    <button onClick={addPath} className="btn btn-primary flex items-center gap-1"><Plus className="h-4 w-4" /> Add</button>
+                  </Tooltip>
+                  <Tooltip text="Browse the client's live filesystem to pick a folder">
+                    <button onClick={() => setShowFileBrowser(true)} className="btn btn-secondary flex items-center gap-1">
+                      <FolderSearch className="h-4 w-4" /> Browse
+                    </button>
+                  </Tooltip>
                 </div>
                 {showFileBrowser && (
                   <ClientFileBrowser
@@ -585,28 +616,36 @@ export function ClientSettings() {
                               }}
                               className="input flex-1 font-mono text-xs py-0.5 h-6"
                             />
-                            <button
-                              onClick={() => {
-                                const v = editingExcludeVal.trim();
-                                if (v) { const arr = getExcludes(); arr[i] = v; setExcludes(arr); }
-                                setEditingExcludeIdx(null);
-                              }}
-                              className="text-green-600 hover:text-green-800 flex-shrink-0" title="Save"
-                            ><Check className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => setEditingExcludeIdx(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0" title="Cancel">
-                              <X className="h-3.5 w-3.5" />
-                            </button>
+                            <Tooltip text="Save this exclusion pattern edit">
+                              <button
+                                onClick={() => {
+                                  const v = editingExcludeVal.trim();
+                                  if (v) { const arr = getExcludes(); arr[i] = v; setExcludes(arr); }
+                                  setEditingExcludeIdx(null);
+                                }}
+                                className="text-green-600 hover:text-green-800 flex-shrink-0"
+                              ><Check className="h-3.5 w-3.5" /></button>
+                            </Tooltip>
+                            <Tooltip text="Discard this edit">
+                              <button onClick={() => setEditingExcludeIdx(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </Tooltip>
                           </>
                         ) : (
                           <>
                             <span className="flex-1 font-mono text-xs truncate">{pat}</span>
-                            <button
-                              onClick={() => { setEditingExcludeIdx(i); setEditingExcludeVal(pat); }}
-                              className="text-gray-400 hover:text-primary-600 flex-shrink-0" title="Edit"
-                            ><Pencil className="h-3 w-3" /></button>
-                            <button onClick={() => setExcludes(getExcludes().filter((_, j) => j !== i))} className="text-red-500 hover:text-red-700 flex-shrink-0" title="Remove">
-                              <Trash2 className="h-3 w-3" />
-                            </button>
+                            <Tooltip text="Edit this exclusion pattern">
+                              <button
+                                onClick={() => { setEditingExcludeIdx(i); setEditingExcludeVal(pat); }}
+                                className="text-gray-400 hover:text-primary-600 flex-shrink-0"
+                              ><Pencil className="h-3 w-3" /></button>
+                            </Tooltip>
+                            <Tooltip text="Remove this exclusion pattern">
+                              <button onClick={() => setExcludes(getExcludes().filter((_, j) => j !== i))} className="text-red-500 hover:text-red-700 flex-shrink-0">
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </Tooltip>
                           </>
                         )}
                       </div>
@@ -614,28 +653,36 @@ export function ClientSettings() {
                   }
                 </div>
                 <div className="flex gap-2">
-                  <input type="text" value={newExcludePattern} onChange={e => setNewExcludePattern(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && addExclude()}
-                    placeholder="e.g. *.tmp or C:\Windows\Temp\*" className="input flex-1 font-mono text-sm" />
-                  <button onClick={addExclude} className="btn btn-primary flex items-center gap-1"><Plus className="h-4 w-4" /> Add</button>
+                  <Tooltip text="Enter a path or wildcard pattern to exclude — e.g. *.tmp" position="bottom">
+                    <input type="text" value={newExcludePattern} onChange={e => setNewExcludePattern(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addExclude()}
+                      placeholder="e.g. *.tmp or C:\Windows\Temp\*" className="input flex-1 font-mono text-sm" />
+                  </Tooltip>
+                  <Tooltip text="Add this pattern to the exclusion list">
+                    <button onClick={addExclude} className="btn btn-primary flex items-center gap-1"><Plus className="h-4 w-4" /> Add</button>
+                  </Tooltip>
                 </div>
-                <button
-                  onClick={() => setExcludes(getDefaults().exclude_files.split(';').filter(Boolean))}
-                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline text-left"
-                >
-                  Apply default Windows exclusions (junction points, temp files, Windows dir)
-                </button>
+                <Tooltip text="Replace exclusions with a curated list of Windows junctions, temp dirs, and OS files" position="bottom">
+                  <button
+                    onClick={() => setExcludes(getDefaults().exclude_files.split(';').filter(Boolean))}
+                    className="text-sm text-primary-600 dark:text-primary-400 hover:underline text-left"
+                  >
+                    Apply default Windows exclusions (junction points, temp files, Windows dir)
+                  </button>
+                </Tooltip>
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-1">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Detect from last backup</p>
-                    <button
-                      onClick={detectFailedPaths}
-                      disabled={failedPathsLoading || !clientId}
-                      className="btn btn-secondary flex items-center gap-1 text-sm py-1"
-                    >
-                      {failedPathsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ScanSearch className="h-3.5 w-3.5" />}
-                      Scan for failed paths
-                    </button>
+                    <Tooltip text="Scan the last backup log for paths that caused errors">
+                      <button
+                        onClick={detectFailedPaths}
+                        disabled={failedPathsLoading || !clientId}
+                        className="btn btn-secondary flex items-center gap-1 text-sm py-1"
+                      >
+                        {failedPathsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ScanSearch className="h-3.5 w-3.5" />}
+                        Scan for failed paths
+                      </button>
+                    </Tooltip>
                   </div>
                   {failedPaths !== null && (
                     failedPaths.length === 0
@@ -652,32 +699,37 @@ export function ClientSettings() {
                                   <span className={`flex-1 font-mono text-xs truncate ${alreadyExcluded ? 'text-gray-400 line-through' : ''}`}>{path}</span>
                                   <span className="text-xs text-gray-400 flex-shrink-0">{count} {count === 1 ? 'error' : 'errors'}</span>
                                   {!alreadyExcluded && (
-                                    <button
-                                      onClick={() => setExcludes([...getExcludes(), path])}
-                                      className="text-primary-600 dark:text-primary-400 hover:text-primary-800 flex-shrink-0"
-                                      title="Add to exclusions"
-                                    >
-                                      <Plus className="h-3.5 w-3.5" />
-                                    </button>
+                                    <Tooltip text="Add this path to the exclusion list">
+                                      <button
+                                        onClick={() => setExcludes([...getExcludes(), path])}
+                                        className="text-primary-600 dark:text-primary-400 hover:text-primary-800 flex-shrink-0"
+                                      >
+                                        <Plus className="h-3.5 w-3.5" />
+                                      </button>
+                                    </Tooltip>
                                   )}
                                 </div>
                               );
                             })}
                           </div>
                           {failedPaths.some(p => !getExcludes().includes(p.path)) && (
-                            <button
-                              onClick={() => addFailedPathsToExcludes(failedPaths)}
-                              className="btn btn-primary text-sm py-1"
-                            >
-                              Add all to exclusions
-                            </button>
+                            <Tooltip text="Add every failed path at once to suppress backup errors">
+                              <button
+                                onClick={() => addFailedPathsToExcludes(failedPaths)}
+                                className="btn btn-primary text-sm py-1"
+                              >
+                                Add all to exclusions
+                              </button>
+                            </Tooltip>
                           )}
                         </>
                   )}
                 </div>
                 <div className="pt-2">
                   <Row label="Backup paths are optional" hint="If enabled, the backup will succeed even if backup paths don't exist on the client.">
-                    <Toggle checked={bool('backup_dirs_optional')} onChange={v => set('backup_dirs_optional', v)} />
+                    <Tooltip text="Allow backup to succeed even when configured paths don't exist on the client">
+                      <Toggle checked={bool('backup_dirs_optional')} onChange={v => set('backup_dirs_optional', v)} />
+                    </Tooltip>
                   </Row>
                 </div>
               </Section>
@@ -690,22 +742,38 @@ export function ClientSettings() {
               <Section title="File Backup Schedule">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="label">Incremental interval (seconds)</label>
-                    <input type="number" className="input" value={s('update_freq_incr')} onChange={e => set('update_freq_incr', Number(e.target.value))} />
+                    <Tooltip text="How often to run file backups — minimum seconds between incremental runs" position="bottom">
+                      <label className="label">Incremental interval (seconds)</label>
+                    </Tooltip>
+                    <Tooltip text="How often to run incremental file backups (seconds). Default: 18000 = 5 hrs" position="bottom">
+                      <input type="number" className="input" value={s('update_freq_incr')} onChange={e => set('update_freq_incr', Number(e.target.value))} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Default: 18000 (5 hours)</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Full backup interval (seconds)</label>
-                    <input type="number" className="input" value={s('update_freq_full')} onChange={e => set('update_freq_full', Number(e.target.value))} />
+                    <Tooltip text="How often to run a full file backup (all files re-transferred)" position="bottom">
+                      <label className="label">Full backup interval (seconds)</label>
+                    </Tooltip>
+                    <Tooltip text="Seconds between full file backups. Default: 2592000 = 30 days" position="bottom">
+                      <input type="number" className="input" value={s('update_freq_full')} onChange={e => set('update_freq_full', Number(e.target.value))} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Default: 2592000 (30 days)</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Incremental backup window</label>
-                    <input type="text" className="input" value={s('backup_window_incr_file')} onChange={e => set('backup_window_incr_file', e.target.value)} />
+                    <Tooltip text="Days/hours when incremental file backups are allowed. Format: 1-7/0-24" position="bottom">
+                      <label className="label">Incremental backup window</label>
+                    </Tooltip>
+                    <Tooltip text="Time window for incremental file backups. e.g. 1-7/0-24 = any time" position="bottom">
+                      <input type="text" className="input" value={s('backup_window_incr_file')} onChange={e => set('backup_window_incr_file', e.target.value)} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Full backup window</label>
-                    <input type="text" className="input" value={s('backup_window_full_file')} onChange={e => set('backup_window_full_file', e.target.value)} />
+                    <Tooltip text="Days/hours when full file backups are allowed. Format: 1-7/0-24" position="bottom">
+                      <label className="label">Full backup window</label>
+                    </Tooltip>
+                    <Tooltip text="Time window for full file backups. e.g. 1-7/0-24 = any time" position="bottom">
+                      <input type="text" className="input" value={s('backup_window_full_file')} onChange={e => set('backup_window_full_file', e.target.value)} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Format: 1-7/0-24 (all week, all hours)</p>
                   </div>
                 </div>
@@ -714,20 +782,36 @@ export function ClientSettings() {
               <Section title="File Backup Retention">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="label">Max incremental backups</label>
-                    <input type="number" className="input" value={s('max_file_incr')} onChange={e => set('max_file_incr', Number(e.target.value))} />
+                    <Tooltip text="Number of incremental file backup snapshots to keep before oldest is deleted" position="bottom">
+                      <label className="label">Max incremental backups</label>
+                    </Tooltip>
+                    <Tooltip text="Max incremental file backups to retain. Oldest are pruned when exceeded." position="bottom">
+                      <input type="number" className="input" value={s('max_file_incr')} onChange={e => set('max_file_incr', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Max full backups</label>
-                    <input type="number" className="input" value={s('max_file_full')} onChange={e => set('max_file_full', Number(e.target.value))} />
+                    <Tooltip text="Number of full file backup snapshots to keep before oldest is deleted" position="bottom">
+                      <label className="label">Max full backups</label>
+                    </Tooltip>
+                    <Tooltip text="Max full file backups to retain. Oldest are pruned when exceeded." position="bottom">
+                      <input type="number" className="input" value={s('max_file_full')} onChange={e => set('max_file_full', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Min incremental age (minutes)</label>
-                    <input type="number" className="input" value={s('min_file_incr')} onChange={e => set('min_file_incr', Number(e.target.value))} />
+                    <Tooltip text="Minimum age in minutes before an incremental backup can be deleted" position="bottom">
+                      <label className="label">Min incremental age (minutes)</label>
+                    </Tooltip>
+                    <Tooltip text="Protects recent incremental backups from early deletion (minutes)" position="bottom">
+                      <input type="number" className="input" value={s('min_file_incr')} onChange={e => set('min_file_incr', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Min full backup age (days)</label>
-                    <input type="number" className="input" value={s('min_file_full')} onChange={e => set('min_file_full', Number(e.target.value))} />
+                    <Tooltip text="Minimum age in days before a full backup can be deleted" position="bottom">
+                      <label className="label">Min full backup age (days)</label>
+                    </Tooltip>
+                    <Tooltip text="Protects recent full backups from early deletion (days)" position="bottom">
+                      <input type="number" className="input" value={s('min_file_full')} onChange={e => set('min_file_full', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                 </div>
               </Section>
@@ -735,22 +819,38 @@ export function ClientSettings() {
               <Section title="Image Backup Schedule">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="label">Incremental interval (seconds)</label>
-                    <input type="number" className="input" value={s('update_freq_image_incr')} onChange={e => set('update_freq_image_incr', Number(e.target.value))} />
+                    <Tooltip text="How often to run incremental disk image (bare-metal) backups" position="bottom">
+                      <label className="label">Incremental interval (seconds)</label>
+                    </Tooltip>
+                    <Tooltip text="How often to run incremental image backups (seconds). Default: 604800 = 7 days" position="bottom">
+                      <input type="number" className="input" value={s('update_freq_image_incr')} onChange={e => set('update_freq_image_incr', Number(e.target.value))} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Default: 604800 (7 days)</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Full image interval (seconds)</label>
-                    <input type="number" className="input" value={s('update_freq_image_full')} onChange={e => set('update_freq_image_full', Number(e.target.value))} />
+                    <Tooltip text="How often to run a full disk image backup (bare-metal)" position="bottom">
+                      <label className="label">Full image interval (seconds)</label>
+                    </Tooltip>
+                    <Tooltip text="Seconds between full image backups. Default: 5184000 = 60 days" position="bottom">
+                      <input type="number" className="input" value={s('update_freq_image_full')} onChange={e => set('update_freq_image_full', Number(e.target.value))} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Default: 5184000 (60 days)</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Incremental image window</label>
-                    <input type="text" className="input" value={s('backup_window_incr_image')} onChange={e => set('backup_window_incr_image', e.target.value)} />
+                    <Tooltip text="Days/hours when incremental image backups are allowed" position="bottom">
+                      <label className="label">Incremental image window</label>
+                    </Tooltip>
+                    <Tooltip text="Time window for incremental image backups. e.g. 1-7/0-24" position="bottom">
+                      <input type="text" className="input" value={s('backup_window_incr_image')} onChange={e => set('backup_window_incr_image', e.target.value)} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Full image window</label>
-                    <input type="text" className="input" value={s('backup_window_full_image')} onChange={e => set('backup_window_full_image', e.target.value)} />
+                    <Tooltip text="Days/hours when full image backups are allowed" position="bottom">
+                      <label className="label">Full image window</label>
+                    </Tooltip>
+                    <Tooltip text="Time window for full image backups. e.g. 1-7/0-24" position="bottom">
+                      <input type="text" className="input" value={s('backup_window_full_image')} onChange={e => set('backup_window_full_image', e.target.value)} />
+                    </Tooltip>
                   </div>
                 </div>
               </Section>
@@ -758,20 +858,36 @@ export function ClientSettings() {
               <Section title="Image Backup Retention">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="label">Max incremental image backups</label>
-                    <input type="number" className="input" value={s('max_image_incr')} onChange={e => set('max_image_incr', Number(e.target.value))} />
+                    <Tooltip text="Number of incremental image backups to keep before oldest is deleted" position="bottom">
+                      <label className="label">Max incremental image backups</label>
+                    </Tooltip>
+                    <Tooltip text="Max incremental image backups to retain. Oldest pruned when exceeded." position="bottom">
+                      <input type="number" className="input" value={s('max_image_incr')} onChange={e => set('max_image_incr', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Max full image backups</label>
-                    <input type="number" className="input" value={s('max_image_full')} onChange={e => set('max_image_full', Number(e.target.value))} />
+                    <Tooltip text="Number of full image backups to keep before oldest is deleted" position="bottom">
+                      <label className="label">Max full image backups</label>
+                    </Tooltip>
+                    <Tooltip text="Max full image backups to retain. Oldest pruned when exceeded." position="bottom">
+                      <input type="number" className="input" value={s('max_image_full')} onChange={e => set('max_image_full', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Min incremental age (days)</label>
-                    <input type="number" className="input" value={s('min_image_incr')} onChange={e => set('min_image_incr', Number(e.target.value))} />
+                    <Tooltip text="Minimum age in days before an incremental image backup can be deleted" position="bottom">
+                      <label className="label">Min incremental age (days)</label>
+                    </Tooltip>
+                    <Tooltip text="Protects recent incremental image backups from early deletion (days)" position="bottom">
+                      <input type="number" className="input" value={s('min_image_incr')} onChange={e => set('min_image_incr', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Min full image age (days)</label>
-                    <input type="number" className="input" value={s('min_image_full')} onChange={e => set('min_image_full', Number(e.target.value))} />
+                    <Tooltip text="Minimum age in days before a full image backup can be deleted" position="bottom">
+                      <label className="label">Min full image age (days)</label>
+                    </Tooltip>
+                    <Tooltip text="Protects recent full image backups from early deletion (days)" position="bottom">
+                      <input type="number" className="input" value={s('min_image_full')} onChange={e => set('min_image_full', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                 </div>
               </Section>
@@ -784,81 +900,147 @@ export function ClientSettings() {
               <Section title="Internet Transfer Modes">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="label">Full file backup mode</label>
-                    <Select value={s('internet_full_file_transfer_mode') || 'raw'} onChange={v => set('internet_full_file_transfer_mode', v)} options={TRANSFER_MODES} />
+                    <Tooltip text="Transfer mode for full file backups over internet (raw, compressed, hashed, blockhash)" position="bottom">
+                      <label className="label">Full file backup mode</label>
+                    </Tooltip>
+                    <Tooltip text="raw=send all data; hashed=skip unchanged; blockhash=block-level dedup" position="bottom">
+                      <Select value={s('internet_full_file_transfer_mode') || 'raw'} onChange={v => set('internet_full_file_transfer_mode', v)} options={TRANSFER_MODES} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Incremental file backup mode</label>
-                    <Select value={s('internet_incr_file_transfer_mode') || 'blockhash'} onChange={v => set('internet_incr_file_transfer_mode', v)} options={TRANSFER_MODES} />
+                    <Tooltip text="Transfer mode for incremental file backups over internet" position="bottom">
+                      <label className="label">Incremental file backup mode</label>
+                    </Tooltip>
+                    <Tooltip text="blockhash recommended for internet — only changed blocks transferred" position="bottom">
+                      <Select value={s('internet_incr_file_transfer_mode') || 'blockhash'} onChange={v => set('internet_incr_file_transfer_mode', v)} options={TRANSFER_MODES} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Image backup mode</label>
-                    <Select value={s('internet_image_transfer_mode') || 'raw'} onChange={v => set('internet_image_transfer_mode', v)} options={TRANSFER_MODES} />
+                    <Tooltip text="Transfer mode for disk image backups over internet" position="bottom">
+                      <label className="label">Image backup mode</label>
+                    </Tooltip>
+                    <Tooltip text="raw=send full sectors; blockhash=only changed sectors (saves bandwidth)" position="bottom">
+                      <Select value={s('internet_image_transfer_mode') || 'raw'} onChange={v => set('internet_image_transfer_mode', v)} options={TRANSFER_MODES} />
+                    </Tooltip>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <Row label="Compress internet transfers" hint="Reduce bandwidth usage"><Toggle checked={bool('internet_compress')} onChange={v => set('internet_compress', v)} /></Row>
-                  <Row label="Encrypt internet transfers" hint="End-to-end encryption"><Toggle checked={bool('internet_encrypt')} onChange={v => set('internet_encrypt', v)} /></Row>
+                  <Row label="Compress internet transfers" hint="Reduce bandwidth usage">
+                    <Tooltip text="Compress data in transit to reduce internet bandwidth usage">
+                      <Toggle checked={bool('internet_compress')} onChange={v => set('internet_compress', v)} />
+                    </Tooltip>
+                  </Row>
+                  <Row label="Encrypt internet transfers" hint="End-to-end encryption">
+                    <Tooltip text="Encrypt backup data end-to-end before sending over the internet">
+                      <Toggle checked={bool('internet_encrypt')} onChange={v => set('internet_encrypt', v)} />
+                    </Tooltip>
+                  </Row>
                 </div>
               </Section>
 
               <Section title="Local Transfer Modes">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="label">Full file backup mode</label>
-                    <Select value={s('local_full_file_transfer_mode') || 'hashed'} onChange={v => set('local_full_file_transfer_mode', v)} options={TRANSFER_MODES} />
+                    <Tooltip text="Transfer mode for full file backups on the local network" position="bottom">
+                      <label className="label">Full file backup mode</label>
+                    </Tooltip>
+                    <Tooltip text="hashed recommended for LAN — only files with changed hash are transferred" position="bottom">
+                      <Select value={s('local_full_file_transfer_mode') || 'hashed'} onChange={v => set('local_full_file_transfer_mode', v)} options={TRANSFER_MODES} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Incremental file backup mode</label>
-                    <Select value={s('local_incr_file_transfer_mode') || 'hashed'} onChange={v => set('local_incr_file_transfer_mode', v)} options={TRANSFER_MODES} />
+                    <Tooltip text="Transfer mode for incremental file backups on the local network" position="bottom">
+                      <label className="label">Incremental file backup mode</label>
+                    </Tooltip>
+                    <Tooltip text="hashed recommended for LAN incremental — skips unchanged files efficiently" position="bottom">
+                      <Select value={s('local_incr_file_transfer_mode') || 'hashed'} onChange={v => set('local_incr_file_transfer_mode', v)} options={TRANSFER_MODES} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Image backup mode</label>
-                    <Select value={s('local_image_transfer_mode') || 'hashed'} onChange={v => set('local_image_transfer_mode', v)} options={TRANSFER_MODES} />
+                    <Tooltip text="Transfer mode for disk image backups on the local network" position="bottom">
+                      <label className="label">Image backup mode</label>
+                    </Tooltip>
+                    <Tooltip text="hashed = only changed blocks sent; raw = full disk sectors every time" position="bottom">
+                      <Select value={s('local_image_transfer_mode') || 'hashed'} onChange={v => set('local_image_transfer_mode', v)} options={TRANSFER_MODES} />
+                    </Tooltip>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <Row label="Compress local transfers"><Toggle checked={bool('local_compress')} onChange={v => set('local_compress', v)} /></Row>
-                  <Row label="Encrypt local transfers"><Toggle checked={bool('local_encrypt')} onChange={v => set('local_encrypt', v)} /></Row>
+                  <Row label="Compress local transfers">
+                    <Tooltip text="Compress data on LAN transfers — usually not needed on fast local networks">
+                      <Toggle checked={bool('local_compress')} onChange={v => set('local_compress', v)} />
+                    </Tooltip>
+                  </Row>
+                  <Row label="Encrypt local transfers">
+                    <Tooltip text="Encrypt backup data on the local network — adds CPU overhead">
+                      <Toggle checked={bool('local_encrypt')} onChange={v => set('local_encrypt', v)} />
+                    </Tooltip>
+                  </Row>
                 </div>
               </Section>
 
               <Section title="Speed Limits &amp; Data Plans">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="label">Internet speed limit (bytes/s, -1 = unlimited)</label>
-                    <input type="number" className="input" value={s('internet_speed')} onChange={e => set('internet_speed', Number(e.target.value))} />
+                    <Tooltip text="Max internet backup speed in bytes/sec — use -1 for unlimited" position="bottom">
+                      <label className="label">Internet speed limit (bytes/s, -1 = unlimited)</label>
+                    </Tooltip>
+                    <Tooltip text="Throttle internet backup bandwidth. -1 = no limit. e.g. 1048576 = 1 MB/s" position="bottom">
+                      <input type="number" className="input" value={s('internet_speed')} onChange={e => set('internet_speed', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Local speed limit (bytes/s, -1 = unlimited)</label>
-                    <input type="number" className="input" value={s('local_speed')} onChange={e => set('local_speed', Number(e.target.value))} />
+                    <Tooltip text="Max local network backup speed in bytes/sec — use -1 for unlimited" position="bottom">
+                      <label className="label">Local speed limit (bytes/s, -1 = unlimited)</label>
+                    </Tooltip>
+                    <Tooltip text="Throttle LAN backup bandwidth. -1 = no limit. e.g. 104857600 = 100 MB/s" position="bottom">
+                      <input type="number" className="input" value={s('local_speed')} onChange={e => set('local_speed', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">File data plan limit (bytes)</label>
-                    <input type="number" className="input" value={s('internet_file_dataplan_limit')} onChange={e => set('internet_file_dataplan_limit', Number(e.target.value))} />
+                    <Tooltip text="Max bytes of file backup data transferred per billing period over internet" position="bottom">
+                      <label className="label">File data plan limit (bytes)</label>
+                    </Tooltip>
+                    <Tooltip text="Monthly data cap for internet file backups. Default 5 GB = 5242880000" position="bottom">
+                      <input type="number" className="input" value={s('internet_file_dataplan_limit')} onChange={e => set('internet_file_dataplan_limit', Number(e.target.value))} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Default: 5 GB (5242880000)</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Image data plan limit (bytes)</label>
-                    <input type="number" className="input" value={s('internet_image_dataplan_limit')} onChange={e => set('internet_image_dataplan_limit', Number(e.target.value))} />
+                    <Tooltip text="Max bytes of image backup data transferred per billing period over internet" position="bottom">
+                      <label className="label">Image data plan limit (bytes)</label>
+                    </Tooltip>
+                    <Tooltip text="Monthly data cap for internet image backups. Default 20 GB = 20971520000" position="bottom">
+                      <input type="number" className="input" value={s('internet_image_dataplan_limit')} onChange={e => set('internet_image_dataplan_limit', Number(e.target.value))} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Default: 20 GB (20971520000)</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Client quota (bytes, empty = unlimited)</label>
-                    <input type="text" className="input" value={s('client_quota') || ''} onChange={e => set('client_quota', e.target.value)} />
+                    <Tooltip text="Total storage quota for this client in bytes — leave empty for no limit" position="bottom">
+                      <label className="label">Client quota (bytes, empty = unlimited)</label>
+                    </Tooltip>
+                    <Tooltip text="Hard storage quota for this client's backups on the server (bytes)" position="bottom">
+                      <input type="text" className="input" value={s('client_quota') || ''} onChange={e => set('client_quota', e.target.value)} />
+                    </Tooltip>
                   </div>
                 </div>
               </Section>
 
               <Section title="Internet Mode" collapsible>
                 <Row label="Enable internet mode" hint="Allow this client to back up over the internet">
-                  <Toggle checked={bool('internet_mode_enabled')} onChange={v => set('internet_mode_enabled', v)} />
+                  <Tooltip text="Allow this client to connect and back up over the internet">
+                    <Toggle checked={bool('internet_mode_enabled')} onChange={v => set('internet_mode_enabled', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Enable internet file backups">
-                  <Toggle checked={bool('internet_full_file_backups')} onChange={v => set('internet_full_file_backups', v)} />
+                  <Tooltip text="Allow file backups when this client connects via the internet">
+                    <Toggle checked={bool('internet_full_file_backups')} onChange={v => set('internet_full_file_backups', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Enable internet image backups">
-                  <Toggle checked={bool('internet_image_backups')} onChange={v => set('internet_image_backups', v)} />
+                  <Tooltip text="Allow disk image (bare-metal) backups when connected via the internet">
+                    <Toggle checked={bool('internet_image_backups')} onChange={v => set('internet_image_backups', v)} />
+                  </Tooltip>
                 </Row>
               </Section>
             </>
@@ -869,8 +1051,12 @@ export function ClientSettings() {
             <>
               <Section title="Volumes to Image">
                 <div className="space-y-2">
-                  <label className="label">Drive letters to include (comma or space separated)</label>
-                  <input type="text" className="input font-mono" value={s('image_letters') || 'C'} onChange={e => set('image_letters', e.target.value)} placeholder="C" />
+                  <Tooltip text="Which drive letters to capture in disk image backups — e.g. C or C D or ALL" position="bottom">
+                    <label className="label">Drive letters to include (comma or space separated)</label>
+                  </Tooltip>
+                  <Tooltip text="Enter drive letters to image. e.g. C for system drive, or ALL for every volume" position="bottom">
+                    <input type="text" className="input font-mono" value={s('image_letters') || 'C'} onChange={e => set('image_letters', e.target.value)} placeholder="C" />
+                  </Tooltip>
                   <p className="text-xs text-gray-400">e.g. <code className="font-mono">C</code> or <code className="font-mono">C D E</code> — use <code className="font-mono">ALL</code> for all volumes</p>
                 </div>
               </Section>
@@ -880,15 +1066,21 @@ export function ClientSettings() {
                 <div className="space-y-2">
                   {VSS_COMPONENTS.map(comp => (
                     <Row key={comp.id} label={comp.label}>
-                      <Toggle checked={getVssComponents().includes(comp.id)} onChange={() => toggleVss(comp.id)} />
+                      <Tooltip text={`Include the ${comp.label} VSS writer in image backups`}>
+                        <Toggle checked={getVssComponents().includes(comp.id)} onChange={() => toggleVss(comp.id)} />
+                      </Tooltip>
                     </Row>
                   ))}
                 </div>
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                   <div className="space-y-1">
-                    <label className="label text-xs">Raw VSS components string</label>
-                    <input type="text" className="input font-mono text-xs" value={s('vss_select_components') || 'default=1'}
-                      onChange={e => set('vss_select_components', e.target.value)} />
+                    <Tooltip text="Raw semicolon-separated VSS component string sent directly to UrBackup" position="bottom">
+                      <label className="label text-xs">Raw VSS components string</label>
+                    </Tooltip>
+                    <Tooltip text="Advanced: edit the raw VSS component selection string. Format: Name=1;Name2=1" position="bottom">
+                      <input type="text" className="input font-mono text-xs" value={s('vss_select_components') || 'default=1'}
+                        onChange={e => set('vss_select_components', e.target.value)} />
+                    </Tooltip>
                   </div>
                 </div>
               </Section>
@@ -896,29 +1088,49 @@ export function ClientSettings() {
               <Section title="Image Style">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="label">Internet full image style</label>
-                    <Select value={s('internet_full_image_style') || 'synthetic'} onChange={v => set('internet_full_image_style', v)} options={IMAGE_STYLES_FULL} />
+                    <Tooltip text="How full image backups are created over internet — synthetic builds incrementally" position="bottom">
+                      <label className="label">Internet full image style</label>
+                    </Tooltip>
+                    <Tooltip text="synthetic: builds a new full by applying increments (saves bandwidth); full: complete retransfer" position="bottom">
+                      <Select value={s('internet_full_image_style') || 'synthetic'} onChange={v => set('internet_full_image_style', v)} options={IMAGE_STYLES_FULL} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Synthetic: incremental approach saving bandwidth</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Internet incremental image style</label>
-                    <Select value={s('internet_incr_image_style') || 'to-last'} onChange={v => set('internet_incr_image_style', v)} options={IMAGE_STYLES_INCR} />
+                    <Tooltip text="How incremental image backups reference previous images over internet" position="bottom">
+                      <label className="label">Internet incremental image style</label>
+                    </Tooltip>
+                    <Tooltip text="to-last: increments chain to last backup; to-full: increments all reference the last full" position="bottom">
+                      <Select value={s('internet_incr_image_style') || 'to-last'} onChange={v => set('internet_incr_image_style', v)} options={IMAGE_STYLES_INCR} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Local full image style</label>
-                    <Select value={s('local_full_image_style') || 'full'} onChange={v => set('local_full_image_style', v)} options={IMAGE_STYLES_FULL} />
+                    <Tooltip text="How full image backups are created on the local network" position="bottom">
+                      <label className="label">Local full image style</label>
+                    </Tooltip>
+                    <Tooltip text="full: complete disk image; synthetic: builds new full from increments" position="bottom">
+                      <Select value={s('local_full_image_style') || 'full'} onChange={v => set('local_full_image_style', v)} options={IMAGE_STYLES_FULL} />
+                    </Tooltip>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Local incremental image style</label>
-                    <Select value={s('local_incr_image_style') || 'to-full'} onChange={v => set('local_incr_image_style', v)} options={IMAGE_STYLES_INCR} />
+                    <Tooltip text="How incremental image backups reference previous images on the local network" position="bottom">
+                      <label className="label">Local incremental image style</label>
+                    </Tooltip>
+                    <Tooltip text="to-full: all increments reference the last full; to-last: chain to previous" position="bottom">
+                      <Select value={s('local_incr_image_style') || 'to-full'} onChange={v => set('local_incr_image_style', v)} options={IMAGE_STYLES_INCR} />
+                    </Tooltip>
                   </div>
                 </div>
               </Section>
 
               <Section title="Changed Block Tracking" collapsible>
                 <div className="space-y-1">
-                  <label className="label">CBT volumes (comma-separated drive letters or ALL)</label>
-                  <input type="text" className="input font-mono" value={s('cbt_volumes') || 'ALL'} onChange={e => set('cbt_volumes', e.target.value)} />
+                  <Tooltip text="Drives to use CBT on — tracks only changed disk blocks for faster image backups" position="bottom">
+                    <label className="label">CBT volumes (comma-separated drive letters or ALL)</label>
+                  </Tooltip>
+                  <Tooltip text="Changed Block Tracking volumes. ALL = track every drive. e.g. C D" position="bottom">
+                    <input type="text" className="input font-mono" value={s('cbt_volumes') || 'ALL'} onChange={e => set('cbt_volumes', e.target.value)} />
+                  </Tooltip>
                 </div>
               </Section>
             </>
@@ -929,61 +1141,93 @@ export function ClientSettings() {
             <>
               <Section title="Client Control">
                 <Row label="Silent update" hint="Update client silently without user interaction">
-                  <Toggle checked={bool('silent_update')} onChange={v => set('silent_update', v)} />
+                  <Tooltip text="Install client software updates silently without showing prompts to the user">
+                    <Toggle checked={bool('silent_update')} onChange={v => set('silent_update', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Background backups" hint="Run backups in the background">
-                  <Toggle checked={bool('background_backups')} onChange={v => set('background_backups', v)} />
+                  <Tooltip text="Run backups as a background service with no user-visible progress window">
+                    <Toggle checked={bool('background_backups')} onChange={v => set('background_backups', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Allow tray exit" hint="Allow user to exit the tray icon application">
-                  <Toggle checked={bool('allow_tray_exit')} onChange={v => set('allow_tray_exit', v)} />
+                  <Tooltip text="When OFF the user cannot quit the UrBackup tray icon (requires managed mode)">
+                    <Toggle checked={bool('allow_tray_exit')} onChange={v => set('allow_tray_exit', v)} />
+                  </Tooltip>
                 </Row>
                 <div className="pt-2">
                   <div className="space-y-1">
-                    <label className="label">Startup backup delay (seconds)</label>
-                    <input type="number" className="input w-40" value={s('startup_backup_delay') || 0} onChange={e => set('startup_backup_delay', Number(e.target.value))} />
+                    <Tooltip text="Delay in seconds before the first backup runs after the client starts" position="bottom">
+                      <label className="label">Startup backup delay (seconds)</label>
+                    </Tooltip>
+                    <Tooltip text="Wait this many seconds after client startup before triggering the first backup" position="bottom">
+                      <input type="number" className="input w-40" value={s('startup_backup_delay') || 0} onChange={e => set('startup_backup_delay', Number(e.target.value))} />
+                    </Tooltip>
                   </div>
                 </div>
               </Section>
 
               <Section title="Manual Backup Actions">
                 <Row label="Allow starting full file backups">
-                  <Toggle checked={bool('allow_starting_full_file_backups')} onChange={v => set('allow_starting_full_file_backups', v)} />
+                  <Tooltip text="Allow the user to manually trigger a full file backup from the tray">
+                    <Toggle checked={bool('allow_starting_full_file_backups')} onChange={v => set('allow_starting_full_file_backups', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Allow starting incremental file backups">
-                  <Toggle checked={bool('allow_starting_incr_file_backups')} onChange={v => set('allow_starting_incr_file_backups', v)} />
+                  <Tooltip text="Allow the user to manually trigger an incremental file backup from the tray">
+                    <Toggle checked={bool('allow_starting_incr_file_backups')} onChange={v => set('allow_starting_incr_file_backups', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Allow starting full image backups">
-                  <Toggle checked={bool('allow_starting_full_image_backups')} onChange={v => set('allow_starting_full_image_backups', v)} />
+                  <Tooltip text="Allow the user to manually trigger a full disk image backup from the tray">
+                    <Toggle checked={bool('allow_starting_full_image_backups')} onChange={v => set('allow_starting_full_image_backups', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Allow starting incremental image backups">
-                  <Toggle checked={bool('allow_starting_incr_image_backups')} onChange={v => set('allow_starting_incr_image_backups', v)} />
+                  <Tooltip text="Allow the user to manually trigger an incremental image backup from the tray">
+                    <Toggle checked={bool('allow_starting_incr_image_backups')} onChange={v => set('allow_starting_incr_image_backups', v)} />
+                  </Tooltip>
                 </Row>
               </Section>
 
               <Section title="Restore &amp; View Permissions">
                 <Row label="Allow file restore">
-                  <Toggle checked={bool('allow_file_restore')} onChange={v => set('allow_file_restore', v)} />
+                  <Tooltip text="Allow the user to restore individual files from backups via the tray">
+                    <Toggle checked={bool('allow_file_restore')} onChange={v => set('allow_file_restore', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Allow component restore">
-                  <Toggle checked={bool('allow_component_restore')} onChange={v => set('allow_component_restore', v)} />
+                  <Tooltip text="Allow the user to restore VSS components (e.g. Active Directory, Exchange)">
+                    <Toggle checked={bool('allow_component_restore')} onChange={v => set('allow_component_restore', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Allow component config">
-                  <Toggle checked={bool('allow_component_config')} onChange={v => set('allow_component_config', v)} />
+                  <Tooltip text="Allow the user to configure which VSS components are backed up">
+                    <Toggle checked={bool('allow_component_config')} onChange={v => set('allow_component_config', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Allow log view">
-                  <Toggle checked={bool('allow_log_view')} onChange={v => set('allow_log_view', v)} />
+                  <Tooltip text="Allow the user to view backup logs in the tray application">
+                    <Toggle checked={bool('allow_log_view')} onChange={v => set('allow_log_view', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Allow overwrite">
-                  <Toggle checked={bool('allow_overwrite')} onChange={v => set('allow_overwrite', v)} />
+                  <Tooltip text="Allow restoring files over existing files — shows settings panel in the tray">
+                    <Toggle checked={bool('allow_overwrite')} onChange={v => set('allow_overwrite', v)} />
+                  </Tooltip>
                 </Row>
                 <Row label="Allow pause">
-                  <Toggle checked={bool('allow_pause')} onChange={v => set('allow_pause', v)} />
+                  <Tooltip text="Allow the user to pause/resume backups from the tray icon">
+                    <Toggle checked={bool('allow_pause')} onChange={v => set('allow_pause', v)} />
+                  </Tooltip>
                 </Row>
               </Section>
 
               <Section title="Verification" collapsible>
                 <Row label="End-to-end file backup verification" hint="Verify backup integrity after each file backup (slower)">
-                  <Toggle checked={bool('end_to_end_file_backup_verification')} onChange={v => set('end_to_end_file_backup_verification', v)} />
+                  <Tooltip text="After each file backup, verify every file's hash matches — slower but detects corruption">
+                    <Toggle checked={bool('end_to_end_file_backup_verification')} onChange={v => set('end_to_end_file_backup_verification', v)} />
+                  </Tooltip>
                 </Row>
               </Section>
             </>
@@ -1019,53 +1263,83 @@ export function ClientSettings() {
                       />
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                      {(storageLimit.status === 'warning') && <><AlertTriangle className="h-3.5 w-3.5 text-yellow-500" /> Approaching limit</>}
-                      {(storageLimit.status === 'critical' || storageLimit.status === 'exceeded') && <><XCircle className="h-3.5 w-3.5 text-red-500" /> Limit exceeded</>}
-                      {(storageLimit.status === 'ok') && <><HardDrive className="h-3.5 w-3.5 text-green-500" /> Within limit</>}
+                      {(storageLimit.status === 'warning') && (
+                        <Tooltip text={`Usage is at ${Math.round(storageLimit.pct ?? 0)}% — approaching the configured limit`}>
+                          <span className="flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5 text-yellow-500" /> Approaching limit</span>
+                        </Tooltip>
+                      )}
+                      {(storageLimit.status === 'critical' || storageLimit.status === 'exceeded') && (
+                        <Tooltip text={`Usage is at ${Math.round(storageLimit.pct ?? 0)}% — the configured limit has been reached or exceeded`}>
+                          <span className="flex items-center gap-1"><XCircle className="h-3.5 w-3.5 text-red-500" /> Limit exceeded</span>
+                        </Tooltip>
+                      )}
+                      {(storageLimit.status === 'ok') && (
+                        <Tooltip text={`Usage is at ${Math.round(storageLimit.pct ?? 0)}% — well within the configured limit`}>
+                          <span className="flex items-center gap-1"><HardDrive className="h-3.5 w-3.5 text-green-500" /> Within limit</span>
+                        </Tooltip>
+                      )}
                     </div>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="label">Storage limit</label>
+                    <Tooltip text="Maximum storage this endpoint's backups should use on the server" position="bottom">
+                      <label className="label">Storage limit</label>
+                    </Tooltip>
                     <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min="0.1"
-                        step="0.1"
-                        className="input flex-1"
-                        placeholder={storageLimit?.has_limit ? '' : 'No limit set'}
-                        value={limitInput}
-                        onChange={e => setLimitInput(e.target.value)}
-                      />
-                      <select value={limitUnit} onChange={e => setLimitUnit(e.target.value as 'GB' | 'TB')} className="input w-20">
-                        <option value="GB">GB</option>
-                        <option value="TB">TB</option>
-                      </select>
+                      <Tooltip text="Enter the numeric storage limit value for this endpoint" position="bottom">
+                        <input
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          className="input flex-1"
+                          placeholder={storageLimit?.has_limit ? '' : 'No limit set'}
+                          value={limitInput}
+                          onChange={e => setLimitInput(e.target.value)}
+                        />
+                      </Tooltip>
+                      <Tooltip text="Select the unit for the storage limit: GB or TB">
+                        <select value={limitUnit} onChange={e => setLimitUnit(e.target.value as 'GB' | 'TB')} className="input w-20">
+                          <option value="GB">GB</option>
+                          <option value="TB">TB</option>
+                        </select>
+                      </Tooltip>
                     </div>
                   </div>
                   <div className="space-y-1" />
                   <div className="space-y-1">
-                    <label className="label">Warn at (%)</label>
-                    <input type="number" min="1" max="99" className="input" value={limitWarn} onChange={e => setLimitWarn(Number(e.target.value))} />
+                    <Tooltip text="Show a warning badge on the Endpoints page when usage hits this percentage" position="bottom">
+                      <label className="label">Warn at (%)</label>
+                    </Tooltip>
+                    <Tooltip text="Percentage of limit at which a yellow warning badge is shown" position="bottom">
+                      <input type="number" min="1" max="99" className="input" value={limitWarn} onChange={e => setLimitWarn(Number(e.target.value))} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Show warning badge when usage reaches this %</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="label">Critical at (%)</label>
-                    <input type="number" min="1" max="100" className="input" value={limitCritical} onChange={e => setLimitCritical(Number(e.target.value))} />
+                    <Tooltip text="Show a red critical badge on the Endpoints page when usage hits this percentage" position="bottom">
+                      <label className="label">Critical at (%)</label>
+                    </Tooltip>
+                    <Tooltip text="Percentage of limit at which a red critical/exceeded badge is shown" position="bottom">
+                      <input type="number" min="1" max="100" className="input" value={limitCritical} onChange={e => setLimitCritical(Number(e.target.value))} />
+                    </Tooltip>
                     <p className="text-xs text-gray-400">Show critical/exceeded badge when usage reaches this %</p>
                   </div>
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <button onClick={saveStorageLimit} disabled={savingLimit || !limitInput} className="btn btn-primary flex items-center gap-2 disabled:opacity-50">
-                    <Save className="h-4 w-4" /> {savingLimit ? 'Saving…' : storageLimit?.has_limit ? 'Update Limit' : 'Set Limit'}
-                  </button>
-                  {storageLimit?.has_limit && (
-                    <button onClick={removeStorageLimit} disabled={savingLimit} className="btn bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-300 disabled:opacity-50">
-                      Remove Limit
+                  <Tooltip text={storageLimit?.has_limit ? 'Update the storage limit for this endpoint' : 'Set a new storage limit for this endpoint'}>
+                    <button onClick={saveStorageLimit} disabled={savingLimit || !limitInput} className="btn btn-primary flex items-center gap-2 disabled:opacity-50">
+                      <Save className="h-4 w-4" /> {savingLimit ? 'Saving…' : storageLimit?.has_limit ? 'Update Limit' : 'Set Limit'}
                     </button>
+                  </Tooltip>
+                  {storageLimit?.has_limit && (
+                    <Tooltip text="Remove the storage limit for this endpoint — usage will be unconstrained">
+                      <button onClick={removeStorageLimit} disabled={savingLimit} className="btn bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-300 disabled:opacity-50">
+                        Remove Limit
+                      </button>
+                    </Tooltip>
                   )}
                 </div>
               </Section>

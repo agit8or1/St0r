@@ -219,36 +219,51 @@ export function Customers() {
                       <Users className="h-6 w-6 text-primary-600 dark:text-primary-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-                        {customer.name}
-                      </h3>
+                      <Tooltip text={customer.notes ? customer.notes : 'No notes'}>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate cursor-default">
+                          {customer.name}
+                        </h3>
+                      </Tooltip>
                       {customer.company && (
-                        <div className="flex items-center gap-1 mt-1 text-sm text-gray-600 dark:text-gray-400">
-                          <Building className="h-3 w-3" />
-                          <span className="truncate">{customer.company}</span>
-                        </div>
+                        <Tooltip text={`Company: ${customer.company}`}>
+                          <div className="flex items-center gap-1 mt-1 text-sm text-gray-600 dark:text-gray-400 cursor-default">
+                            <Building className="h-3 w-3" />
+                            <span className="truncate">{customer.company}</span>
+                          </div>
+                        </Tooltip>
                       )}
                     </div>
                   </div>
+                  <Tooltip text={customer.is_active ? 'Customer is active' : 'Customer is inactive'}>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${customer.is_active !== false ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}>
+                      {customer.is_active !== false ? 'Active' : 'Inactive'}
+                    </span>
+                  </Tooltip>
                 </div>
 
                 <div className="space-y-2 text-sm">
                   {customer.email && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Mail className="h-4 w-4" />
-                      <span className="truncate">{customer.email}</span>
-                    </div>
+                    <Tooltip text={`Send email to ${customer.email}`}>
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 cursor-default">
+                        <Mail className="h-4 w-4" />
+                        <span className="truncate">{customer.email}</span>
+                      </div>
+                    </Tooltip>
                   )}
                   {customer.phone && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Phone className="h-4 w-4" />
-                      <span>{customer.phone}</span>
-                    </div>
+                    <Tooltip text={`Phone: ${customer.phone}`}>
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 cursor-default">
+                        <Phone className="h-4 w-4" />
+                        <span>{customer.phone}</span>
+                      </div>
+                    </Tooltip>
                   )}
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <HardDrive className="h-4 w-4" />
-                    <span>{customer.client_count || 0} clients</span>
-                  </div>
+                  <Tooltip text="Number of backup endpoints assigned to this customer">
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 cursor-default">
+                      <HardDrive className="h-4 w-4" />
+                      <span>{customer.client_count || 0} clients</span>
+                    </div>
+                  </Tooltip>
                 </div>
 
                 <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -374,32 +389,38 @@ export function Customers() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={editingCustomer.is_active !== false}
-                  onChange={(e) =>
-                    setEditingCustomer({ ...editingCustomer, is_active: e.target.checked })
-                  }
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <label
-                  htmlFor="is_active"
-                  className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                >
-                  Active
-                </label>
-              </div>
+              <Tooltip text="Inactive customers are hidden from most views but not deleted">
+                <div className="flex items-center gap-2 cursor-default">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={editingCustomer.is_active !== false}
+                    onChange={(e) =>
+                      setEditingCustomer({ ...editingCustomer, is_active: e.target.checked })
+                    }
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <label
+                    htmlFor="is_active"
+                    className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer"
+                  >
+                    Active
+                  </label>
+                </div>
+              </Tooltip>
 
               {/* Client Management Section - Only shown when editing existing customer */}
               {editingCustomer.id && (
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100">Assigned Clients</h3>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {customerClients.length} clients
-                    </span>
+                    <Tooltip text="Backup endpoints currently linked to this customer">
+                      <h3 className="font-medium text-gray-900 dark:text-gray-100 cursor-default">Assigned Clients</h3>
+                    </Tooltip>
+                    <Tooltip text="Total endpoints linked to this customer">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 cursor-default">
+                        {customerClients.length} clients
+                      </span>
+                    </Tooltip>
                   </div>
 
                   {/* Add Client to Customer */}
@@ -418,18 +439,20 @@ export function Customers() {
                           </option>
                         ))}
                     </select>
-                    <button
-                      onClick={() => {
-                        if (selectedClientName) {
-                          handleAddClientToCustomer(selectedClientName);
-                          setSelectedClientName('');
-                        }
-                      }}
-                      disabled={!selectedClientName}
-                      className="btn btn-primary"
-                    >
-                      Add
-                    </button>
+                    <Tooltip text="Link the selected endpoint to this customer">
+                      <button
+                        onClick={() => {
+                          if (selectedClientName) {
+                            handleAddClientToCustomer(selectedClientName);
+                            setSelectedClientName('');
+                          }
+                        }}
+                        disabled={!selectedClientName}
+                        className="btn btn-primary"
+                      >
+                        Add
+                      </button>
+                    </Tooltip>
                   </div>
 
                   {/* List of Assigned Clients */}
@@ -444,19 +467,22 @@ export function Customers() {
                           key={cc.id}
                           className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                         >
-                          <div className="flex items-center gap-2">
-                            <HardDrive className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {cc.client_name}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveClientFromCustomer(cc.id)}
-                            className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                            title="Remove client"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
+                          <Tooltip text={`Backup endpoint: ${cc.client_name}`}>
+                            <div className="flex items-center gap-2 cursor-default">
+                              <HardDrive className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {cc.client_name}
+                              </span>
+                            </div>
+                          </Tooltip>
+                          <Tooltip text="Unlink this endpoint from the customer">
+                            <button
+                              onClick={() => handleRemoveClientFromCustomer(cc.id)}
+                              className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </Tooltip>
                         </div>
                       ))}
                     </div>
@@ -466,22 +492,26 @@ export function Customers() {
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => {
-                  setShowModal(false);
-                  setEditingCustomer(null);
-                  setCustomerClients([]);
-                  setSelectedClientName('');
-                }}
-                className="btn btn-secondary flex items-center gap-2"
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </button>
-              <button onClick={handleSave} className="btn btn-primary flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                Save
-              </button>
+              <Tooltip text="Discard changes and close">
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingCustomer(null);
+                    setCustomerClients([]);
+                    setSelectedClientName('');
+                  }}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </button>
+              </Tooltip>
+              <Tooltip text="Save customer details to the database">
+                <button onClick={handleSave} className="btn btn-primary flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  Save
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -497,7 +527,9 @@ export function Customers() {
 
             <div className="space-y-4">
               <div>
-                <label className="label">Select Client</label>
+                <Tooltip text="Choose an existing backup endpoint to link to this customer">
+                  <label className="label cursor-default">Select Client</label>
+                </Tooltip>
                 <select
                   value={selectedClientName}
                   onChange={(e) => setSelectedClientName(e.target.value)}
@@ -514,24 +546,28 @@ export function Customers() {
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => {
-                  setShowClientModal(false);
-                  setSelectedCustomer(null);
-                  setSelectedClientName('');
-                }}
-                className="btn btn-secondary flex items-center gap-2"
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </button>
-              <button
-                onClick={handleAssignClient}
-                className="btn btn-primary flex items-center gap-2"
-              >
-                <Save className="h-4 w-4" />
-                Assign Client
-              </button>
+              <Tooltip text="Discard and close without assigning">
+                <button
+                  onClick={() => {
+                    setShowClientModal(false);
+                    setSelectedCustomer(null);
+                    setSelectedClientName('');
+                  }}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </button>
+              </Tooltip>
+              <Tooltip text="Link the selected endpoint to this customer">
+                <button
+                  onClick={handleAssignClient}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  Assign Client
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>

@@ -375,69 +375,77 @@ export function Activities() {
 
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="card bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-600 rounded-xl">
-                <ActivityIcon className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Active Jobs</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {currentActivities.length}
-                </p>
+          <Tooltip text="Number of backup jobs currently in progress">
+            <div className="card bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-600 rounded-xl">
+                  <ActivityIcon className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Active Jobs</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {currentActivities.length}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
 
-          <div className="card bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-purple-600 rounded-xl">
-                <HardDrive className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {currentActivities.length > 0 ? 'Data Transferred' : 'Total Backup Storage'}
-                </p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {currentActivities.length > 0
-                    ? formatBytes(currentDataTransferred)
-                    : formatBytes(totalBackupStorage)}
-                </p>
+          <Tooltip text={currentActivities.length > 0 ? 'Total bytes transferred across all active jobs' : 'Total disk space used by all backup sets'}>
+            <div className="card bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-purple-600 rounded-xl">
+                  <HardDrive className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {currentActivities.length > 0 ? 'Data Transferred' : 'Total Backup Storage'}
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {currentActivities.length > 0
+                      ? formatBytes(currentDataTransferred)
+                      : formatBytes(totalBackupStorage)}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
 
-          <div className="card bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-orange-600 rounded-xl">
-                <Zap className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Avg Speed</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {currentActivities.length > 0 && avgSpeed > 0
-                    ? `${formatBytes(avgSpeed * 1000)}/s`
-                    : currentActivities.length > 0
-                    ? 'Calculating...'
-                    : 'Idle'}
-                </p>
+          <Tooltip text="Average transfer speed across all running backup jobs">
+            <div className="card bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-orange-600 rounded-xl">
+                  <Zap className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Avg Speed</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {currentActivities.length > 0 && avgSpeed > 0
+                      ? `${formatBytes(avgSpeed * 1000)}/s`
+                      : currentActivities.length > 0
+                      ? 'Calculating...'
+                      : 'Idle'}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
 
-          <div className="card bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-green-600 rounded-xl">
-                <CheckCircle className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Completed</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {filteredLastActivities.length}
-                </p>
+          <Tooltip text="Total completed backup jobs in the selected time range">
+            <div className="card bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-green-600 rounded-xl">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Completed</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {filteredLastActivities.length}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          </Tooltip>
         </div>
 
         {/* Filters */}
@@ -447,69 +455,81 @@ export function Activities() {
             <div className="flex items-center gap-4">
               <Filter className="h-5 w-5 text-gray-600 dark:text-gray-400" />
               <div className="flex gap-2">
-                <button
-                  onClick={() => setFilter('all')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    filter === 'all'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setFilter('running')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    filter === 'running'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Running
-                </button>
-                <button
-                  onClick={() => setFilter('completed')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    filter === 'completed'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Completed
-                </button>
+                <Tooltip text="Show both running and completed backups">
+                  <button
+                    onClick={() => setFilter('all')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      filter === 'all'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    All
+                  </button>
+                </Tooltip>
+                <Tooltip text="Show only backups currently in progress">
+                  <button
+                    onClick={() => setFilter('running')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      filter === 'running'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Running
+                  </button>
+                </Tooltip>
+                <Tooltip text="Show only finished backup jobs from history">
+                  <button
+                    onClick={() => setFilter('completed')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      filter === 'completed'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Completed
+                  </button>
+                </Tooltip>
               </div>
               <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setActivityType('all')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activityType === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  All Types
-                </button>
-                <button
-                  onClick={() => setActivityType('file')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activityType === 'file'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Files
-                </button>
-                <button
-                  onClick={() => setActivityType('image')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activityType === 'image'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Images
-                </button>
+                <Tooltip text="Show both file and image backup types">
+                  <button
+                    onClick={() => setActivityType('all')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      activityType === 'all'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    All Types
+                  </button>
+                </Tooltip>
+                <Tooltip text="Show file-level backups (individual files and folders)">
+                  <button
+                    onClick={() => setActivityType('file')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      activityType === 'file'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Files
+                  </button>
+                </Tooltip>
+                <Tooltip text="Show disk image backups (full volume snapshots)">
+                  <button
+                    onClick={() => setActivityType('image')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      activityType === 'image'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Images
+                  </button>
+                </Tooltip>
               </div>
             </div>
 
@@ -519,16 +539,18 @@ export function Activities() {
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Client:
                 </label>
-                <select
-                  value={selectedClient}
-                  onChange={(e) => setSelectedClient(e.target.value)}
-                  className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="all">All Clients</option>
-                  {uniqueClients.map(client => (
-                    <option key={client} value={client}>{client}</option>
-                  ))}
-                </select>
+                <Tooltip text="Filter activities to a specific backup client">
+                  <select
+                    value={selectedClient}
+                    onChange={(e) => setSelectedClient(e.target.value)}
+                    className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="all">All Clients</option>
+                    {uniqueClients.map(client => (
+                      <option key={client} value={client}>{client}</option>
+                    ))}
+                  </select>
+                </Tooltip>
               </div>
 
               <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
@@ -538,46 +560,54 @@ export function Activities() {
                   Time Range:
                 </label>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setDateRange('all')}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      dateRange === 'all'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    All Time
-                  </button>
-                  <button
-                    onClick={() => setDateRange('today')}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      dateRange === 'today'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    Today
-                  </button>
-                  <button
-                    onClick={() => setDateRange('week')}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      dateRange === 'week'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    Last 7 Days
-                  </button>
-                  <button
-                    onClick={() => setDateRange('month')}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      dateRange === 'month'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    Last 30 Days
-                  </button>
+                  <Tooltip text="Show completed backups from all time">
+                    <button
+                      onClick={() => setDateRange('all')}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        dateRange === 'all'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      All Time
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Show only backups that ran today">
+                    <button
+                      onClick={() => setDateRange('today')}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        dateRange === 'today'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      Today
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Show backups completed in the last 7 days">
+                    <button
+                      onClick={() => setDateRange('week')}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        dateRange === 'week'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      Last 7 Days
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Show backups completed in the last 30 days">
+                    <button
+                      onClick={() => setDateRange('month')}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        dateRange === 'month'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      Last 30 Days
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>
@@ -633,17 +663,19 @@ export function Activities() {
                       {/* Header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            type === 'image'
-                              ? 'bg-purple-100 dark:bg-purple-900'
-                              : 'bg-blue-100 dark:bg-blue-900'
-                          }`}>
-                            <Server className={`h-5 w-5 ${
+                          <Tooltip text={type === 'image' ? 'Image backup — full disk volume snapshot' : 'File backup — individual files and folders'}>
+                            <div className={`p-2 rounded-lg ${
                               type === 'image'
-                                ? 'text-purple-600 dark:text-purple-400'
-                                : 'text-blue-600 dark:text-blue-400'
-                            }`} />
-                          </div>
+                                ? 'bg-purple-100 dark:bg-purple-900'
+                                : 'bg-blue-100 dark:bg-blue-900'
+                            }`}>
+                              <Server className={`h-5 w-5 ${
+                                type === 'image'
+                                  ? 'text-purple-600 dark:text-purple-400'
+                                  : 'text-blue-600 dark:text-blue-400'
+                              }`} />
+                            </div>
+                          </Tooltip>
                           <div>
                             <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                               {clientName}
@@ -655,10 +687,12 @@ export function Activities() {
                         </div>
                         <div className="flex items-center gap-3">
                           {isPaused && (
-                            <span className="flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 rounded">
-                              <Pause className="h-3 w-3" />
-                              Paused
-                            </span>
+                            <Tooltip text="Backup is paused — will resume automatically">
+                              <span className="flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 rounded">
+                                <Pause className="h-3 w-3" />
+                                Paused
+                              </span>
+                            </Tooltip>
                           )}
                           <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {pcdone.toFixed(0)}%
@@ -679,50 +713,58 @@ export function Activities() {
                       </div>
 
                       {/* Progress Bar */}
-                      <div className="relative">
-                        <div className="h-3 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                          <div
-                            className="h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 transition-all duration-500 ease-out relative overflow-hidden"
-                            style={{ width: `${Math.min(pcdone, 100)}%` }}
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                      <Tooltip text={`${pcdone.toFixed(1)}% complete — ${totalBytes > 0 ? `${formatBytes(doneBytes)} of ${formatBytes(totalBytes)}` : formatBytes(doneBytes)}`}>
+                        <div className="relative">
+                          <div className="h-3 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                            <div
+                              className="h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 transition-all duration-500 ease-out relative overflow-hidden"
+                              style={{ width: `${Math.min(pcdone, 100)}%` }}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </Tooltip>
 
                       {/* Stats Grid */}
                       <div className="grid grid-cols-3 gap-4 pt-2">
-                        <div className="flex items-center gap-2">
-                          <HardDrive className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">Data</p>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              {totalBytes > 0
-                                ? `${formatBytes(doneBytes)} / ${formatBytes(totalBytes)}`
-                                : formatBytes(doneBytes) || 'Calculating...'}
-                            </p>
+                        <Tooltip text="Bytes transferred so far vs total backup size">
+                          <div className="flex items-center gap-2">
+                            <HardDrive className="h-4 w-4 text-gray-400" />
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">Data</p>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                {totalBytes > 0
+                                  ? `${formatBytes(doneBytes)} / ${formatBytes(totalBytes)}`
+                                  : formatBytes(doneBytes) || 'Calculating...'}
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        </Tooltip>
 
-                        <div className="flex items-center gap-2">
-                          <Zap className="h-4 w-4 text-orange-500" />
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">Speed</p>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              {calculateSpeed(doneBytes, totalBytes, speed)}
-                            </p>
+                        <Tooltip text="Current transfer speed reported by UrBackup">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-orange-500" />
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">Speed</p>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                {calculateSpeed(doneBytes, totalBytes, speed)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        </Tooltip>
 
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-purple-500" />
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">ETA</p>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              {etaMs && etaMs > 0 ? formatEta(etaMs) : estimateTimeRemaining(doneBytes, totalBytes, speed)}
-                            </p>
+                        <Tooltip text="Estimated time remaining until backup completes">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-purple-500" />
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">ETA</p>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                {etaMs && etaMs > 0 ? formatEta(etaMs) : estimateTimeRemaining(doneBytes, totalBytes, speed)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        </Tooltip>
                       </div>
                     </div>
                   </div>
@@ -783,14 +825,20 @@ export function Activities() {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                          <Tooltip text="Backup ended with errors">
+                            <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                          </Tooltip>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
-                              {clientName}
-                            </p>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                              {backupType} Backup{partitionStr}{details ? ` • ${details}` : ''}{displayBytes > 0 ? ` • ${formatBytes(displayBytes)}` : ''}
-                            </p>
+                            <Tooltip text={`Client: ${clientName}`}>
+                              <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+                                {clientName}
+                              </p>
+                            </Tooltip>
+                            <Tooltip text={`${backupType} backup${partitionStr}${details ? ` — ${details}` : ''}${displayBytes > 0 ? ` — ${formatBytes(displayBytes)}` : ''}`}>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                {backupType} Backup{partitionStr}{details ? ` • ${details}` : ''}{displayBytes > 0 ? ` • ${formatBytes(displayBytes)}` : ''}
+                              </p>
+                            </Tooltip>
                           </div>
                         </div>
                       </div>
@@ -854,14 +902,20 @@ export function Activities() {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        <Tooltip text="Backup completed successfully">
+                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        </Tooltip>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
-                            {clientName}
-                          </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                            {backupType} Backup{partitionStr}{durationStr ? ` • ${durationStr}` : ''}{displayBytes > 0 ? ` • ${formatBytes(displayBytes)}` : ''}
-                          </p>
+                          <Tooltip text={`Client: ${clientName}`}>
+                            <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+                              {clientName}
+                            </p>
+                          </Tooltip>
+                          <Tooltip text={`${backupType} backup${partitionStr}${durationStr ? ` — took ${durationStr}` : ''}${displayBytes > 0 ? ` — ${formatBytes(displayBytes)}` : ''}`}>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                              {backupType} Backup{partitionStr}{durationStr ? ` • ${durationStr}` : ''}{displayBytes > 0 ? ` • ${formatBytes(displayBytes)}` : ''}
+                            </p>
+                          </Tooltip>
                         </div>
                       </div>
                     </div>
@@ -887,23 +941,27 @@ export function Activities() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showErrorsOnly}
-                  onChange={e => setShowErrorsOnly(e.target.checked)}
-                  className="rounded"
-                />
-                Errors only
-              </label>
-              <button
-                onClick={loadJobLogs}
-                disabled={jobLogsLoading}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
-              >
-                <RefreshCw className={`h-3 w-3 ${jobLogsLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
+              <Tooltip text="Hide successful jobs — show only jobs with errors">
+                <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showErrorsOnly}
+                    onChange={e => setShowErrorsOnly(e.target.checked)}
+                    className="rounded"
+                  />
+                  Errors only
+                </label>
+              </Tooltip>
+              <Tooltip text="Reload the latest job logs from UrBackup">
+                <button
+                  onClick={loadJobLogs}
+                  disabled={jobLogsLoading}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3 w-3 ${jobLogsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -933,35 +991,47 @@ export function Activities() {
                         ? 'border-red-200 dark:border-red-800'
                         : 'border-gray-200 dark:border-gray-700'
                     }`}>
-                      <button
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                          hasErrors
-                            ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20'
-                            : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750'
-                        }`}
-                        onClick={() => loadLogDetail(job.id)}
-                      >
-                        <div className="flex-shrink-0">
-                          {hasErrors
-                            ? <XCircle className="h-4 w-4 text-red-500" />
-                            : job.warnings > 0
-                              ? <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                              : <CheckCircle className="h-4 w-4 text-green-500" />
-                          }
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{job.name}</span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{typeStr}</span>
+                      <Tooltip text={isExpanded ? 'Click to collapse log entries' : 'Click to expand and view log entries'}>
+                        <button
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                            hasErrors
+                              ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20'
+                              : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750'
+                          }`}
+                          onClick={() => loadLogDetail(job.id)}
+                        >
+                          <div className="flex-shrink-0">
+                            <Tooltip text={hasErrors ? 'Job completed with errors' : job.warnings > 0 ? 'Job completed with warnings' : 'Job completed successfully'}>
+                              {hasErrors
+                                ? <XCircle className="h-4 w-4 text-red-500" />
+                                : job.warnings > 0
+                                  ? <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                  : <CheckCircle className="h-4 w-4 text-green-500" />
+                              }
+                            </Tooltip>
                           </div>
-                          <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{timeStr}</span>
-                            {hasErrors && <span className="text-xs font-medium text-red-600 dark:text-red-400">{job.errors} error{job.errors !== 1 ? 's' : ''}</span>}
-                            {job.warnings > 0 && <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">{job.warnings} warning{job.warnings !== 1 ? 's' : ''}</span>}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{job.name}</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{typeStr}</span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{timeStr}</span>
+                              {hasErrors && (
+                                <Tooltip text={`${job.errors} error${job.errors !== 1 ? 's' : ''} — expand to view details`}>
+                                  <span className="text-xs font-medium text-red-600 dark:text-red-400">{job.errors} error{job.errors !== 1 ? 's' : ''}</span>
+                                </Tooltip>
+                              )}
+                              {job.warnings > 0 && (
+                                <Tooltip text={`${job.warnings} warning${job.warnings !== 1 ? 's' : ''} — expand to view details`}>
+                                  <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">{job.warnings} warning{job.warnings !== 1 ? 's' : ''}</span>
+                                </Tooltip>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <ChevronDown className={`h-4 w-4 text-gray-400 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                      </button>
+                          <ChevronDown className={`h-4 w-4 text-gray-400 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                      </Tooltip>
 
                       {isExpanded && (
                         <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-3 max-h-96 overflow-y-auto">
@@ -976,9 +1046,11 @@ export function Activities() {
                                   'text-gray-700 dark:text-gray-400'
                                 }`}>
                                   <span className="flex-shrink-0 w-4">
-                                    {entry.severity === 2 ? <XCircle className="h-3 w-3 mt-0.5" /> :
-                                     entry.severity === 1 ? <AlertTriangle className="h-3 w-3 mt-0.5" /> :
-                                     <Info className="h-3 w-3 mt-0.5" />}
+                                    <Tooltip text={entry.severity === 2 ? 'Error' : entry.severity === 1 ? 'Warning' : 'Info'}>
+                                      {entry.severity === 2 ? <XCircle className="h-3 w-3 mt-0.5" /> :
+                                       entry.severity === 1 ? <AlertTriangle className="h-3 w-3 mt-0.5" /> :
+                                       <Info className="h-3 w-3 mt-0.5" />}
+                                    </Tooltip>
                                   </span>
                                   <span className="break-words whitespace-pre-wrap">{entry.message}</span>
                                 </div>

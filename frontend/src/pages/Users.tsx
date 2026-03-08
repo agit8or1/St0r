@@ -216,25 +216,31 @@ export function Users() {
                     </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{user.email}</td>
                     <td className="py-3 px-4">
-                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                        user.is_admin
-                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-                      }`}>
-                        {user.is_admin ? 'Administrator' : 'User'}
-                      </span>
+                      <Tooltip text={user.is_admin ? 'Administrator — has full access to all settings and data' : 'Standard user — limited access based on permissions'}>
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium cursor-default ${
+                          user.is_admin
+                            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                        }`}>
+                          {user.is_admin ? 'Administrator' : 'User'}
+                        </span>
+                      </Tooltip>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                      {formatDate(user.last_login)}
+                      <Tooltip text={user.last_login ? `Last logged in on ${new Date(user.last_login).toLocaleString()}` : 'This user has never logged in'}>
+                        <span className="cursor-default">{formatDate(user.last_login)}</span>
+                      </Tooltip>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                        user.is_active
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-                          : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-                      }`}>
-                        {user.is_active ? 'Active' : 'Inactive'}
-                      </span>
+                      <Tooltip text={user.is_active ? 'Account is active — this user can log in' : 'Account is inactive — this user cannot log in'}>
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium cursor-default ${
+                          user.is_active
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                            : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+                        }`}>
+                          {user.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </Tooltip>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex justify-end gap-2">

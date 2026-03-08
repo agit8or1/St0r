@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef, useEffect } from 'react';
+import { ReactNode, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTooltips } from '../contexts/TooltipContext';
 
@@ -9,69 +9,65 @@ interface TooltipProps {
   className?: string;
 }
 
-interface AnchorRect {
-  top: number; left: number; width: number; height: number;
-  placement: 'top' | 'bottom' | 'left' | 'right';
-}
-
-function TooltipPopup({ text, anchor }: { text: string; anchor: AnchorRect }) {
-  const ref = useRef<HTMLDivElement>(null);
-  // Start off-screen hidden so we can measure before revealing
-  const [style, setStyle] = useState<React.CSSProperties>({
-    position: 'fixed', visibility: 'hidden', top: -9999, left: -9999, zIndex: 9999,
-  });
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const w = ref.current.offsetWidth;
-    const h = ref.current.offsetHeight;
-    const { top, left, width, height, placement } = anchor;
-    const gap = 8;
-    let t = 0, l = 0;
-    if (placement === 'top')    { t = top - h - gap;             l = left + width / 2 - w / 2; }
-    if (placement === 'bottom') { t = top + height + gap;        l = left + width / 2 - w / 2; }
-    if (placement === 'left')   { t = top + height / 2 - h / 2;  l = left - w - gap; }
-    if (placement === 'right')  { t = top + height / 2 - h / 2;  l = left + width + gap; }
-    // Clamp to viewport edges
-    l = Math.max(4, Math.min(l, window.innerWidth - w - 4));
-    t = Math.max(4, Math.min(t, window.innerHeight - h - 4));
-    setStyle({ position: 'fixed', top: t, left: l, zIndex: 9999, visibility: 'visible' });
-  }, [anchor]);
-
-  return (
-    <div ref={ref} style={style} className="pointer-events-none">
-      <div className="bg-gray-700 dark:bg-gray-500 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg max-w-xs leading-relaxed">
-        {text}
-      </div>
-    </div>
-  );
-}
-
 export function Tooltip({ text, children, position = 'top', className = '' }: TooltipProps) {
   const { tooltipsEnabled } = useTooltips();
-  const [anchor, setAnchor] = useState<AnchorRect | null>(null);
+  const [visible, setVisible] = useState(false);
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const hoveringRef = useRef(false);
+
+  const show = useCallback((e: React.MouseEvent) => {
+    hoveringRef.current = true;
+    const x = e.clientX;
+    const y = e.clientY;
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (hoveringRef.current) {
+        setCoords({ x, y });
+        setVisible(true);
+      }
+    }, 300);
+  }, []);
+
+  const hide = useCallback(() => {
+    hoveringRef.current = false;
+    clearTimeout(timerRef.current);
+    setVisible(false);
+  }, []);
+
+  const move = useCallback((e: React.MouseEvent) => {
+    setCoords({ x: e.clientX, y: e.clientY });
+  }, []);
 
   if (!tooltipsEnabled || !text) return <>{children}</>;
 
-  const show = () => {
-    timerRef.current = setTimeout(() => {
-      if (!wrapRef.current) return;
-      const r = wrapRef.current.getBoundingClientRect();
-      setAnchor({ top: r.top, left: r.left, width: r.width, height: r.height, placement: position });
-    }, 400);
-  };
-
-  const hide = () => {
-    clearTimeout(timerRef.current);
-    setAnchor(null);
-  };
+  const offsetY = position === 'bottom' ? 16 : -40;
 
   return (
-    <div ref={wrapRef} className={`relative inline-flex ${className}`} onMouseEnter={show} onMouseLeave={hide}>
+    <div
+      className={`relative inline-flex ${className}`}
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onMouseMove={move}
+    >
       {children}
-      {anchor && createPortal(<TooltipPopup text={text} anchor={anchor} />, document.body)}
+      {visible && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: coords.y + offsetY,
+            left: coords.x,
+            transform: 'translateX(-50%)',
+            zIndex: 99999,
+            pointerEvents: 'none',
+          }}
+        >
+          <div className="bg-gray-800 text-white text-xs rounded px-2 py-1.5 shadow-lg leading-snug max-w-[260px] text-center whitespace-normal">
+            {text}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { Tooltip } from '../components/Tooltip';
 import {
   Copy as DocumentDuplicateIcon,
   RefreshCw as ArrowPathIcon,
@@ -261,16 +262,20 @@ export default function ServerSettings() {
       return (
         <div className="flex items-start">
           <div className="flex items-center h-5">
-            <input
-              id={key}
-              type="checkbox"
-              checked={value === true || value === 'true'}
-              onChange={(e) => updateSetting(key, e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
-            />
+            <Tooltip text={description || label} position="bottom">
+              <input
+                id={key}
+                type="checkbox"
+                checked={value === true || value === 'true'}
+                onChange={(e) => updateSetting(key, e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
+              />
+            </Tooltip>
           </div>
           <div className="ml-3 text-sm">
-            <label htmlFor={key} className="font-medium text-gray-700 dark:text-gray-300">{label}</label>
+            <Tooltip text={description || label} position="bottom">
+              <label htmlFor={key} className="font-medium text-gray-700 dark:text-gray-300">{label}</label>
+            </Tooltip>
             {description && <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">{description}</p>}
           </div>
         </div>
@@ -280,33 +285,41 @@ export default function ServerSettings() {
     if (type === 'select' && options) {
       return (
         <div>
-          <label htmlFor={key} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+          <Tooltip text={description || label} position="bottom">
+            <label htmlFor={key} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+          </Tooltip>
           {description && <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">{description}</p>}
-          <select
-            id={key}
-            value={value || ''}
-            onChange={(e) => updateSetting(key, e.target.value)}
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          >
-            {options.map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
+          <Tooltip text={description || label} position="bottom">
+            <select
+              id={key}
+              value={value || ''}
+              onChange={(e) => updateSetting(key, e.target.value)}
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            >
+              {options.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </Tooltip>
         </div>
       );
     }
 
     return (
       <div>
-        <label htmlFor={key} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+        <Tooltip text={description || label} position="bottom">
+          <label htmlFor={key} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+        </Tooltip>
         {description && <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">{description}</p>}
-        <input
-          id={key}
-          type={type}
-          value={value !== null && value !== undefined ? value : ''}
-          onChange={(e) => updateSetting(key, type === 'number' ? parseInt(e.target.value) || 0 : e.target.value)}
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-        />
+        <Tooltip text={description || label} position="bottom">
+          <input
+            id={key}
+            type={type}
+            value={value !== null && value !== undefined ? value : ''}
+            onChange={(e) => updateSetting(key, type === 'number' ? parseInt(e.target.value) || 0 : e.target.value)}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          />
+        </Tooltip>
       </div>
     );
   };
@@ -316,13 +329,15 @@ export default function ServerSettings() {
       {/* Header with Back Button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <ArrowLeftIcon className="h-4 w-4 mr-2" />
-            Back
-          </button>
+          <Tooltip text="Return to the previous page">
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <ArrowLeftIcon className="h-4 w-4 mr-2" />
+              Back
+            </button>
+          </Tooltip>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">UrBackup Server Settings</h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -368,39 +383,45 @@ export default function ServerSettings() {
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('backup')}
-            className={`${
-              activeTab === 'backup'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-            } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center`}
-          >
-            <ShieldCheckIcon className="h-5 w-5 mr-2" />
-            Configuration Backup
-          </button>
-          <button
-            onClick={() => setActiveTab('general')}
-            className={`${
-              activeTab === 'general'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-            } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center`}
-          >
-            <SettingsIcon className="h-5 w-5 mr-2" />
-            General Settings
-          </button>
-          <button
-            onClick={() => setActiveTab('internet')}
-            className={`${
-              activeTab === 'internet'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-            } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center`}
-          >
-            <GlobeIcon className="h-5 w-5 mr-2" />
-            Internet Mode
-          </button>
+          <Tooltip text="Create and restore snapshots of all UrBackup server settings">
+            <button
+              onClick={() => setActiveTab('backup')}
+              className={`${
+                activeTab === 'backup'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center`}
+            >
+              <ShieldCheckIcon className="h-5 w-5 mr-2" />
+              Configuration Backup
+            </button>
+          </Tooltip>
+          <Tooltip text="Storage paths, performance limits, client management, and maintenance windows">
+            <button
+              onClick={() => setActiveTab('general')}
+              className={`${
+                activeTab === 'general'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center`}
+            >
+              <SettingsIcon className="h-5 w-5 mr-2" />
+              General Settings
+            </button>
+          </Tooltip>
+          <Tooltip text="Configure the FQDN and port for remote clients connecting over the internet">
+            <button
+              onClick={() => setActiveTab('internet')}
+              className={`${
+                activeTab === 'internet'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center`}
+            >
+              <GlobeIcon className="h-5 w-5 mr-2" />
+              Internet Mode
+            </button>
+          </Tooltip>
         </nav>
       </div>
 
@@ -431,21 +452,25 @@ export default function ServerSettings() {
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Create New Backup</h2>
-              <button
-                onClick={() => setShowCreateBackup(!showCreateBackup)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <DocumentDuplicateIcon className="h-5 w-5 mr-2" />
-                New Backup
-              </button>
+              <Tooltip text="Snapshot all current UrBackup server settings into a named backup">
+                <button
+                  onClick={() => setShowCreateBackup(!showCreateBackup)}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <DocumentDuplicateIcon className="h-5 w-5 mr-2" />
+                  New Backup
+                </button>
+              </Tooltip>
             </div>
 
             {showCreateBackup && (
               <div className="mt-4 space-y-4">
                 <div>
-                  <label htmlFor="backup-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Backup Name
-                  </label>
+                  <Tooltip text="A descriptive name so you can identify this backup later" position="bottom">
+                    <label htmlFor="backup-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Backup Name
+                    </label>
+                  </Tooltip>
                   <input
                     type="text"
                     id="backup-name"
@@ -456,32 +481,36 @@ export default function ServerSettings() {
                   />
                 </div>
                 <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => {
-                      setShowCreateBackup(false);
-                      setBackupName('');
-                    }}
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={createBackup}
-                    disabled={loading || !backupName.trim()}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? (
-                      <>
-                        <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <CloudArrowDownIcon className="h-5 w-5 mr-2" />
-                        Create Backup
-                      </>
-                    )}
-                  </button>
+                  <Tooltip text="Discard this new backup without saving">
+                    <button
+                      onClick={() => {
+                        setShowCreateBackup(false);
+                        setBackupName('');
+                      }}
+                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Save a snapshot of all current server settings under this name">
+                    <button
+                      onClick={createBackup}
+                      disabled={loading || !backupName.trim()}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <>
+                          <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <CloudArrowDownIcon className="h-5 w-5 mr-2" />
+                          Create Backup
+                        </>
+                      )}
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             )}
@@ -518,25 +547,31 @@ export default function ServerSettings() {
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => viewBackup(backup.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                        >
-                          View
-                        </button>
-                        <button
-                          onClick={() => setPendingRestoreId({ id: backup.id, name: backup.name })}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700"
-                        >
-                          <ArrowPathIcon className="h-4 w-4 mr-1" />
-                          Restore
-                        </button>
-                        <button
-                          onClick={() => deleteBackup(backup.id, backup.name)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
+                        <Tooltip text="View the raw settings stored in this backup">
+                          <button
+                            onClick={() => viewBackup(backup.id)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                          >
+                            View
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Overwrite current server settings with this backup's values">
+                          <button
+                            onClick={() => setPendingRestoreId({ id: backup.id, name: backup.name })}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700"
+                          >
+                            <ArrowPathIcon className="h-4 w-4 mr-1" />
+                            Restore
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Permanently delete this backup snapshot">
+                          <button
+                            onClick={() => deleteBackup(backup.id, backup.name)}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </Tooltip>
                       </div>
                     </div>
                   </div>
@@ -571,21 +606,25 @@ export default function ServerSettings() {
                   </pre>
                 </div>
                 <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                  <button
-                    onClick={() => setSelectedBackup(null)}
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={() => {
-                      setPendingRestoreId({ id: selectedBackup.id, name: selectedBackup.name });
-                      setSelectedBackup(null);
-                    }}
-                    className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                  >
-                    Restore This Backup
-                  </button>
+                  <Tooltip text="Close this detail view without making changes">
+                    <button
+                      onClick={() => setSelectedBackup(null)}
+                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      Close
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Apply this backup's settings to the UrBackup server now">
+                    <button
+                      onClick={() => {
+                        setPendingRestoreId({ id: selectedBackup.id, name: selectedBackup.name });
+                        setSelectedBackup(null);
+                      }}
+                      className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      Restore This Backup
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>
@@ -614,32 +653,36 @@ export default function ServerSettings() {
                       </span>
                     </div>
                     <div className="flex space-x-3">
-                      <button
-                        onClick={() => {
-                          setSettings(originalSettings);
-                          setMessage({ type: 'success', text: 'Changes discarded' });
-                        }}
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        Discard Changes
-                      </button>
-                      <button
-                        onClick={() => setShowSaveConfirm(true)}
-                        disabled={saveLoading}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {saveLoading ? (
-                          <>
-                            <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <SaveIcon className="h-5 w-5 mr-2" />
-                            Save Settings
-                          </>
-                        )}
-                      </button>
+                      <Tooltip text="Revert all fields back to their last saved values">
+                        <button
+                          onClick={() => {
+                            setSettings(originalSettings);
+                            setMessage({ type: 'success', text: 'Changes discarded' });
+                          }}
+                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                        >
+                          Discard Changes
+                        </button>
+                      </Tooltip>
+                      <Tooltip text="Write all modified settings to the UrBackup server">
+                        <button
+                          onClick={() => setShowSaveConfirm(true)}
+                          disabled={saveLoading}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {saveLoading ? (
+                            <>
+                              <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <SaveIcon className="h-5 w-5 mr-2" />
+                              Save Settings
+                            </>
+                          )}
+                        </button>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>
@@ -794,32 +837,36 @@ export default function ServerSettings() {
                       </span>
                     </div>
                     <div className="flex space-x-3">
-                      <button
-                        onClick={() => {
-                          setSettings(originalSettings);
-                          setMessage({ type: 'success', text: 'Changes discarded' });
-                        }}
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        Discard Changes
-                      </button>
-                      <button
-                        onClick={() => setShowSaveConfirm(true)}
-                        disabled={saveLoading}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {saveLoading ? (
-                          <>
-                            <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <SaveIcon className="h-5 w-5 mr-2" />
-                            Save Settings
-                          </>
-                        )}
-                      </button>
+                      <Tooltip text="Revert all fields back to their last saved values">
+                        <button
+                          onClick={() => {
+                            setSettings(originalSettings);
+                            setMessage({ type: 'success', text: 'Changes discarded' });
+                          }}
+                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                        >
+                          Discard Changes
+                        </button>
+                      </Tooltip>
+                      <Tooltip text="Write all modified settings to the UrBackup server">
+                        <button
+                          onClick={() => setShowSaveConfirm(true)}
+                          disabled={saveLoading}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {saveLoading ? (
+                            <>
+                              <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <SaveIcon className="h-5 w-5 mr-2" />
+                              Save Settings
+                            </>
+                          )}
+                        </button>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>
@@ -904,14 +951,18 @@ export default function ServerSettings() {
               This will update the UrBackup server configuration. Are you sure?
             </p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setShowSaveConfirm(false)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                Cancel
-              </button>
-              <button onClick={() => { setShowSaveConfirm(false); saveSettings(); }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium">
-                Save
-              </button>
+              <Tooltip text="Go back without saving any changes">
+                <button onClick={() => setShowSaveConfirm(false)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  Cancel
+                </button>
+              </Tooltip>
+              <Tooltip text="Confirm and apply all changed settings to UrBackup">
+                <button onClick={() => { setShowSaveConfirm(false); saveSettings(); }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium">
+                  Save
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -926,14 +977,18 @@ export default function ServerSettings() {
               Restore settings from <strong>"{pendingRestoreId.name}"</strong>? This will overwrite current server settings.
             </p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setPendingRestoreId(null)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                Cancel
-              </button>
-              <button onClick={() => { const r = pendingRestoreId; setPendingRestoreId(null); restoreBackup(r.id, r.name); }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium">
-                Restore
-              </button>
+              <Tooltip text="Abort the restore — current settings remain unchanged">
+                <button onClick={() => setPendingRestoreId(null)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  Cancel
+                </button>
+              </Tooltip>
+              <Tooltip text="Overwrite current server settings with this backup's values">
+                <button onClick={() => { const r = pendingRestoreId; setPendingRestoreId(null); restoreBackup(r.id, r.name); }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium">
+                  Restore
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>

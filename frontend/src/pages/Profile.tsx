@@ -12,6 +12,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
+import { Tooltip } from '../components/Tooltip';
 import { useAuth } from '../hooks/useAuth';
 
 export function Profile() {
@@ -227,31 +228,37 @@ export function Profile() {
         <div className="card">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Account Information</h2>
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Username</p>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">{user?.username}</p>
+            <Tooltip text="Your login username — contact an admin to change it" className="block">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Username</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">{user?.username}</p>
+                </div>
               </div>
-            </div>
+            </Tooltip>
 
-            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <Mail className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">{user?.email || 'Not set'}</p>
+            <Tooltip text="Email address associated with this account" className="block">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <Mail className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">{user?.email || 'Not set'}</p>
+                </div>
               </div>
-            </div>
+            </Tooltip>
 
-            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <Shield className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Role</p>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">
-                  {user?.isAdmin ? 'Administrator' : 'User'}
-                </p>
+            <Tooltip text="Administrator accounts have full access; Users have read-only access" className="block">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <Shield className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Role</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">
+                    {user?.isAdmin ? 'Administrator' : 'User'}
+                  </p>
+                </div>
               </div>
-            </div>
+            </Tooltip>
           </div>
         </div>
 
@@ -264,56 +271,70 @@ export function Profile() {
 
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Current Password
-              </label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="input w-full"
-                autoComplete="current-password"
-                required
-              />
+              <Tooltip text="Enter your existing password to confirm your identity" className="block">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Current Password
+                </label>
+              </Tooltip>
+              <Tooltip text="Your current login password — required to authorise this change" className="block">
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="input w-full"
+                  autoComplete="current-password"
+                  required
+                />
+              </Tooltip>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                New Password
-              </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="input w-full"
-                autoComplete="new-password"
-                required
-                minLength={8}
-              />
+              <Tooltip text="Choose a strong password — minimum 8 characters" className="block">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  New Password
+                </label>
+              </Tooltip>
+              <Tooltip text="Must be at least 8 characters; use letters, numbers and symbols" className="block">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="input w-full"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                />
+              </Tooltip>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Minimum 8 characters</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Confirm New Password
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input w-full"
-                autoComplete="new-password"
-                required
-              />
+              <Tooltip text="Re-enter your new password to prevent typos" className="block">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Confirm New Password
+                </label>
+              </Tooltip>
+              <Tooltip text="Must exactly match the New Password field above" className="block">
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="input w-full"
+                  autoComplete="new-password"
+                  required
+                />
+              </Tooltip>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary"
-            >
-              {loading ? 'Changing Password...' : 'Change Password'}
-            </button>
+            <Tooltip text="Save the new password — you will stay logged in">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn btn-primary"
+              >
+                {loading ? 'Changing Password...' : 'Change Password'}
+              </button>
+            </Tooltip>
           </form>
         </div>
 
@@ -331,14 +352,16 @@ export function Profile() {
                 You'll need an authenticator app like Google Authenticator, Authy, or Microsoft Authenticator.
               </p>
 
-              <button
-                onClick={handleEnable2FA}
-                disabled={loading}
-                className="btn btn-primary"
-              >
-                <Key className="h-4 w-4 mr-2" />
-                {loading ? 'Setting up...' : 'Enable 2FA'}
-              </button>
+              <Tooltip text="Begin 2FA setup — you will scan a QR code with your authenticator app">
+                <button
+                  onClick={handleEnable2FA}
+                  disabled={loading}
+                  className="btn btn-primary"
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  {loading ? 'Setting up...' : 'Enable 2FA'}
+                </button>
+              </Tooltip>
             </div>
           )}
 
@@ -350,25 +373,31 @@ export function Profile() {
                   Open your authenticator app and scan this QR code:
                 </p>
 
-                <div className="bg-white p-4 rounded-lg inline-block">
-                  <img src={qrCodeUrl} alt="2FA QR Code" className="w-48 h-48" />
-                </div>
+                <Tooltip text="Scan with Google Authenticator, Authy, or any TOTP app">
+                  <div className="bg-white p-4 rounded-lg inline-block">
+                    <img src={qrCodeUrl} alt="2FA QR Code" className="w-48 h-48" />
+                  </div>
+                </Tooltip>
 
                 <div className="mt-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Or manually enter this secret key:
                   </p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 p-2 bg-gray-900 text-green-400 rounded font-mono text-sm break-all">
-                      {secret}
-                    </code>
-                    <button
-                      onClick={copySecret}
-                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                      title="Copy secret"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
+                    <Tooltip text="TOTP secret — paste into your authenticator app manually" className="flex-1">
+                      <code className="flex-1 p-2 bg-gray-900 text-green-400 rounded font-mono text-sm break-all">
+                        {secret}
+                      </code>
+                    </Tooltip>
+                    <Tooltip text="Copy the secret key to clipboard">
+                      <button
+                        onClick={copySecret}
+                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                        title="Copy secret"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
               </div>
@@ -380,21 +409,25 @@ export function Profile() {
                 </p>
 
                 <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="input w-32 text-center text-lg font-mono"
-                    placeholder="000000"
-                    maxLength={6}
-                  />
-                  <button
-                    onClick={handleVerify2FA}
-                    disabled={loading || verificationCode.length !== 6}
-                    className="btn btn-primary"
-                  >
-                    {loading ? 'Verifying...' : 'Verify & Enable'}
-                  </button>
+                  <Tooltip text="6-digit one-time code shown in your authenticator app">
+                    <input
+                      type="text"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="input w-32 text-center text-lg font-mono"
+                      placeholder="000000"
+                      maxLength={6}
+                    />
+                  </Tooltip>
+                  <Tooltip text="Confirm the code and activate 2FA on your account">
+                    <button
+                      onClick={handleVerify2FA}
+                      disabled={loading || verificationCode.length !== 6}
+                      className="btn btn-primary"
+                    >
+                      {loading ? 'Verifying...' : 'Verify & Enable'}
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>
@@ -402,17 +435,19 @@ export function Profile() {
 
           {twoFactorEnabled && (
             <div className="space-y-4">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">2FA is Enabled</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Your account is protected with two-factor authentication
-                    </p>
+              <Tooltip text="2FA is active — a code is required on every login" className="block">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">2FA is Enabled</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Your account is protected with two-factor authentication
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Tooltip>
 
               {backupCodes.length > 0 && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
@@ -424,31 +459,37 @@ export function Profile() {
                     Save these backup codes in a safe place. You can use them to access your account if you lose your authenticator device.
                   </p>
 
-                  <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 mb-3">
-                    <div className="grid grid-cols-2 gap-2 font-mono text-sm text-green-400">
-                      {backupCodes.map((code, index) => (
-                        <div key={index}>{code}</div>
-                      ))}
+                  <Tooltip text="Each code can be used once as a substitute for a 2FA code" className="block">
+                    <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 mb-3">
+                      <div className="grid grid-cols-2 gap-2 font-mono text-sm text-green-400">
+                        {backupCodes.map((code, index) => (
+                          <div key={index}>{code}</div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  </Tooltip>
 
-                  <button
-                    onClick={copyBackupCodes}
-                    className="btn btn-secondary text-sm"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy Backup Codes
-                  </button>
+                  <Tooltip text="Copy all backup codes to clipboard so you can store them safely">
+                    <button
+                      onClick={copyBackupCodes}
+                      className="btn btn-secondary text-sm"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy Backup Codes
+                    </button>
+                  </Tooltip>
                 </div>
               )}
 
-              <button
-                onClick={handleDisable2FA}
-                disabled={loading}
-                className="btn bg-red-600 hover:bg-red-700 text-white"
-              >
-                {loading ? 'Disabling...' : 'Disable 2FA'}
-              </button>
+              <Tooltip text="Remove 2FA from your account — login will require only password">
+                <button
+                  onClick={handleDisable2FA}
+                  disabled={loading}
+                  className="btn bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {loading ? 'Disabling...' : 'Disable 2FA'}
+                </button>
+              </Tooltip>
             </div>
           )}
         </div>
