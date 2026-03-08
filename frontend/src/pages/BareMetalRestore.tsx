@@ -32,6 +32,7 @@ export function BareMetalRestore() {
   const [imageBackups, setImageBackups] = useState<ImageBackup[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingBackups, setLoadingBackups] = useState(false);
+  const [confirmDownload, setConfirmDownload] = useState<{ backup: ImageBackup; gb: number } | null>(null);
 
   useEffect(() => {
     loadClients();
@@ -344,20 +345,29 @@ export function BareMetalRestore() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <a
-                        href={api.getImageBackupConvertUrl(selectedClient.id, backup.id)}
-                        download
-                        title={`Convert .vhdz → .vhd and download (~${backup.size_bytes ? (backup.size_bytes * 5 / 1e9).toFixed(0) : '?'} GB uncompressed)`}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
-                        onClick={e => {
-                          const gb = backup.size_bytes ? backup.size_bytes * 5 / 1e9 : 0;
-                          if (gb > 100 && !window.confirm(`This will decompress ~${gb.toFixed(0)} GB on the server then stream it to your browser. This may take a long time. Continue?`)) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        <Download className="h-3.5 w-3.5" /> Convert &amp; Download VHD
-                      </a>
+                      {(() => {
+                        const gb = backup.size_bytes ? backup.size_bytes * 5 / 1e9 : 0;
+                        if (gb > 100) {
+                          return (
+                            <button
+                              onClick={() => setConfirmDownload({ backup, gb })}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                            >
+                              <Download className="h-3.5 w-3.5" /> Convert &amp; Download VHD
+                            </button>
+                          );
+                        }
+                        return (
+                          <a
+                            href={api.getImageBackupConvertUrl(selectedClient.id, backup.id)}
+                            download
+                            title={`Convert .vhdz → .vhd and download (~${gb.toFixed(0)} GB uncompressed)`}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                          >
+                            <Download className="h-3.5 w-3.5" /> Convert &amp; Download VHD
+                          </a>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}
@@ -372,6 +382,29 @@ export function BareMetalRestore() {
           </div>
         )}
       </div>
+
+      {/* Large download confirmation modal */}
+      {confirmDownload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setConfirmDownload(null)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Large Download Warning</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              This will decompress approximately <strong>{confirmDownload.gb.toFixed(0)} GB</strong> on the server then stream it to your browser. This may take a long time depending on your connection.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmDownload(null)} className="btn btn-secondary">Cancel</button>
+              <a
+                href={api.getImageBackupConvertUrl(selectedClient!.id, confirmDownload.backup.id)}
+                download
+                className="btn btn-primary flex items-center gap-2"
+                onClick={() => setConfirmDownload(null)}
+              >
+                <Download className="h-4 w-4" /> Continue Download
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

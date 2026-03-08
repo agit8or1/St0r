@@ -104,10 +104,19 @@ app.use('/api/storage-limits', storageLimitsRoutes);
 // Serve frontend static files in production
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDist = resolve(__dirname, '../../frontend/dist');
-app.use(express.static(frontendDist));
+// Hashed assets (JS/CSS) get long-lived cache; index.html must never be cached
+// so browsers always fetch the latest version with correct asset hashes.
+app.use(express.static(frontendDist, {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
 
 // SPA fallback — serve index.html for all non-API routes
 app.get('*', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(resolve(frontendDist, 'index.html'));
 });
 
