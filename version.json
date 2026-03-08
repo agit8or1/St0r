@@ -1,7 +1,9 @@
 {
-  "version": "3.2.61",
+  "version": "3.2.62",
   "releaseDate": "2026-03-08",
   "changelog": [
-    "Feature: Client storage limits with warning system — set per-client quotas with configurable warn/critical thresholds, progress bars, and alert banners on the Endpoints page"
+    "Feature: Storage Limit tab in Client Settings — view and manage per-client storage quotas directly from the endpoint settings page",
+    "Fix: Service startup now retries DB connection up to 30s to survive slow MariaDB boot",
+    "Fix: Systemd service hardened with Requires=mariadb.service and network-online.target dependency"
   ]
 }

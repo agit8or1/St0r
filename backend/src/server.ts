@@ -163,10 +163,18 @@ async function initializeDefaultUser() {
 // Start server
 async function startServer() {
   try {
-    // Test database connection
-    const dbConnected = await testConnection();
+    // Test database connection — retry for up to 30s to handle slow MariaDB start at boot
+    let dbConnected = false;
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      dbConnected = await testConnection();
+      if (dbConnected) break;
+      if (attempt < 6) {
+        logger.warn(`Database not ready (attempt ${attempt}/6), retrying in 5s...`);
+        await new Promise(r => setTimeout(r, 5000));
+      }
+    }
     if (!dbConnected) {
-      logger.error('Failed to connect to database. Exiting...');
+      logger.error('Failed to connect to database after 6 attempts. Exiting...');
       process.exit(1);
     }
 

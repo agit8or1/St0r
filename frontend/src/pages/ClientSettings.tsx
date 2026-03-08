@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
-import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch, Loader2, ScanSearch, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, Save, Settings as SettingsIcon, Plus, Trash2, ChevronDown, ChevronRight, Lock, Unlock, FolderSearch, Loader2, ScanSearch, Pencil, Check, X, AlertTriangle, XCircle, HardDrive } from 'lucide-react';
 import { ClientFileBrowser } from '../components/ClientFileBrowser';
+import type { StorageLimitStatus } from '../types';
 
 interface ClientSettings {
   [key: string]: any;
@@ -83,7 +84,7 @@ export function ClientSettings() {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<ClientSettings>({});
   const [clientId, setClientId] = useState<string>('');
-  const [tab, setTab] = useState<'paths' | 'schedule' | 'transfer' | 'image' | 'permissions'>('paths');
+  const [tab, setTab] = useState<'paths' | 'schedule' | 'transfer' | 'image' | 'permissions' | 'storage'>('paths');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [noBackupPaths, setNoBackupPaths] = useState(false);
   const [newIncludePath, setNewIncludePath] = useState('');
@@ -94,6 +95,15 @@ export function ClientSettings() {
   const [failedPathsLoading, setFailedPathsLoading] = useState(false);
   const [editingExcludeIdx, setEditingExcludeIdx] = useState<number | null>(null);
   const [editingExcludeVal, setEditingExcludeVal] = useState('');
+
+  // Storage limit state
+  const [storageLimit, setStorageLimit] = useState<StorageLimitStatus | null>(null);
+  const [limitInput, setLimitInput] = useState('');
+  const [limitUnit, setLimitUnit] = useState<'GB' | 'TB'>('GB');
+  const [limitWarn, setLimitWarn] = useState(80);
+  const [limitCritical, setLimitCritical] = useState(95);
+  const [savingLimit, setSavingLimit] = useState(false);
+  const [limitMessage, setLimitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => { loadSettings(); }, [clientName]);
 
@@ -106,16 +116,33 @@ export function ClientSettings() {
       setClientId(foundClient.id);
       setNoBackupPaths(foundClient.no_backup_paths === true);
 
-      const response = await fetch(`/api/client-settings/${foundClient.id}`, { credentials: 'include' });
-      if (response.status === 404) { setSettings(getDefaults()); return; }
-      if (!response.ok) throw new Error('Failed to load settings');
+      const [settingsResp, limitResp] = await Promise.all([
+        fetch(`/api/client-settings/${foundClient.id}`, { credentials: 'include' }),
+        fetch(`/api/storage-limits`, { credentials: 'include' }),
+      ]);
+      if (settingsResp.status === 404) { setSettings(getDefaults()); }
+      else if (!settingsResp.ok) throw new Error('Failed to load settings');
+      else {
+        const data = await settingsResp.json();
+        const raw = data.settings || data;
+        const cleanRaw = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== null && v !== undefined));
+        setSettings({ ...getDefaults(), ...cleanRaw });
+      }
 
-      const data = await response.json();
-      const raw = data.settings || data;
-      // Merge with defaults so all fields are always present
-      // Filter out null/undefined API values so defaults are used for unset settings
-      const cleanRaw = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== null && v !== undefined));
-      setSettings({ ...getDefaults(), ...cleanRaw });
+      if (limitResp.ok) {
+        const limits = await limitResp.json();
+        const match = limits.find((l: any) => l.client_name === clientName);
+        if (match) {
+          setStorageLimit({ name: clientName!, has_limit: true, limit_bytes: match.limit_bytes, used_bytes: 0, pct: 0, status: 'ok', warn_threshold_pct: match.warn_threshold_pct, critical_threshold_pct: match.critical_threshold_pct });
+          const gb = match.limit_bytes / 1e9;
+          if (gb >= 1000) { setLimitUnit('TB'); setLimitInput(String(+(gb / 1000).toFixed(2))); }
+          else { setLimitUnit('GB'); setLimitInput(String(+gb.toFixed(2))); }
+          setLimitWarn(match.warn_threshold_pct ?? 80);
+          setLimitCritical(match.critical_threshold_pct ?? 95);
+        } else {
+          setStorageLimit({ name: clientName!, has_limit: false });
+        }
+      }
     } catch (err) {
       console.error('Failed to load settings:', err);
       setMessage({ type: 'error', text: 'Failed to load settings' });
@@ -328,6 +355,48 @@ export function ClientSettings() {
     }
   };
 
+  const saveStorageLimit = async () => {
+    const val = parseFloat(limitInput);
+    if (!val || val <= 0) { setLimitMessage({ type: 'error', text: 'Enter a valid limit' }); return; }
+    if (limitWarn >= limitCritical) { setLimitMessage({ type: 'error', text: 'Warning % must be less than critical %' }); return; }
+    setSavingLimit(true);
+    try {
+      const bytes = Math.round(val * (limitUnit === 'TB' ? 1e12 : 1e9));
+      const resp = await fetch(`/api/storage-limits/${encodeURIComponent(clientName!)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ limit_bytes: bytes, warn_threshold_pct: limitWarn, critical_threshold_pct: limitCritical }),
+      });
+      if (!resp.ok) throw new Error('Failed to save');
+      setStorageLimit({ name: clientName!, has_limit: true, limit_bytes: bytes, used_bytes: 0, pct: 0, status: 'ok', warn_threshold_pct: limitWarn, critical_threshold_pct: limitCritical });
+      setLimitMessage({ type: 'success', text: 'Storage limit saved.' });
+      setTimeout(() => setLimitMessage(null), 3000);
+    } catch {
+      setLimitMessage({ type: 'error', text: 'Failed to save storage limit' });
+    } finally {
+      setSavingLimit(false);
+    }
+  };
+
+  const removeStorageLimit = async () => {
+    setSavingLimit(true);
+    try {
+      await fetch(`/api/storage-limits/${encodeURIComponent(clientName!)}`, { method: 'DELETE', credentials: 'include' });
+      setStorageLimit({ name: clientName!, has_limit: false });
+      setLimitInput('');
+      setLimitUnit('GB');
+      setLimitWarn(80);
+      setLimitCritical(95);
+      setLimitMessage({ type: 'success', text: 'Storage limit removed.' });
+      setTimeout(() => setLimitMessage(null), 3000);
+    } catch {
+      setLimitMessage({ type: 'error', text: 'Failed to remove storage limit' });
+    } finally {
+      setSavingLimit(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -355,6 +424,7 @@ export function ClientSettings() {
     { id: 'transfer', label: 'Transfer' },
     { id: 'image', label: 'Image Backup' },
     { id: 'permissions', label: 'Permissions' },
+    { id: 'storage', label: 'Storage Limit' },
   ] as const;
 
   if (loading) return <Layout><Loading /></Layout>;
@@ -917,6 +987,89 @@ export function ClientSettings() {
                 </Row>
               </Section>
             </>
+          )}
+
+          {/* ── STORAGE LIMIT ────────────────────────────────────── */}
+          {tab === 'storage' && (
+            <div className="space-y-6">
+              {limitMessage && (
+                <div className={`rounded-lg p-4 ${limitMessage.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'}`}>
+                  {limitMessage.text}
+                </div>
+              )}
+
+              <Section title="Storage Limit">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Set a soft storage limit for this endpoint. A warning is shown on the Endpoints page when usage approaches or exceeds the limit. This does not hard-block backups.
+                </p>
+
+                {storageLimit?.has_limit && storageLimit.limit_bytes && storageLimit.used_bytes !== undefined && storageLimit.used_bytes > 0 && (
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Current usage</span>
+                      <span className={`font-semibold ${storageLimit.status === 'exceeded' || storageLimit.status === 'critical' ? 'text-red-600 dark:text-red-400' : storageLimit.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {((storageLimit.used_bytes ?? 0) / 1e9).toFixed(1)} GB / {(storageLimit.limit_bytes / 1e9).toFixed(1)} GB
+                        {(storageLimit.pct ?? 0) > 0 && ` (${Math.round(storageLimit.pct ?? 0)}%)`}
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${storageLimit.status === 'exceeded' || storageLimit.status === 'critical' ? 'bg-red-500' : storageLimit.status === 'warning' ? 'bg-yellow-400' : 'bg-green-500'}`}
+                        style={{ width: `${Math.min(storageLimit.pct ?? 0, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      {(storageLimit.status === 'warning') && <><AlertTriangle className="h-3.5 w-3.5 text-yellow-500" /> Approaching limit</>}
+                      {(storageLimit.status === 'critical' || storageLimit.status === 'exceeded') && <><XCircle className="h-3.5 w-3.5 text-red-500" /> Limit exceeded</>}
+                      {(storageLimit.status === 'ok') && <><HardDrive className="h-3.5 w-3.5 text-green-500" /> Within limit</>}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="label">Storage limit</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        className="input flex-1"
+                        placeholder={storageLimit?.has_limit ? '' : 'No limit set'}
+                        value={limitInput}
+                        onChange={e => setLimitInput(e.target.value)}
+                      />
+                      <select value={limitUnit} onChange={e => setLimitUnit(e.target.value as 'GB' | 'TB')} className="input w-20">
+                        <option value="GB">GB</option>
+                        <option value="TB">TB</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1" />
+                  <div className="space-y-1">
+                    <label className="label">Warn at (%)</label>
+                    <input type="number" min="1" max="99" className="input" value={limitWarn} onChange={e => setLimitWarn(Number(e.target.value))} />
+                    <p className="text-xs text-gray-400">Show warning badge when usage reaches this %</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="label">Critical at (%)</label>
+                    <input type="number" min="1" max="100" className="input" value={limitCritical} onChange={e => setLimitCritical(Number(e.target.value))} />
+                    <p className="text-xs text-gray-400">Show critical/exceeded badge when usage reaches this %</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={saveStorageLimit} disabled={savingLimit || !limitInput} className="btn btn-primary flex items-center gap-2 disabled:opacity-50">
+                    <Save className="h-4 w-4" /> {savingLimit ? 'Saving…' : storageLimit?.has_limit ? 'Update Limit' : 'Set Limit'}
+                  </button>
+                  {storageLimit?.has_limit && (
+                    <button onClick={removeStorageLimit} disabled={savingLimit} className="btn bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-300 disabled:opacity-50">
+                      Remove Limit
+                    </button>
+                  )}
+                </div>
+              </Section>
+            </div>
           )}
         </div>
       </div>
