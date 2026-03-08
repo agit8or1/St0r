@@ -199,7 +199,7 @@ export function Dashboard() {
         </div>
 
         {/* Replication health card */}
-        {(() => {
+        <div>{(() => {
           const replHealthy = replStatuses.filter(s => s.lastRun?.status === 'success').length;
           const replTotal = replStatuses.length;
           const replDegraded = replStatuses.some(s => s.lastRun?.status === 'failed');
@@ -228,7 +228,7 @@ export function Dashboard() {
             </div>
             </Tooltip>
           );
-        })()}
+        })()}</div>
 
         {/* Server resource gauges */}
         {metrics && (
