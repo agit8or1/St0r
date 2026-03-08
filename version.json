@@ -1,7 +1,9 @@
 {
-  "version": "3.2.63",
+  "version": "3.2.64",
   "releaseDate": "2026-03-08",
   "changelog": [
+    "Feature: Tooltip system — helpful hover tooltips on buttons, icons, and nav items throughout the UI",
+    "Feature: Tooltip toggle in Settings > General > Interface — enabled by default, persisted in localStorage",
     "Feature: Storage Limit tab in Client Settings — view and manage per-client storage quotas directly from the endpoint settings page",
     "Fix: Service startup now retries DB connection up to 30s to survive slow MariaDB boot",
     "Fix: Systemd service hardened with Requires=mariadb.service and network-online.target dependency",

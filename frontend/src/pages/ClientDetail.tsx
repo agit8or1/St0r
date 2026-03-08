@@ -24,6 +24,7 @@ import {
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { BackupSchedule } from '../components/BackupSchedule';
+import { Tooltip } from '../components/Tooltip';
 import { api } from '../services/api';
 import type { Client, Backup } from '../types';
 import { formatBytes, formatTimeAgo, formatTimestamp, formatDuration } from '../utils/format';
@@ -239,20 +240,24 @@ export function ClientDetail() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}/settings`)}
-              className="btn btn-secondary flex items-center gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </button>
-            <button
-              onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}/browse`)}
-              className="btn btn-primary flex items-center gap-2"
-            >
-              <FolderOpen className="h-4 w-4" />
-              Browse Files
-            </button>
+            <Tooltip text="Configure backup settings for this endpoint">
+              <button
+                onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}/settings`)}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </button>
+            </Tooltip>
+            <Tooltip text="Browse files from backed-up snapshots">
+              <button
+                onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}/browse`)}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                <FolderOpen className="h-4 w-4" />
+                Browse Files
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -489,60 +494,68 @@ export function ClientDetail() {
             <div className="space-y-2">
               <h3 className="font-medium text-gray-900 dark:text-gray-100">File Backups</h3>
               <div className="flex gap-2">
-                <button
-                  onClick={() => handleStartBackup('file', false)}
-                  disabled={!!startingBackup}
-                  className="btn btn-primary flex-1 flex items-center justify-center gap-2"
-                >
-                  {startingBackup === 'file-full' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                  Full Backup
-                </button>
-                <button
-                  onClick={() => handleStartBackup('file', true)}
-                  disabled={!!startingBackup}
-                  className="btn btn-secondary flex-1 flex items-center justify-center gap-2"
-                >
-                  {startingBackup === 'file-incr' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Activity className="h-4 w-4" />
-                  )}
-                  Incremental
-                </button>
+                <Tooltip text="Start a full file backup now — backs up all selected paths" className="flex-1">
+                  <button
+                    onClick={() => handleStartBackup('file', false)}
+                    disabled={!!startingBackup}
+                    className="btn btn-primary w-full flex items-center justify-center gap-2"
+                  >
+                    {startingBackup === 'file-full' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                    Full Backup
+                  </button>
+                </Tooltip>
+                <Tooltip text="Start an incremental file backup — only backs up changed files" className="flex-1">
+                  <button
+                    onClick={() => handleStartBackup('file', true)}
+                    disabled={!!startingBackup}
+                    className="btn btn-secondary w-full flex items-center justify-center gap-2"
+                  >
+                    {startingBackup === 'file-incr' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Activity className="h-4 w-4" />
+                    )}
+                    Incremental
+                  </button>
+                </Tooltip>
               </div>
             </div>
 
             <div className="space-y-2">
               <h3 className="font-medium text-gray-900 dark:text-gray-100">Image Backups</h3>
               <div className="flex gap-2">
-                <button
-                  onClick={() => handleStartBackup('image', false)}
-                  disabled={!!startingBackup}
-                  className="btn btn-primary flex-1 flex items-center justify-center gap-2"
-                >
-                  {startingBackup === 'image-full' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                  Full Image
-                </button>
-                <button
-                  onClick={() => handleStartBackup('image', true)}
-                  disabled={!!startingBackup}
-                  className="btn btn-secondary flex-1 flex items-center justify-center gap-2"
-                >
-                  {startingBackup === 'image-incr' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Activity className="h-4 w-4" />
-                  )}
-                  Incremental
-                </button>
+                <Tooltip text="Start a full disk image backup — captures the entire drive" className="flex-1">
+                  <button
+                    onClick={() => handleStartBackup('image', false)}
+                    disabled={!!startingBackup}
+                    className="btn btn-primary w-full flex items-center justify-center gap-2"
+                  >
+                    {startingBackup === 'image-full' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                    Full Image
+                  </button>
+                </Tooltip>
+                <Tooltip text="Start an incremental image backup — only captures changed blocks" className="flex-1">
+                  <button
+                    onClick={() => handleStartBackup('image', true)}
+                    disabled={!!startingBackup}
+                    className="btn btn-secondary w-full flex items-center justify-center gap-2"
+                  >
+                    {startingBackup === 'image-incr' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Activity className="h-4 w-4" />
+                    )}
+                    Incremental
+                  </button>
+                </Tooltip>
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { HardDrive, Search, Settings, Users, ChevronUp, ChevronDown, AlertTriang
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { ClientManagementModal } from '../components/ClientManagementModal';
+import { Tooltip } from '../components/Tooltip';
 import { api } from '../services/api';
 import type { Client, Customer, CustomerClient, StorageLimitStatus } from '../types';
 import { formatTimeAgo, formatBytes } from '../utils/format';
@@ -22,9 +23,11 @@ function StorageLimitCell({ storage, limitStatus, onEdit }: {
     return (
       <div className="flex items-center gap-1 group">
         <span className="text-gray-600 dark:text-gray-400 text-sm">{usedStr}</span>
-        <button onClick={onEdit} title="Set storage limit" className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-          <Edit2 className="h-3 w-3 text-gray-400" />
-        </button>
+        <Tooltip text="Set a storage limit for this endpoint">
+          <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+            <Edit2 className="h-3 w-3 text-gray-400" />
+          </button>
+        </Tooltip>
       </div>
     );
   }
@@ -52,11 +55,21 @@ function StorageLimitCell({ storage, limitStatus, onEdit }: {
           <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
         </div>
       </div>
-      {(status === 'warning') && <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />}
-      {(status === 'critical' || status === 'exceeded') && <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
-      <button onClick={onEdit} title="Edit storage limit" className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-        <Edit2 className="h-3 w-3 text-gray-400" />
-      </button>
+      {(status === 'warning') && (
+        <Tooltip text="Storage usage is approaching the limit">
+          <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
+        </Tooltip>
+      )}
+      {(status === 'critical' || status === 'exceeded') && (
+        <Tooltip text="Storage limit exceeded or critically full">
+          <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+        </Tooltip>
+      )}
+      <Tooltip text="Edit storage limit">
+        <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+          <Edit2 className="h-3 w-3 text-gray-400" />
+        </button>
+      </Tooltip>
     </div>
   );
 }
@@ -266,10 +279,12 @@ export function Clients() {
               {clients.length} total · {onlineCount} online · {failedCount} failed
             </p>
           </div>
-          <button onClick={() => setIsManageModalOpen(true)} className="btn bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-sm">
-            <Settings className="h-4 w-4" />
-            Manage
-          </button>
+          <Tooltip text="Add or remove endpoints from UrBackup">
+            <button onClick={() => setIsManageModalOpen(true)} className="btn bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-sm">
+              <Settings className="h-4 w-4" />
+              Manage
+            </button>
+          </Tooltip>
         </div>
 
         {/* Filter bar */}
@@ -368,7 +383,9 @@ export function Clients() {
                       >
                         {/* Online dot */}
                         <td className="px-3 py-2">
-                          <div className={`h-2 w-2 rounded-full ${client.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} title={client.online ? 'Online' : 'Offline'} />
+                          <Tooltip text={client.online ? 'Endpoint is online' : 'Endpoint is offline'} position="right">
+                            <div className={`h-2 w-2 rounded-full ${client.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                          </Tooltip>
                         </td>
                         {/* Name */}
                         <td className="px-3 py-2">
@@ -419,12 +436,16 @@ export function Clients() {
                               {client.online ? 'Online' : 'Offline'}
                             </span>
                             <div className="flex gap-1">
-                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                !hasFileProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                              }`}>F</span>
-                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                !hasImageProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                              }`}>I</span>
+                              <Tooltip text={hasFileProblem(client) ? 'File backup has a problem' : 'File backup is OK'}>
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                  !hasFileProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                                }`}>F</span>
+                              </Tooltip>
+                              <Tooltip text={hasImageProblem(client) ? 'Image backup has a problem' : 'Image backup is OK'}>
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                  !hasImageProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                                }`}>I</span>
+                              </Tooltip>
                             </div>
                           </div>
                         </td>

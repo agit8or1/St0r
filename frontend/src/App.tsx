@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { TooltipsProvider } from './contexts/TooltipContext';
 import { useAuth } from './hooks/useAuth';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -42,6 +43,7 @@ function AuthenticatedUpdateNotification() {
 function App() {
   return (
     <ThemeProvider>
+      <TooltipsProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthenticatedUpdateNotification />
         <Routes>
@@ -200,6 +202,7 @@ function App() {
           />
         </Routes>
       </BrowserRouter>
+      </TooltipsProvider>
     </ThemeProvider>
   );
 }

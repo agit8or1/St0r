@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
 import { Save, Settings as SettingsIcon, Server as ServerIcon, Smartphone, Key, Check, X, Copy } from 'lucide-react';
+import { useTooltips } from '../contexts/TooltipContext';
 
 interface ServerSettings {
   [key: string]: any;
@@ -9,6 +10,7 @@ interface ServerSettings {
 
 export function Settings() {
   const { user } = useAuth();
+  const { tooltipsEnabled, toggleTooltips } = useTooltips();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<ServerSettings>({});
@@ -410,6 +412,28 @@ export function Settings() {
                 {renderSettingField('Enable Download from Client', 'allow_restore', 'checkbox', 'Allow clients to download files from backups')}
                 {renderSettingField('Enable Internet Clients', 'internet_mode_enabled', 'checkbox', 'Allow backups from internet clients')}
                 {renderSettingField('Headless Mode (API Only)', 'no_images', 'checkbox', 'Run UrBackup server without web interface, API only')}
+              </div>
+
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-4">
+                Interface
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100 block">
+                      Show Tooltips
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Show helpful tooltip hints when hovering over buttons and icons
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={tooltipsEnabled}
+                    onChange={toggleTooltips}
+                    className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-0.5"
+                  />
+                </div>
               </div>
             </div>
           )}
