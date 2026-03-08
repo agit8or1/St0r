@@ -2,7 +2,7 @@
 
 A modern, full-featured web interface for managing and monitoring [UrBackup](https://www.urbackup.org/) servers. Built with React + TypeScript, designed to run directly on your UrBackup Linux server.
 
-[![Version](https://img.shields.io/badge/version-3.2.23-blue.svg)](version.json)
+[![Version](https://img.shields.io/badge/version-3.2.63-blue.svg)](version.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -57,13 +57,31 @@ A modern, full-featured web interface for managing and monitoring [UrBackup](htt
 ### Dashboard
 ![Dashboard](screenshots/01-dashboard.png)
 
-### Clients Overview
-![Clients](screenshots/02-clients.png)
+### Endpoints
+![Endpoints](screenshots/02-clients.png)
 
-### Client Detail & Backup Controls
-![Client Detail](screenshots/03-client-detail.png)
+### Endpoint Detail
+![Endpoint Detail](screenshots/03-client-detail.png)
 
-### Activity Monitoring (grouped image partitions)
+### Endpoint Settings — Backup Paths
+![Endpoint Settings — Backup Paths](screenshots/11-client-settings.png)
+
+### Endpoint Settings — Schedule & Retention
+![Endpoint Settings — Schedule](screenshots/12-client-settings-schedule.png)
+
+### Endpoint Settings — Transfer
+![Endpoint Settings — Transfer](screenshots/13-client-settings-transfer.png)
+
+### Endpoint Settings — Image Backup
+![Endpoint Settings — Image Backup](screenshots/14-client-settings-image.png)
+
+### Endpoint Settings — Permissions
+![Endpoint Settings — Permissions](screenshots/15-client-settings-permissions.png)
+
+### Endpoint Settings — Storage Limit
+![Endpoint Settings — Storage Limit](screenshots/16-client-settings-storage.png)
+
+### Activity Monitoring
 ![Activities](screenshots/04-activities.png)
 
 ### Replication Management
