@@ -951,7 +951,32 @@ export class UrBackupService {
         dirCounts.set(dir, (dirCounts.get(dir) || 0) + 1);
       }
 
-      const paths = Array.from(dirCounts.entries())
+      // Iterative rollup: if >= 3 sibling dirs all have errors, collapse them into their parent.
+      // Repeat until no more collapsing is possible. This surfaces "Nextcloud4" instead of
+      // hundreds of individual Nextcloud4\subfolder entries.
+      let current = new Map<string, number>(dirCounts);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        const byParent = new Map<string, string[]>();
+        for (const dir of current.keys()) {
+          const parts = dir.split('\\');
+          if (parts.length < 2) continue;
+          const parent = parts.slice(0, -1).join('\\');
+          if (!byParent.has(parent)) byParent.set(parent, []);
+          byParent.get(parent)!.push(dir);
+        }
+        for (const [parent, children] of byParent) {
+          if (children.length >= 3) {
+            const total = children.reduce((sum, c) => sum + (current.get(c) || 0), 0);
+            for (const child of children) current.delete(child);
+            current.set(parent, (current.get(parent) || 0) + total);
+            changed = true;
+          }
+        }
+      }
+
+      const paths = Array.from(current.entries())
         .sort((a, b) => b[1] - a[1])
         .map(([path, count]) => ({ path, count }));
 
