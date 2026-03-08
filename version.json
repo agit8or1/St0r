@@ -1,9 +1,11 @@
 {
-  "version": "3.2.62",
+  "version": "3.2.63",
   "releaseDate": "2026-03-08",
   "changelog": [
     "Feature: Storage Limit tab in Client Settings — view and manage per-client storage quotas directly from the endpoint settings page",
     "Fix: Service startup now retries DB connection up to 30s to survive slow MariaDB boot",
-    "Fix: Systemd service hardened with Requires=mariadb.service and network-online.target dependency"
+    "Fix: Systemd service hardened with Requires=mariadb.service and network-online.target dependency",
+    "Fix: Express serves frontend static files (eliminates dependency on Vite dev server across reboots)",
+    "UX: Endpoints list customer column is now read-only — edit via device settings or Customers page"
   ]
 }
