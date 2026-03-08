@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
+import { Tooltip } from '../components/Tooltip';
 import { api } from '../services/api';
 import type { Activity } from '../types';
 import { formatBytes } from '../utils/format';
@@ -345,27 +346,30 @@ export function Activities() {
                 {clearStaleResult.found === 0 ? 'No stuck jobs found' : `Cleared ${clearStaleResult.stopped}/${clearStaleResult.found} stuck jobs`}
               </span>
             ) : (
-              <button
-                onClick={() => setShowClearConfirm(true)}
-                disabled={clearingStaleJobs}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Stop and remove stale/stuck jobs"
-              >
-                <XCircle className={`h-4 w-4 ${clearingStaleJobs ? 'animate-spin' : ''}`} />
-                {clearingStaleJobs ? 'Clearing...' : 'Clear Stale Jobs'}
-              </button>
+              <Tooltip text="Stop and remove backup jobs that are stuck or not responding">
+                <button
+                  onClick={() => setShowClearConfirm(true)}
+                  disabled={clearingStaleJobs}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <XCircle className={`h-4 w-4 ${clearingStaleJobs ? 'animate-spin' : ''}`} />
+                  {clearingStaleJobs ? 'Clearing...' : 'Clear Stale Jobs'}
+                </button>
+              </Tooltip>
             )}
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                autoRefresh
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin' : ''}`} />
-              {autoRefresh ? 'Auto Refresh' : 'Paused'}
-            </button>
+            <Tooltip text={autoRefresh ? 'Auto-refresh is on — disable to pause updates' : 'Enable auto-refresh every 5 seconds'}>
+              <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  autoRefresh
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                    : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+              >
+                <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin' : ''}`} />
+                {autoRefresh ? 'Auto Refresh' : 'Paused'}
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -659,15 +663,18 @@ export function Activities() {
                           <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {pcdone.toFixed(0)}%
                           </span>
-                          {activityData.process_id && <button
-                            onClick={() => handleCancelActivity(String(activityData.process_id), clientName, activityData.clientid)}
-                            disabled={cancellingId === String(activityData.process_id)}
-                            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title="Cancel this backup"
-                          >
-                            <StopCircle className="h-3.5 w-3.5" />
-                            {cancellingId === String(activityData.process_id) ? 'Cancelling…' : 'Cancel'}
-                          </button>}
+                          {activityData.process_id && (
+                            <Tooltip text="Stop this backup job (UrBackup may take a moment to process)">
+                              <button
+                                onClick={() => handleCancelActivity(String(activityData.process_id), clientName, activityData.clientid)}
+                                disabled={cancellingId === String(activityData.process_id)}
+                                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <StopCircle className="h-3.5 w-3.5" />
+                                {cancellingId === String(activityData.process_id) ? 'Cancelling…' : 'Cancel'}
+                              </button>
+                            </Tooltip>
+                          )}
                         </div>
                       </div>
 

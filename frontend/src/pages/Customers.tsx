@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { Tooltip } from '../components/Tooltip';
 import { Users, Plus, Edit, Trash2, Save, X, HardDrive, Phone, Mail, Building } from 'lucide-react';
 import { api } from '../services/api';
 import type { Customer, Client } from '../types';
@@ -177,13 +178,15 @@ export function Customers() {
               Manage customers and their device assignments
             </p>
           </div>
-          <button
-            onClick={handleCreate}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Customer
-          </button>
+          <Tooltip text="Create a new customer record" position="bottom">
+            <button
+              onClick={handleCreate}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Customer
+            </button>
+          </Tooltip>
         </div>
 
         {/* Customers List */}
@@ -249,24 +252,30 @@ export function Customers() {
                 </div>
 
                 <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => handleAddClient(customer)}
-                    className="btn btn-secondary flex-1 text-sm"
-                  >
-                    Add Client
-                  </button>
-                  <button
-                    onClick={() => handleEdit(customer)}
-                    className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(customer)}
-                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip text="Assign an existing backup endpoint to this customer" className="flex-1">
+                    <button
+                      onClick={() => handleAddClient(customer)}
+                      className="btn btn-secondary w-full text-sm"
+                    >
+                      Add Client
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Edit customer details">
+                    <button
+                      onClick={() => handleEdit(customer)}
+                      className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Delete this customer and all endpoint assignments">
+                    <button
+                      onClick={() => handleDelete(customer)}
+                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             ))}

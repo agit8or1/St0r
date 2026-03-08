@@ -7,9 +7,10 @@ import {
   CheckCircle,
   GitBranch,
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ChartTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
+import { Tooltip } from '../components/Tooltip';
 import { api } from '../services/api';
 import type { Client, Activity, ReplicationTargetStatus, SystemMetrics } from '../types';
 import { formatBytes, formatTimeAgo } from '../utils/format';
@@ -130,6 +131,7 @@ export function Dashboard() {
 
         {/* Stats row */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <Tooltip text="View all backup clients" position="bottom">
           <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/clients')}>
             <div className="flex items-center justify-between">
               <div>
@@ -146,7 +148,9 @@ export function Dashboard() {
               <span>{offlineClients} offline</span>
             </p>
           </div>
+          </Tooltip>
 
+          <Tooltip text="Filter to online clients only" position="bottom">
           <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/clients?filter=online')}>
             <div className="flex items-center justify-between">
               <div>
@@ -161,7 +165,9 @@ export function Dashboard() {
               {Math.round((onlineClients / (clients.length || 1)) * 100)}% of total
             </p>
           </div>
+          </Tooltip>
 
+          <Tooltip text="View clients with backup failures" position="bottom">
           <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/clients?filter=failed')}>
             <div className="flex items-center justify-between">
               <div>
@@ -174,7 +180,9 @@ export function Dashboard() {
             </div>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Require attention</p>
           </div>
+          </Tooltip>
 
+          <Tooltip text="View currently running backup jobs" position="bottom">
           <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/activities')}>
             <div className="flex items-center justify-between">
               <div>
@@ -187,6 +195,7 @@ export function Dashboard() {
             </div>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Running backups</p>
           </div>
+          </Tooltip>
         </div>
 
         {/* Replication health card */}
@@ -201,6 +210,7 @@ export function Dashboard() {
           }, null as number | null);
           const lagStr = worstLag === null ? '—' : worstLag < 60 ? `${worstLag}s` : worstLag < 3600 ? `${Math.floor(worstLag / 60)}m` : `${Math.floor(worstLag / 3600)}h`;
           return (
+            <Tooltip text="View replication targets and sync status" position="bottom">
             <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow flex items-center gap-4"
               onClick={() => navigate('/replication')}>
               <div className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 p-2 flex-shrink-0">
@@ -216,6 +226,7 @@ export function Dashboard() {
                 </div>
               </div>
             </div>
+            </Tooltip>
           );
         })()}
 
@@ -256,6 +267,7 @@ export function Dashboard() {
         {/* Storage + Charts row */}
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Disk Usage */}
+          <Tooltip text="Go to server settings and storage configuration" position="top">
           <div className="card py-3 px-4 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/server-settings')}>
             <div className="flex items-center gap-2 mb-2">
               <div className="rounded-full bg-purple-600 p-1.5">
@@ -289,13 +301,14 @@ export function Dashboard() {
                     <Cell fill="#7c3aed" />
                     <Cell fill="#c4b5fd" />
                   </Pie>
-                  <Tooltip formatter={(v: any) => formatBytes(v)} contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '11px' }} />
+                  <ChartTooltip formatter={(v: any) => formatBytes(v)} contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '11px' }} />
                 </PieChart>
               </div>
             ) : (
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">No storage data available</p>
             )}
           </div>
+          </Tooltip>
 
           {/* Client Status Pie */}
           <div className="card py-3 px-4">
@@ -307,7 +320,7 @@ export function Dashboard() {
                   outerRadius={65} dataKey="value">
                   {statusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
-                <Tooltip />
+                <ChartTooltip />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -320,7 +333,7 @@ export function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '11px' }} />
+                <ChartTooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '11px' }} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
                 <Bar dataKey="successful" fill="#10b981" name="OK" />
                 <Bar dataKey="failed" fill="#ef4444" name="Failed" />
@@ -334,7 +347,7 @@ export function Dashboard() {
           <div className="card py-3 px-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Current Activities</h2>
-              <Link to="/activities" className="text-xs text-primary-600 hover:text-primary-700">View all</Link>
+              <Tooltip text="Go to Activities page"><Link to="/activities" className="text-xs text-primary-600 hover:text-primary-700">View all</Link></Tooltip>
             </div>
             {activities.length === 0 ? (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-6">No active tasks</p>
@@ -359,7 +372,7 @@ export function Dashboard() {
           <div className="card py-3 px-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Endpoints Needing Attention</h2>
-              <Link to="/clients" className="text-xs text-primary-600 hover:text-primary-700">View all</Link>
+              <Tooltip text="Go to Clients page"><Link to="/clients" className="text-xs text-primary-600 hover:text-primary-700">View all</Link></Tooltip>
             </div>
             {failedClients === 0 ? (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-6">All backups are healthy</p>

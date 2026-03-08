@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { Tooltip } from '../components/Tooltip';
 import { Loading } from '../components/Loading';
 import { Users as UsersIcon, Plus, Edit, Trash2, Save, X, Shield, User } from 'lucide-react';
 
@@ -162,13 +163,15 @@ export function Users() {
               Manage users and their permissions
             </p>
           </div>
-          <button
-            onClick={handleAddUser}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add User
-          </button>
+          <Tooltip text="Create a new St0r user account" position="bottom">
+            <button
+              onClick={handleAddUser}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add User
+            </button>
+          </Tooltip>
         </div>
 
         {/* Message */}
@@ -201,11 +204,13 @@ export function Users() {
                   <tr key={user.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        {user.is_admin ? (
-                          <Shield className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-                        ) : (
-                          <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                        )}
+                        <Tooltip text={user.is_admin ? 'Administrator — full access to all settings' : 'Standard user — limited access'} position="right">
+                          {user.is_admin ? (
+                            <Shield className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                          ) : (
+                            <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                          )}
+                        </Tooltip>
                         <span className="font-medium text-gray-900 dark:text-gray-100">{user.username}</span>
                       </div>
                     </td>
@@ -233,20 +238,22 @@ export function Users() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleEditUser(user)}
-                          className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
-                          title="Edit user"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                          title="Delete user"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <Tooltip text="Edit user details and permissions">
+                          <button
+                            onClick={() => handleEditUser(user)}
+                            className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Delete this user account permanently">
+                          <button
+                            onClick={() => handleDelete(user.id)}
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </Tooltip>
                       </div>
                     </td>
                   </tr>

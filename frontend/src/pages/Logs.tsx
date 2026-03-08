@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FileText, Search, RefreshCw, Download } from 'lucide-react';
 import { Layout } from '../components/Layout';
+import { Tooltip } from '../components/Tooltip';
 import { Loading } from '../components/Loading';
 import { api } from '../services/api';
 
@@ -142,29 +143,35 @@ export function Logs() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`btn flex items-center gap-2 ${
-                autoRefresh ? 'btn-primary' : 'btn-secondary'
-              }`}
-            >
-              <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin' : ''}`} />
-              Auto-refresh
-            </button>
-            <button
-              onClick={loadLogs}
-              className="btn btn-secondary flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </button>
-            <button
-              onClick={exportLogs}
-              className="btn btn-secondary flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </button>
+            <Tooltip text={autoRefresh ? 'Auto-refresh is on — click to pause' : 'Auto-refresh is paused — click to enable (every 5s)'}>
+              <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`btn flex items-center gap-2 ${
+                  autoRefresh ? 'btn-primary' : 'btn-secondary'
+                }`}
+              >
+                <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin' : ''}`} />
+                Auto-refresh
+              </button>
+            </Tooltip>
+            <Tooltip text="Fetch the latest logs from the server now">
+              <button
+                onClick={loadLogs}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </button>
+            </Tooltip>
+            <Tooltip text="Download currently displayed logs as a text file">
+              <button
+                onClick={exportLogs}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </button>
+            </Tooltip>
           </div>
         </div>
 

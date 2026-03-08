@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { Tooltip } from '../components/Tooltip';
 import { Bell, Plus, Edit, Trash2, Save, X, AlertTriangle, CheckCircle } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -222,18 +223,22 @@ export function Alerts() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAcknowledge(alert.id)}
-                        className="px-3 py-1 text-sm rounded bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
-                      >
-                        Acknowledge
-                      </button>
-                      <button
-                        onClick={() => handleDismiss(alert.id)}
-                        className="px-3 py-1 text-sm rounded bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
-                      >
-                        Dismiss
-                      </button>
+                      <Tooltip text="Mark as acknowledged — alert moves to history but stays visible">
+                        <button
+                          onClick={() => handleAcknowledge(alert.id)}
+                          className="px-3 py-1 text-sm rounded bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        >
+                          Acknowledge
+                        </button>
+                      </Tooltip>
+                      <Tooltip text="Permanently dismiss this alert">
+                        <button
+                          onClick={() => handleDismiss(alert.id)}
+                          className="px-3 py-1 text-sm rounded bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        >
+                          Dismiss
+                        </button>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>
@@ -279,12 +284,14 @@ export function Alerts() {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleEditRule(rule)}
-                  className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
-                >
-                  <Edit className="h-4 w-4" />
-                </button>
+                <Tooltip text="Edit this alert rule">
+                  <button
+                    onClick={() => handleEditRule(rule)}
+                    className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               </div>
             ))}
           </div>
@@ -308,12 +315,14 @@ export function Alerts() {
                       {new Date(alert.timestamp).toLocaleString()}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleDismiss(alert.id)}
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <Tooltip text="Remove from acknowledged alerts">
+                    <button
+                      onClick={() => handleDismiss(alert.id)}
+                      className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
               ))}
             </div>
