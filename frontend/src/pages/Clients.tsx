@@ -341,8 +341,8 @@ export function Clients() {
                     <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100" onClick={() => handleSort('name')}>
                       Endpoint <SortIcon field="name" />
                     </th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100" onClick={() => handleSort('customer')}>
-                      Customer <SortIcon field="customer" />
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">
+                      Customer
                     </th>
                     <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100" onClick={() => handleSort('lastBackup')}>
                       Last File Backup <SortIcon field="lastBackup" />
@@ -374,25 +374,16 @@ export function Clients() {
                         <td className="px-3 py-2">
                           <span className="font-medium text-gray-900 dark:text-gray-100">{client.name}</span>
                         </td>
-                        {/* Customer dropdown */}
-                        <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                            <select
-                              value={mapping?.customer_id != null ? String(mapping.customer_id) : ''}
-                              disabled={savingCustomer.has(client.name)}
-                              onChange={async e => {
-                                const val = e.target.value;
-                                await handleAssignCustomer(client, val ? Number(val) : null);
-                              }}
-                              className="text-xs bg-transparent border-none text-primary-600 dark:text-primary-400 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-400 rounded px-0.5 disabled:opacity-50 max-w-[140px]"
-                            >
-                              <option value="">— Unassigned —</option>
-                              {customers.map(c => (
-                                <option key={c.id} value={String(c.id)}>{c.name}{c.company ? ` (${c.company})` : ''}</option>
-                              ))}
-                            </select>
-                          </div>
+                        {/* Customer (read-only) */}
+                        <td className="px-3 py-2">
+                          {mapping?.customer_name ? (
+                            <div className="flex items-center gap-1">
+                              <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                              <span className="text-xs text-primary-600 dark:text-primary-400">{mapping.customer_name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
                         </td>
                         {/* Last file backup */}
                         <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
