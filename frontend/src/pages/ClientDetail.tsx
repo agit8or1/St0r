@@ -43,8 +43,10 @@ export function ClientDetail() {
   const [loadingAuthKey, setLoadingAuthKey] = useState(false);
   const [serverInfo, setServerInfo] = useState<{ serverIP: string; serverPort: string; serverUrl: string } | null>(null);
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [deletingBackupId, setDeletingBackupId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingBackupId, setDeletingBackupId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [selectedBackupIds, setSelectedBackupIds] = useState<Set<number>>(new Set());
+  const [deletingSelected, setDeletingSelected] = useState(false);
 
   useEffect(() => {
     loadClientData();
@@ -86,13 +88,24 @@ export function ClientDetail() {
     }
   };
 
-  const handleDeleteBackup = async (backupId: string, isImage: boolean) => {
+  const reloadBackups = async (clientId: number) => {
+    const backupData = await api.getBackups(clientId as any);
+    const objData = backupData as any;
+    const allBackups = [
+      ...(objData.file || []),
+      ...(objData.image || []),
+    ];
+    setBackups(allBackups);
+  };
+
+  const handleDeleteBackup = async (backupId: number, isImage: boolean) => {
     if (!client?.id) return;
     setDeletingBackupId(backupId);
     setConfirmDeleteId(null);
     try {
       await api.deleteBackup(client.id, backupId, isImage);
-      setBackups(prev => prev.filter(b => b.id !== backupId));
+      await reloadBackups(Number(client.id));
+      setSelectedBackupIds(prev => { const s = new Set(prev); s.delete(backupId); return s; });
       setBackupMessage({ type: 'success', text: 'Backup deleted successfully' });
       setTimeout(() => setBackupMessage(null), 4000);
     } catch (err: any) {
@@ -101,6 +114,32 @@ export function ClientDetail() {
     } finally {
       setDeletingBackupId(null);
     }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!client?.id || selectedBackupIds.size === 0) return;
+    setDeletingSelected(true);
+    setConfirmDeleteId(null);
+    let failed = 0;
+    for (const id of selectedBackupIds) {
+      const backup = backups.find(b => Number(b.id) === id);
+      if (!backup) continue;
+      try {
+        await api.deleteBackup(client.id, id, !!backup.image);
+      } catch {
+        failed++;
+      }
+    }
+    await reloadBackups(Number(client.id));
+    setSelectedBackupIds(new Set());
+    setDeletingSelected(false);
+    setBackupMessage({
+      type: failed === 0 ? 'success' : 'error',
+      text: failed === 0
+        ? `Deleted ${selectedBackupIds.size} backup(s) successfully`
+        : `${failed} backup(s) failed to delete`,
+    });
+    setTimeout(() => setBackupMessage(null), 4000);
   };
 
   const loadServerInfo = async () => {
@@ -567,9 +606,19 @@ export function ClientDetail() {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Backup History
             </h2>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {selectedBackupIds.size > 0 && (
+                <button
+                  onClick={handleDeleteSelected}
+                  disabled={deletingSelected}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white text-sm font-medium disabled:opacity-50"
+                >
+                  {deletingSelected ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  Delete {selectedBackupIds.size} selected
+                </button>
+              )}
               <button
-                onClick={() => setTab('file')}
+                onClick={() => { setTab('file'); setSelectedBackupIds(new Set()); }}
                 className={`px-4 py-2 rounded-lg font-medium ${
                   tab === 'file'
                     ? 'bg-primary-600 text-white'
@@ -579,7 +628,7 @@ export function ClientDetail() {
                 File Backups ({fileBackups.length})
               </button>
               <button
-                onClick={() => setTab('image')}
+                onClick={() => { setTab('image'); setSelectedBackupIds(new Set()); }}
                 className={`px-4 py-2 rounded-lg font-medium ${
                   tab === 'image'
                     ? 'bg-primary-600 text-white'
@@ -597,15 +646,49 @@ export function ClientDetail() {
             </p>
           ) : (
             <div className="space-y-2">
+              {/* Select all row */}
+              <div className="flex items-center gap-3 px-4 py-1 text-xs text-gray-500 dark:text-gray-400">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 accent-primary-600"
+                  checked={displayBackups.length > 0 && displayBackups.every(b => selectedBackupIds.has(Number(b.id)))}
+                  onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedBackupIds(new Set(displayBackups.map(b => Number(b.id))));
+                    } else {
+                      setSelectedBackupIds(new Set());
+                    }
+                  }}
+                />
+                <span>Select all</span>
+              </div>
               {displayBackups.map((backup) => {
-                const isConfirming = confirmDeleteId === backup.id;
-                const isDeleting = deletingBackupId === backup.id;
+                const backupId = Number(backup.id);
+                const isConfirming = confirmDeleteId === backupId;
+                const isDeleting = deletingBackupId === backupId;
+                const isSelected = selectedBackupIds.has(backupId);
                 return (
                   <div
                     key={backup.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                      isSelected
+                        ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-600'
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 accent-primary-600"
+                        checked={isSelected}
+                        onChange={e => {
+                          setSelectedBackupIds(prev => {
+                            const s = new Set(prev);
+                            e.target.checked ? s.add(backupId) : s.delete(backupId);
+                            return s;
+                          });
+                        }}
+                      />
                       <div className={`rounded-full p-2 ${
                         backup.incremental
                           ? 'bg-blue-100 dark:bg-blue-900'
@@ -640,7 +723,7 @@ export function ClientDetail() {
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-red-600 dark:text-red-400 font-medium">Delete?</span>
                           <button
-                            onClick={() => handleDeleteBackup(backup.id, !!backup.image)}
+                            onClick={() => handleDeleteBackup(backupId, !!backup.image)}
                             className="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
                           >Yes</button>
                           <button
@@ -650,8 +733,8 @@ export function ClientDetail() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => setConfirmDeleteId(backup.id)}
-                          disabled={isDeleting}
+                          onClick={() => setConfirmDeleteId(backupId)}
+                          disabled={isDeleting || deletingSelected}
                           className="flex items-center gap-1 px-2 py-1.5 rounded text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-colors disabled:opacity-50 text-xs font-medium"
                           title="Delete this backup"
                         >

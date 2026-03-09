@@ -5,6 +5,14 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.68] - 2026-03-09
+
+### Fixed
+- **Backup deletion broken**: Backend was correctly deleting files but the UI never updated — caused by `Backup.id` being typed as `string` while the API returns `number`, making comparisons silently fail. Fixed type, now reloads backup list from server after every delete.
+
+### Added
+- **Multi-select backups**: Checkbox on each backup row + Select All. When any are checked a "Delete N selected" button appears that bulk-deletes them sequentially.
+
 ## [3.2.67] - 2026-03-09
 
 ### Added

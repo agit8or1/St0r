@@ -60,7 +60,7 @@ export interface Activity {
 }
 
 export interface Backup {
-  id: string;
+  id: number;
   backuptime: number;
   image: boolean;
   incremental: boolean;

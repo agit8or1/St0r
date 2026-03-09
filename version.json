@@ -1,12 +1,9 @@
 {
-  "version": "3.2.67",
+  "version": "3.2.68",
   "releaseDate": "2026-03-09",
   "changelog": [
-    "Feature: Dashboard — Successful Backups tile showing 7-day job count",
-    "Feature: Dashboard — Failed Backups tile now shows job-level count (last 7 days)",
-    "Feature: Dashboard — Backup Jobs (7d) summary card replaces bar chart with plain numbers",
-    "Fix: Dashboard stats load on initial render (no more — placeholder)",
-    "Feature: Activities page complete redesign — unified job list with filters, customer column, inline log expansion",
-    "Fix: Report Bug button opens GitHub Issues directly instead of custom modal"
+    "Fix: Backup deletion now works — reloads list from server after delete instead of optimistic filter",
+    "Fix: Backup ID type mismatch corrected (was string, now number) — comparisons now reliable",
+    "Feature: Multi-select checkboxes on backup list — select individual or all, bulk delete selected"
   ]
 }
