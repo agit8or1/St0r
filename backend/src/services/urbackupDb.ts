@@ -774,10 +774,14 @@ export class UrBackupDbService {
       if (!dirToDelete.startsWith(backupFolder + '/')) {
         throw new Error(`Refusing to delete path outside backup storage: ${dirToDelete}`);
       }
-      logger.info(`Deleting backup directory: ${dirToDelete}`);
-      // Backup dirs are owned by urbackup:urbackup — run rm as urbackup via sudo
-      await execFile('sudo', ['-u', 'urbackup', 'rm', '-rf', '--', dirToDelete], { timeout: 120_000 });
-      logger.info(`Deleted backup directory: ${dirToDelete}`);
+
+      // Run rm -rf in background — large backups can take minutes to delete.
+      // delete_pending=1 is already set so the backup won't appear in listings.
+      const dirSnapshot = dirToDelete;
+      logger.info(`Queuing background deletion: ${dirSnapshot}`);
+      execFile('sudo', ['-u', 'urbackup', 'rm', '-rf', '--', dirSnapshot], { timeout: 600_000 })
+        .then(() => logger.info(`Background deletion complete: ${dirSnapshot}`))
+        .catch(err => logger.error(`Background deletion failed for ${dirSnapshot}:`, err));
 
       return { success: true, backupId, isImage };
     } catch (error) {

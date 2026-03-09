@@ -1,9 +1,9 @@
 {
-  "version": "3.2.68",
+  "version": "3.2.69",
   "releaseDate": "2026-03-09",
   "changelog": [
-    "Fix: Backup deletion now works — reloads list from server after delete instead of optimistic filter",
-    "Fix: Backup ID type mismatch corrected (was string, now number) — comparisons now reliable",
-    "Feature: Multi-select checkboxes on backup list — select individual or all, bulk delete selected"
+    "Fix: Backup deletion now instant — rm -rf runs in background, delete_pending flag hides backup immediately",
+    "Fix: Backup ID type corrected (string→number), list reloads from server after delete",
+    "Feature: Multi-select checkboxes on backup list with bulk delete"
   ]
 }

@@ -5,6 +5,11 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.69] - 2026-03-09
+
+### Fixed
+- **Backup deletion hanging**: `rm -rf` on large backups was blocking the HTTP response for minutes, making it appear the delete had failed. The DB `delete_pending=1` flag is now set synchronously (backup disappears from the list instantly), then `rm -rf` runs in the background without blocking.
+
 ## [3.2.68] - 2026-03-09
 
 ### Fixed
