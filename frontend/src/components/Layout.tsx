@@ -24,7 +24,6 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../contexts/ThemeContext';
 import { Logo } from './Logo';
-import { BugReportModal } from './BugReportModal';
 import { Tooltip } from './Tooltip';
 
 interface LayoutProps {
@@ -36,7 +35,6 @@ export function Layout({ children }: LayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isBugReportOpen, setIsBugReportOpen] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
 
   const handleLogout = () => {
@@ -117,14 +115,16 @@ export function Layout({ children }: LayoutProps) {
 
           {/* Report Bug Button */}
           <div className="px-3 pb-3">
-            <Tooltip text="Report a bug or issue with St0r" position="right" className="w-full">
-              <button
-                onClick={() => setIsBugReportOpen(true)}
+            <Tooltip text="Report a bug or issue on GitHub" position="right" className="w-full">
+              <a
+                href="https://github.com/agit8or1/St0r/issues/new"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors bg-red-600 hover:bg-red-700 text-white"
               >
                 <Bug className="h-5 w-5" />
                 Report Bug
-              </button>
+              </a>
             </Tooltip>
           </div>
 
@@ -160,11 +160,6 @@ export function Layout({ children }: LayoutProps) {
         <div className="p-8">{children}</div>
       </main>
 
-      {/* Bug Report Modal */}
-      <BugReportModal
-        isOpen={isBugReportOpen}
-        onClose={() => setIsBugReportOpen(false)}
-      />
 
       {/* Support Modal */}
       {showSupportModal && (

@@ -7,7 +7,7 @@ import {
   CheckCircle,
   GitBranch,
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ChartTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ChartTooltip } from 'recharts';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { Tooltip } from '../components/Tooltip';
@@ -47,6 +47,7 @@ export function Dashboard() {
   const [diskUsage, setDiskUsage] = useState<{ used: number; available: number } | null>(null);
   const [replStatuses, setReplStatuses] = useState<ReplicationTargetStatus[]>([]);
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const [backupStats, setBackupStats] = useState<{ successful: number; failed: number; total: number; days: number } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -57,9 +58,10 @@ export function Dashboard() {
   const loadData = async () => {
     // Load fast data first so the dashboard renders immediately
     try {
-      const [clientsData, activitiesData] = await Promise.all([
+      const [clientsData, activitiesData, statsData] = await Promise.all([
         api.getClients().catch(() => [] as Client[]),
         api.getCurrentActivities().catch(() => [] as Activity[]),
+        api.getBackupStats(7).catch(() => null),
       ]);
       setClients(clientsData);
       if (Array.isArray(activitiesData)) {
@@ -70,6 +72,7 @@ export function Dashboard() {
       } else {
         setActivities([]);
       }
+      if (statsData) setBackupStats(statsData);
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load data');
@@ -100,19 +103,6 @@ export function Dashboard() {
     { name: 'Offline', value: offlineClients, color: '#6b7280' },
   ];
 
-  const backupTypeData = [
-    {
-      name: 'File',
-      successful: clients.filter(c => (c as any).lastbackup && c.file_ok).length,
-      failed: clients.filter(c => !(c as any).lastbackup || !c.file_ok).length,
-    },
-    {
-      name: 'Image',
-      successful: clients.filter(c => (c as any).lastbackup_image && c.image_ok).length,
-      failed: clients.filter(c => !(c as any).lastbackup_image || !c.image_ok).length,
-    },
-  ];
-
   return (
     <Layout>
       <div className="space-y-4">
@@ -130,7 +120,7 @@ export function Dashboard() {
         )}
 
         {/* Stats row */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
           <Tooltip text="View all backup clients" position="bottom">
           <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/clients')}>
             <div className="flex items-center justify-between">
@@ -167,18 +157,33 @@ export function Dashboard() {
           </div>
           </Tooltip>
 
-          <Tooltip text="View clients with backup failures" position="bottom">
-          <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/clients?filter=failed')}>
+          <Tooltip text="Backup jobs completed successfully in the last 7 days" position="bottom">
+          <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/activities?status=successful')}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Successful Backups</p>
+                <p className="mt-1 text-2xl font-bold text-green-600 dark:text-green-400">{backupStats?.successful ?? '—'}</p>
+              </div>
+              <div className="rounded-full bg-green-100 dark:bg-green-900/40 p-2">
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Last 7 days</p>
+          </div>
+          </Tooltip>
+
+          <Tooltip text="Backup jobs with errors in the last 7 days" position="bottom">
+          <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/activities?status=errors')}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Failed Backups</p>
-                <p className="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{failedClients}</p>
+                <p className="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{backupStats?.failed ?? '—'}</p>
               </div>
               <div className="rounded-full bg-red-100 dark:bg-red-900/40 p-2">
                 <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
             </div>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Require attention</p>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Last 7 days</p>
           </div>
           </Tooltip>
 
@@ -333,23 +338,26 @@ export function Dashboard() {
             </ResponsiveContainer>
           </div>
 
-          {/* Backup Types Bar */}
-          <div className="card py-3 px-4">
-            <Tooltip text="Count of successful vs failed file and image backups across all endpoints">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 cursor-default inline-block">Backup Types</h2>
-            </Tooltip>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={backupTypeData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
-                <ChartTooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '11px' }} />
-                <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="successful" fill="#10b981" name="OK" />
-                <Bar dataKey="failed" fill="#ef4444" name="Failed" />
-              </BarChart>
-            </ResponsiveContainer>
+          {/* Backup Job Stats */}
+          <Tooltip text="Backup jobs completed in the last 7 days" position="top">
+          <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/activities')}>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Backup Jobs (7d)</h2>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Successful</span>
+                <span className="text-lg font-bold text-green-600 dark:text-green-400">{backupStats?.successful ?? '—'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Failed / Errors</span>
+                <span className="text-lg font-bold text-red-600 dark:text-red-400">{backupStats?.failed ?? '—'}</span>
+              </div>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex items-center justify-between">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Total</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{backupStats?.total ?? '—'}</span>
+              </div>
+            </div>
           </div>
+          </Tooltip>
         </div>
 
         {/* Activities + Attention */}

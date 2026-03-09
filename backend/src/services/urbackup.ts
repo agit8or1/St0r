@@ -550,6 +550,10 @@ export class UrBackupService {
     }
   }
 
+  async getBackupStats(days: number = 7) {
+    return this.dbService.getBackupStats(days);
+  }
+
   async getActivities() {
     try {
       // Use getCurrentActivities() which includes API progress merging
@@ -947,7 +951,11 @@ export class UrBackupService {
         // Convert forward-slash path to Windows backslash and get parent dir
         const parts = m[1].split('/');
         if (parts.length < 2) continue;
-        const dir = parts.slice(0, -1).join('\\');
+        let dir = parts.slice(0, -1).join('\\');
+        // UrBackup session paths are relative (no drive letter).
+        // exclude_files matches against full absolute paths, so prepend :\
+        // which acts as a wildcard for any drive letter (C:\, D:\, etc.)
+        if (!/^[A-Za-z]:/.test(dir)) dir = ':' + (dir.startsWith('\\') ? '' : '\\') + dir;
         dirCounts.set(dir, (dirCounts.get(dir) || 0) + 1);
       }
 

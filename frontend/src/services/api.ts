@@ -265,6 +265,11 @@ class ApiService {
     return response.data;
   }
 
+  async getBackupStats(days = 7): Promise<{ successful: number; failed: number; total: number; days: number }> {
+    const response = await this.api.get('/urbackup/backup-stats', { params: { days } });
+    return response.data;
+  }
+
   // Customers
   async getCustomers(): Promise<Customer[]> {
     const response = await this.api.get<Customer[]>('/customers');

@@ -4,6 +4,7 @@ import { resolve, dirname } from 'path';
 import { getUrBackupDb, openUrBackupDbReadWrite } from '../config/urbackupDb.js';
 const execFile = promisify(execFileCb);
 import { logger } from '../utils/logger.js';
+import { pool } from '../config/database.js';
 
 /**
  * Service for querying the UrBackup SQLite database directly
@@ -380,44 +381,68 @@ export class UrBackupDbService {
     try {
       const db = await getUrBackupDb();
 
-      // Get recent file backups
+      // Get recent file backups with duration and error counts from logs table.
+      // logs.created is UTC; synctime is Unix epoch — join within 120s window.
       const fileBackups = await db.all(`
         SELECT
           b.id,
           b.clientid,
           c.name as client_name,
-          b.backuptime,
+          CAST(strftime('%s', b.backuptime) AS INTEGER) as backuptime,
           b.incremental,
           b.complete,
           b.size_bytes,
+          b.synctime,
+          (b.synctime - CAST(strftime('%s', b.backuptime) AS INTEGER)) as duration,
+          COALESCE(l.errors, 0) as errors,
+          COALESCE(l.warnings, 0) as warnings,
+          l.id as log_id,
           'file' as backup_type
         FROM backups b
         JOIN clients c ON b.clientid = c.id
+        LEFT JOIN logs l ON l.clientid = b.clientid
+          AND l.image = 0
+          AND CAST(strftime('%s', l.created) AS INTEGER) BETWEEN b.synctime - 120 AND b.synctime + 120
         WHERE b.complete = 1
         ORDER BY b.backuptime DESC
         LIMIT ?
       `, limit);
 
       // Get recent image backups — group by (clientid, backuptime) so multi-partition
-      // image backups appear as one entry with all partition letters listed
+      // image backups appear as one entry with all partition letters listed.
+      // MAX() cannot be used in a JOIN condition directly in SQLite, so we group
+      // in a subquery first, then JOIN against logs in the outer query.
       const imageBackups = await db.all(`
         SELECT
-          MIN(b.id) as id,
-          b.clientid,
-          c.name as client_name,
-          b.backuptime,
-          b.incremental,
-          b.complete,
-          SUM(b.size_bytes) as size_bytes,
-          COUNT(*) as partition_count,
-          GROUP_CONCAT(b.letter, ', ') as letters,
+          g.id, g.clientid, g.client_name, g.backuptime, g.incremental, g.complete,
+          g.size_bytes, g.partition_count, g.letters, g.synctime,
+          (g.synctime - g.backuptime) as duration,
+          COALESCE(l.errors, 0) as errors,
+          COALESCE(l.warnings, 0) as warnings,
+          l.id as log_id,
           'image' as backup_type
-        FROM backup_images b
-        JOIN clients c ON b.clientid = c.id
-        WHERE b.complete = 1
-        GROUP BY b.clientid, b.backuptime
-        ORDER BY b.backuptime DESC
-        LIMIT ?
+        FROM (
+          SELECT
+            MIN(b.id) as id,
+            b.clientid,
+            c.name as client_name,
+            CAST(strftime('%s', b.backuptime) AS INTEGER) as backuptime,
+            b.incremental,
+            b.complete,
+            SUM(b.size_bytes) as size_bytes,
+            COUNT(*) as partition_count,
+            GROUP_CONCAT(b.letter, ', ') as letters,
+            MAX(b.synctime) as synctime
+          FROM backup_images b
+          JOIN clients c ON b.clientid = c.id
+          WHERE b.complete = 1
+          GROUP BY b.clientid, b.backuptime
+          ORDER BY b.backuptime DESC
+          LIMIT ?
+        ) g
+        LEFT JOIN logs l ON l.clientid = g.clientid
+          AND l.image = 1
+          AND CAST(strftime('%s', l.created) AS INTEGER) BETWEEN g.synctime - 120 AND g.synctime + 120
       `, limit);
 
       // Combine and sort by time
@@ -425,10 +450,33 @@ export class UrBackupDbService {
         .sort((a, b) => b.backuptime - a.backuptime)
         .slice(0, limit);
 
+      // Build a customer name lookup: client_name → customer name (from MariaDB)
+      const uniqueClientNames = [...new Set(activities.map(a => a.client_name as string).filter(Boolean))];
+      const customerMap = new Map<string, string>();
+      if (uniqueClientNames.length > 0) {
+        try {
+          const placeholders = uniqueClientNames.map(() => '?').join(',');
+          const [rows] = await pool.query(
+            `SELECT cc.client_name, c.name AS customer_name
+             FROM customer_clients cc
+             JOIN customers c ON cc.customer_id = c.id
+             WHERE cc.client_name IN (${placeholders})`,
+            uniqueClientNames
+          ) as any[];
+          for (const row of rows) {
+            customerMap.set(row.client_name, row.customer_name);
+          }
+        } catch (err) {
+          // Non-fatal: customer lookup is best-effort
+          logger.warn('Customer lookup failed in getRecentActivities:', err);
+        }
+      }
+
       return activities.map(activity => ({
         id: `${activity.backup_type}-${activity.id}`,
         clientid: activity.clientid,
         clientName: activity.client_name,
+        customerName: customerMap.get(activity.client_name) || null,
         backuptime: activity.backuptime * 1000,
         incremental: activity.incremental === 1,
         complete: activity.complete === 1,
@@ -436,9 +484,40 @@ export class UrBackupDbService {
         size_bytes: activity.size_bytes,
         partition_count: activity.partition_count || null,
         letters: activity.letters || null,
+        duration: activity.duration > 0 ? activity.duration : null,
+        errors: activity.errors || 0,
+        warnings: activity.warnings || 0,
+        log_id: activity.log_id || null,
       }));
     } catch (error) {
       logger.error('Failed to get recent activities:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get backup job counts (successful / failed) for the last N days.
+   * Queries the UrBackup logs table which has one row per completed backup job.
+   */
+  async getBackupStats(days: number = 7) {
+    try {
+      const db = await getUrBackupDb();
+      const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
+      const rows = await db.all(`
+        SELECT
+          CASE WHEN errors = 0 THEN 'successful' ELSE 'failed' END AS status,
+          COUNT(*) AS count
+        FROM logs
+        WHERE restore = 0
+          AND CAST(strftime('%s', created) AS INTEGER) >= ?
+        GROUP BY status
+      `, cutoff) as { status: string; count: number }[];
+
+      const successful = rows.find(r => r.status === 'successful')?.count ?? 0;
+      const failed = rows.find(r => r.status === 'failed')?.count ?? 0;
+      return { successful, failed, total: successful + failed, days };
+    } catch (error) {
+      logger.error('Failed to get backup stats:', error);
       throw error;
     }
   }

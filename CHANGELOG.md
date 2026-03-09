@@ -5,6 +5,27 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.67] - 2026-03-09
+
+### Added
+- **Dashboard — Successful Backups tile**: New green stat card showing count of successful backup jobs in the last 7 days, linking to Activities filtered by successful
+- **Dashboard — Backup Jobs (7d) summary card**: Replaces the Backup Types bar chart with a clean numeric card showing Successful / Failed / Total job counts for the past 7 days
+- **Activities page redesign**: Unified backup job list replacing the old multi-section layout
+  - Single filterable table showing all backup jobs with Client, Customer, Date/Time, Type, Duration, Size, and Issues columns
+  - Status filter tabs: All / Running / Successful / Errors
+  - Type filter: All / File / Image
+  - Client dropdown filter
+  - Date range tabs: Today (default) / Last 7 Days / Last 30 Days / All Time
+  - Running jobs shown as rich progress cards with speed, ETA, and cancel button
+  - Click any completed job row to expand inline log entries
+  - Customer column sourced from MariaDB customers/customer\_clients tables
+- **Backend `/api/urbackup/backup-stats`**: New endpoint returning successful/failed/total job counts for a configurable number of days
+
+### Fixed
+- Dashboard backup stats (Successful/Failed counts) now load on initial render — no more `—` placeholder on page load
+- Failed Backups tile now shows job-level count from backup-stats API (consistent with Successful tile)
+- Report Bug button now opens GitHub Issues directly (`https://github.com/agit8or1/St0r/issues/new`) instead of the custom in-app modal
+
 ## [3.2.23] - 2026-03-04
 
 ### Added

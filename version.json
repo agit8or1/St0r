@@ -1,9 +1,12 @@
 {
-  "version": "3.2.66",
-  "releaseDate": "2026-03-08",
+  "version": "3.2.67",
+  "releaseDate": "2026-03-09",
   "changelog": [
-    "Feature: Comprehensive tooltips on every interactive element and stat display across all pages",
-    "Fix: Tooltip component rewritten with cursor-following approach — no more measurement/positioning failures",
-    "Feature: Tooltips on Activities, Logs, Alerts, Users, Customers, Dashboard, Clients, ClientDetail, Reports, Replication, ServerSettings, ClientSettings, Profile"
+    "Feature: Dashboard — Successful Backups tile showing 7-day job count",
+    "Feature: Dashboard — Failed Backups tile now shows job-level count (last 7 days)",
+    "Feature: Dashboard — Backup Jobs (7d) summary card replaces bar chart with plain numbers",
+    "Fix: Dashboard stats load on initial render (no more — placeholder)",
+    "Feature: Activities page complete redesign — unified job list with filters, customer column, inline log expansion",
+    "Fix: Report Bug button opens GitHub Issues directly instead of custom modal"
   ]
 }

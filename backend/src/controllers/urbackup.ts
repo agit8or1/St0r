@@ -454,6 +454,19 @@ export async function getJobLog(req: AuthRequest, res: Response): Promise<void> 
   }
 }
 
+export async function getBackupStats(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const days = parseInt(String(req.query.days)) || 7;
+    const service = await getService();
+    if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
+    const stats = await service.getBackupStats(days);
+    res.json(stats);
+  } catch (error) {
+    logger.error('Failed to get backup stats:', error);
+    res.status(500).json({ error: 'Failed to get backup stats' });
+  }
+}
+
 export async function getFailedPaths(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;
@@ -562,11 +575,13 @@ export async function convertAndDownloadImageBackup(req: AuthRequest, res: Respo
 
     // Copy to temp dir so decompress-file doesn't touch the original backup
     fs.mkdirSync(tmpDir, { recursive: true });
+    fs.chmodSync(tmpDir, 0o777); // urbackup user needs write access to rename .vhdz.tmp → output
     const fileName = path.basename(srcPath);
     tmpFile = path.join(tmpDir, fileName);
 
     logger.info(`[convertVhd] Copying ${srcPath} → ${tmpFile} (${(srcStat.size / 1e9).toFixed(1)} GB)`);
     fs.copyFileSync(srcPath, tmpFile);
+    fs.chmodSync(tmpFile, 0o644); // urbackup user (internal drop) needs read access
 
     // Decompress in-place inside tmpDir
     logger.info(`[convertVhd] Decompressing ${tmpFile}`);
@@ -579,6 +594,12 @@ export async function convertAndDownloadImageBackup(req: AuthRequest, res: Respo
     if (!fs.existsSync(tmpFile)) {
       throw new Error('Decompressed file not found after conversion');
     }
+
+    // After decompress, file is owned by urbackup — make it world-readable so Node can stream it
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn('sudo', ['chmod', '644', tmpFile!]);
+      proc.on('close', (code: number) => code === 0 ? resolve() : reject(new Error(`chmod post-decompress failed: ${code}`)));
+    });
 
     const vhdStat = fs.statSync(tmpFile);
     const downloadName = fileName.replace(/\.vhdz$/, '.vhd');
