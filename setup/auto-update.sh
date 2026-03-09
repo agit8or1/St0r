@@ -131,7 +131,13 @@ echo "$(timestamp) Latest version: $VERSION"
 
 # ── 2. Backup current installation ────────────────────────────────────────
 echo "$(timestamp) Creating backup at $BACKUP_DIR..."
-cp -a "$INSTALL_DIR" "$BACKUP_DIR"
+# Exclude node_modules and frontend/dist — they can be rebuilt; including them
+# makes the backup take many minutes and wastes several hundred MB of disk.
+rsync -a \
+  --exclude='backend/node_modules' \
+  --exclude='frontend/node_modules' \
+  --exclude='frontend/dist' \
+  "$INSTALL_DIR/" "$BACKUP_DIR/"
 
 # ── 3. Download & extract ──────────────────────────────────────────────────
 echo "$(timestamp) Downloading latest version..."
