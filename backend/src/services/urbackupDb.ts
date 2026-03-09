@@ -24,8 +24,8 @@ export class UrBackupDbService {
           CASE WHEN c.lastbackup IS NULL OR c.lastbackup = 0 THEN NULL ELSE CAST(strftime('%s', c.lastbackup) AS INTEGER) END as lastbackup,
           CASE WHEN c.lastseen IS NULL OR c.lastseen = 0 THEN NULL ELSE CAST(strftime('%s', c.lastseen) AS INTEGER) END as lastseen,
           CASE WHEN c.lastbackup_image IS NULL OR c.lastbackup_image = 0 THEN NULL ELSE CAST(strftime('%s', c.lastbackup_image) AS INTEGER) END as lastbackup_image,
-          c.bytes_used_files,
-          c.bytes_used_images,
+          COALESCE((SELECT SUM(size_bytes) FROM backups WHERE clientid = c.id AND (delete_pending = 0 OR delete_pending IS NULL)), 0) as bytes_used_files,
+          COALESCE((SELECT SUM(size_bytes) FROM backup_images WHERE clientid = c.id AND (delete_pending = 0 OR delete_pending IS NULL)), 0) as bytes_used_images,
           c.last_filebackup_issues,
           c.os_simple,
           c.os_version_str,
@@ -68,8 +68,8 @@ export class UrBackupDbService {
           c.lastbackup,
           c.lastseen,
           c.lastbackup_image,
-          c.bytes_used_files,
-          c.bytes_used_images,
+          COALESCE((SELECT SUM(size_bytes) FROM backups WHERE clientid = c.id AND (delete_pending = 0 OR delete_pending IS NULL)), 0) as bytes_used_files,
+          COALESCE((SELECT SUM(size_bytes) FROM backup_images WHERE clientid = c.id AND (delete_pending = 0 OR delete_pending IS NULL)), 0) as bytes_used_images,
           c.last_filebackup_issues,
           c.os_simple,
           c.os_version_str,
@@ -536,8 +536,8 @@ export class UrBackupDbService {
           (SELECT COUNT(*) FROM clients WHERE delete_pending = 0 AND (file_ok = 0 OR image_ok = 0)) as failed_clients,
           (SELECT COUNT(*) FROM backups WHERE running IS NOT NULL AND complete = 0) as running_file_backups,
           (SELECT COUNT(*) FROM backup_images WHERE running IS NOT NULL AND complete = 0) as running_image_backups,
-          (SELECT SUM(bytes_used_files) FROM clients WHERE delete_pending = 0) as total_file_bytes,
-          (SELECT SUM(bytes_used_images) FROM clients WHERE delete_pending = 0) as total_image_bytes
+          (SELECT COALESCE(SUM(size_bytes), 0) FROM backups WHERE delete_pending = 0 OR delete_pending IS NULL) as total_file_bytes,
+          (SELECT COALESCE(SUM(size_bytes), 0) FROM backup_images WHERE delete_pending = 0 OR delete_pending IS NULL) as total_image_bytes
       `, Math.floor(Date.now() / 1000) - 600);
 
       return stats;
