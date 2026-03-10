@@ -554,6 +554,10 @@ export class UrBackupService {
     return this.dbService.getBackupStats(days);
   }
 
+  async getStorageByCustomer() {
+    return this.dbService.getStorageByCustomer();
+  }
+
   async getActivities() {
     try {
       // Use getCurrentActivities() which includes API progress merging

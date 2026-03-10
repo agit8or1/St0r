@@ -870,4 +870,73 @@ export class UrBackupDbService {
       if (db) await db.close();
     }
   }
+
+  /**
+   * Get storage usage aggregated by customer (joins UrBackup SQLite + MariaDB customers)
+   */
+  async getStorageByCustomer() {
+    try {
+      const db = await getUrBackupDb();
+
+      // Per-client storage from UrBackup SQLite
+      const clientStorage = await db.all(`
+        SELECT
+          c.name AS client_name,
+          COALESCE((SELECT SUM(size_bytes) FROM backups WHERE clientid = c.id AND (delete_pending = 0 OR delete_pending IS NULL)), 0) AS file_bytes,
+          COALESCE((SELECT SUM(size_bytes) FROM backup_images WHERE clientid = c.id AND (delete_pending = 0 OR delete_pending IS NULL)), 0) AS image_bytes
+        FROM clients c
+        WHERE c.delete_pending = 0
+      `) as { client_name: string; file_bytes: number; image_bytes: number }[];
+
+      const clientMap = new Map<string, { file_bytes: number; image_bytes: number }>();
+      for (const row of clientStorage) {
+        clientMap.set(row.client_name, { file_bytes: Number(row.file_bytes), image_bytes: Number(row.image_bytes) });
+      }
+
+      // Customer → client mappings from MariaDB
+      const [customerRows] = await pool.execute<any[]>(`
+        SELECT c.id, c.name AS customer_name, c.company, cc.client_name
+        FROM customers c
+        LEFT JOIN customer_clients cc ON cc.customer_id = c.id
+        WHERE c.is_active = 1
+        ORDER BY c.name, cc.client_name
+      `);
+
+      type CustEntry = { id: number; name: string; company: string | null; client_count: number; file_bytes: number; image_bytes: number; total_bytes: number; clients: string[] };
+      const customerMap = new Map<number, CustEntry>();
+
+      for (const row of customerRows) {
+        if (!customerMap.has(row.id)) {
+          customerMap.set(row.id, { id: row.id, name: row.customer_name, company: row.company || null, client_count: 0, file_bytes: 0, image_bytes: 0, total_bytes: 0, clients: [] });
+        }
+        const cust = customerMap.get(row.id)!;
+        if (row.client_name) {
+          cust.clients.push(row.client_name);
+          cust.client_count++;
+          const storage = clientMap.get(row.client_name);
+          if (storage) {
+            cust.file_bytes += storage.file_bytes;
+            cust.image_bytes += storage.image_bytes;
+          }
+        }
+      }
+
+      const assignedNames = new Set<string>(customerRows.map((r: any) => r.client_name).filter(Boolean));
+      const unassigned = clientStorage.filter(c => !assignedNames.has(c.client_name));
+
+      const result: CustEntry[] = Array.from(customerMap.values()).map(c => ({ ...c, total_bytes: c.file_bytes + c.image_bytes }));
+      result.sort((a, b) => b.total_bytes - a.total_bytes);
+
+      if (unassigned.length > 0) {
+        const uf = unassigned.reduce((s, c) => s + Number(c.file_bytes), 0);
+        const ui = unassigned.reduce((s, c) => s + Number(c.image_bytes), 0);
+        result.push({ id: -1, name: 'Unassigned', company: null, client_count: unassigned.length, file_bytes: uf, image_bytes: ui, total_bytes: uf + ui, clients: unassigned.map(c => c.client_name) });
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to get storage by customer:', error);
+      throw error;
+    }
+  }
 }

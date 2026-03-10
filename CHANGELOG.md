@@ -5,6 +5,14 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.70] - 2026-03-10
+
+### Fixed
+- **Server Settings page layout broken**: Page was missing the `Layout` wrapper, causing the sidebar, nav menu, and CSS to disappear when visiting `/server-settings` directly
+
+### Added
+- **Storage by Customer tab** on Server Settings page: Shows backup storage usage (file + image backups) aggregated per customer, with a progress bar and percentage of total. Unassigned clients grouped separately.
+
 ## [3.2.69] - 2026-03-09
 
 ### Fixed

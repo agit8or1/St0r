@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Tooltip } from '../components/Tooltip';
+import { Layout } from '../components/Layout';
 import {
   Copy as DocumentDuplicateIcon,
   RefreshCw as ArrowPathIcon,
@@ -13,7 +14,9 @@ import {
   Save as SaveIcon,
   Settings as SettingsIcon,
   Globe as GlobeIcon,
-  ArrowLeft as ArrowLeftIcon
+  ArrowLeft as ArrowLeftIcon,
+  HardDrive as HardDriveIcon,
+  Users as UsersIcon
 } from 'lucide-react';
 
 interface Backup {
@@ -32,9 +35,22 @@ interface ServerSettings {
   [key: string]: any;
 }
 
+interface CustomerStorage {
+  id: number;
+  name: string;
+  company: string | null;
+  client_count: number;
+  file_bytes: number;
+  image_bytes: number;
+  total_bytes: number;
+  clients: string[];
+}
+
 export default function ServerSettings() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'backup' | 'general' | 'internet'>('backup');
+  const [activeTab, setActiveTab] = useState<'backup' | 'general' | 'internet' | 'storage'>('backup');
+  const [storageData, setStorageData] = useState<CustomerStorage[]>([]);
+  const [storageLoading, setStorageLoading] = useState(false);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [selectedBackup, setSelectedBackup] = useState<BackupDetails | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,8 +71,29 @@ export default function ServerSettings() {
       loadBackups();
     } else if (activeTab === 'general' || activeTab === 'internet') {
       loadSettings();
+    } else if (activeTab === 'storage') {
+      loadStorageByCustomer();
     }
   }, [activeTab]);
+
+  const loadStorageByCustomer = async () => {
+    try {
+      setStorageLoading(true);
+      const data = await api.getStorageByCustomer();
+      setStorageData(data);
+    } catch (error: any) {
+      setMessage({ type: 'error', text: `Failed to load storage data: ${error.message}` });
+    } finally {
+      setStorageLoading(false);
+    }
+  };
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+  };
 
   const loadSettings = async () => {
     try {
@@ -325,6 +362,7 @@ export default function ServerSettings() {
   };
 
   return (
+    <Layout>
     <div className="space-y-6">
       {/* Header with Back Button */}
       <div className="flex items-center justify-between">
@@ -420,6 +458,19 @@ export default function ServerSettings() {
             >
               <GlobeIcon className="h-5 w-5 mr-2" />
               Internet Mode
+            </button>
+          </Tooltip>
+          <Tooltip text="View backup storage usage broken down by customer">
+            <button
+              onClick={() => setActiveTab('storage')}
+              className={`${
+                activeTab === 'storage'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center`}
+            >
+              <HardDriveIcon className="h-5 w-5 mr-2" />
+              Storage by Customer
             </button>
           </Tooltip>
         </nav>
@@ -942,6 +993,102 @@ export default function ServerSettings() {
         </div>
       )}
 
+      {/* Storage by Customer Tab */}
+      {activeTab === 'storage' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Storage usage aggregated from UrBackup backup data, grouped by customer assignment.
+            </p>
+            <button
+              onClick={loadStorageByCustomer}
+              disabled={storageLoading}
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
+              <ArrowPathIcon className={`h-4 w-4 mr-1.5 ${storageLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+
+          {storageLoading ? (
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 text-center">
+              <ArrowPathIcon className="h-12 w-12 mx-auto text-gray-400 animate-spin" />
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading storage data...</p>
+            </div>
+          ) : storageData.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 text-center">
+              <UsersIcon className="h-12 w-12 mx-auto text-gray-400" />
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">No customer data found. Add customers in the Customers page.</p>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Clients</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">File Backups</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Image Backups</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {storageData.map((cust) => {
+                    const totalAll = storageData.reduce((s, c) => s + c.total_bytes, 0);
+                    const pct = totalAll > 0 ? Math.round((cust.total_bytes / totalAll) * 100) : 0;
+                    return (
+                      <tr key={cust.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${cust.id === -1 ? 'bg-yellow-50/30 dark:bg-yellow-900/10' : ''}`}>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <UsersIcon className={`h-5 w-5 mr-3 flex-shrink-0 ${cust.id === -1 ? 'text-yellow-400' : 'text-blue-400'}`} />
+                            <div>
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">{cust.name}</div>
+                              {cust.company && <div className="text-xs text-gray-500 dark:text-gray-400">{cust.company}</div>}
+                              {cust.clients.length > 0 && (
+                                <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{cust.clients.join(', ')}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm text-gray-600 dark:text-gray-300">{cust.client_count}</td>
+                        <td className="px-6 py-4 text-right text-sm text-gray-600 dark:text-gray-300">{formatBytes(cust.file_bytes)}</td>
+                        <td className="px-6 py-4 text-right text-sm text-gray-600 dark:text-gray-300">{formatBytes(cust.image_bytes)}</td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end space-x-3">
+                            <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                              <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white w-16 text-right">{formatBytes(cust.total_bytes)}</span>
+                            <span className="text-xs text-gray-400 w-8 text-right">{pct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-gray-50 dark:bg-gray-900/50 border-t-2 border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <td className="px-6 py-3 text-sm font-semibold text-gray-900 dark:text-white">Total</td>
+                    <td className="px-6 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
+                      {storageData.filter(c => c.id !== -1).reduce((s, c) => s + c.client_count, 0)}
+                    </td>
+                    <td className="px-6 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
+                      {formatBytes(storageData.reduce((s, c) => s + c.file_bytes, 0))}
+                    </td>
+                    <td className="px-6 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
+                      {formatBytes(storageData.reduce((s, c) => s + c.image_bytes, 0))}
+                    </td>
+                    <td className="px-6 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
+                      {formatBytes(storageData.reduce((s, c) => s + c.total_bytes, 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Save settings confirm dialog */}
       {showSaveConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -994,5 +1141,6 @@ export default function ServerSettings() {
         </div>
       )}
     </div>
+    </Layout>
   );
 }

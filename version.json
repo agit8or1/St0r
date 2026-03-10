@@ -1,9 +1,8 @@
 {
-  "version": "3.2.69",
-  "releaseDate": "2026-03-09",
+  "version": "3.2.70",
+  "releaseDate": "2026-03-10",
   "changelog": [
-    "Fix: Backup deletion now instant — rm -rf runs in background, delete_pending flag hides backup immediately",
-    "Fix: Backup ID type corrected (string→number), list reloads from server after delete",
-    "Feature: Multi-select checkboxes on backup list with bulk delete"
+    "Fix: Server Settings page now shows sidebar/menu (was missing Layout wrapper)",
+    "Feature: Storage by Customer tab — backup usage per customer with file/image breakdown and percentage bar"
   ]
 }

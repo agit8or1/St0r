@@ -270,6 +270,11 @@ class ApiService {
     return response.data;
   }
 
+  async getStorageByCustomer(): Promise<{ id: number; name: string; company: string | null; client_count: number; file_bytes: number; image_bytes: number; total_bytes: number; clients: string[] }[]> {
+    const response = await this.api.get('/urbackup/storage-by-customer');
+    return response.data;
+  }
+
   // Customers
   async getCustomers(): Promise<Customer[]> {
     const response = await this.api.get<Customer[]>('/customers');

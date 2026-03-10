@@ -467,6 +467,18 @@ export async function getBackupStats(req: AuthRequest, res: Response): Promise<v
   }
 }
 
+export async function getStorageByCustomer(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const service = await getService();
+    if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
+    const data = await service.getStorageByCustomer();
+    res.json(data);
+  } catch (error) {
+    logger.error('Failed to get storage by customer:', error);
+    res.status(500).json({ error: 'Failed to get storage by customer' });
+  }
+}
+
 export async function getFailedPaths(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;
