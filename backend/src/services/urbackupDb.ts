@@ -594,7 +594,9 @@ export class UrBackupDbService {
       lastbackup_image: parseTimestamp(client.lastbackup_image),
       online: lastseenSeconds > 0 && lastseenSeconds > tenMinutesAgo,
       file_ok: client.file_ok === 1,
-      image_ok: client.image_ok === 1,
+      // image_ok: use UrBackup's flag only when there are actual image backups.
+      // After manual deletion UrBackup leaves image_ok=1 until the next backup cycle.
+      image_ok: client.image_ok === 1 && client.bytes_used_images > 0,
       status: this.getClientStatus(client, tenMinutesAgo),
       os: client.os_simple,
       os_version: client.os_version_str,

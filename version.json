@@ -1,9 +1,7 @@
 {
-  "version": "3.2.72",
+  "version": "3.2.73",
   "releaseDate": "2026-03-10",
   "changelog": [
-    "Feature: Download backup — fetches .sql.gz file to your browser",
-    "Feature: Restore from existing backup — replaces database with confirm dialog",
-    "Feature: Upload & Restore — upload a .sql or .sql.gz file from your computer to restore"
+    "Fix: Client image_ok status no longer shows OK when all image backups have been deleted"
   ]
 }
