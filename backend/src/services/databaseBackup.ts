@@ -209,6 +209,25 @@ export class DatabaseBackupService {
   }
 
   /**
+   * Delete a specific backup file by filename
+   */
+  async deleteBackup(filename: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Validate filename to prevent path traversal — must match expected pattern exactly
+      if (!/^urbackup_gui_db_backup_[\d\-_]+\.sql\.gz$/.test(filename)) {
+        return { success: false, error: 'Invalid backup filename' };
+      }
+      const filePath = join(this.backupDir, filename);
+      await unlink(filePath);
+      logger.info(`Backup deleted: ${filename}`);
+      return { success: true };
+    } catch (error: any) {
+      logger.error('Failed to delete backup:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Get backup statistics
    */
   async getBackupStats(): Promise<{

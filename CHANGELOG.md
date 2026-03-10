@@ -5,6 +5,16 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.71] - 2026-03-10
+
+### Fixed
+- **Configuration Backup completely broken**: Frontend was calling non-existent API endpoints (`/database-backup/:id`, `/database-backup/:id/restore`, expected `{id,name,createdBy}` response) while backend uses a file-based MySQL dump system with different routes/format — nothing worked at all
+- **Backup creation required manual name entry**: Now auto-named with `YYYY-MM-DD_HH-MM-SS` timestamp, single-click create
+
+### Added
+- **Delete backup**: Trash button per backup row triggers an inline confirm dialog before deleting the `.sql.gz` file
+- **Backup list shows**: human-readable date/time, filename, compressed size, and age
+
 ## [3.2.70] - 2026-03-10
 
 ### Fixed

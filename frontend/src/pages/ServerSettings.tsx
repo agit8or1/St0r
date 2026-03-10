@@ -19,16 +19,11 @@ import {
   Users as UsersIcon
 } from 'lucide-react';
 
-interface Backup {
-  id: number;
+interface DbBackup {
   name: string;
-  createdAt: string;
-  createdBy: string;
-}
-
-interface BackupDetails extends Backup {
-  settingsCount: number;
-  settings: any;
+  size: number;
+  created: string;
+  age: string;
 }
 
 interface ServerSettings {
@@ -51,12 +46,11 @@ export default function ServerSettings() {
   const [activeTab, setActiveTab] = useState<'backup' | 'general' | 'internet' | 'storage'>('backup');
   const [storageData, setStorageData] = useState<CustomerStorage[]>([]);
   const [storageLoading, setStorageLoading] = useState(false);
-  const [backups, setBackups] = useState<Backup[]>([]);
-  const [selectedBackup, setSelectedBackup] = useState<BackupDetails | null>(null);
+  const [backups, setBackups] = useState<DbBackup[]>([]);
   const [loading, setLoading] = useState(false);
+  const [creatingBackup, setCreatingBackup] = useState(false);
+  const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [backupName, setBackupName] = useState('');
-  const [showCreateBackup, setShowCreateBackup] = useState(false);
 
   // Settings state
   const [settings, setSettings] = useState<ServerSettings>({});
@@ -64,7 +58,6 @@ export default function ServerSettings() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-  const [pendingRestoreId, setPendingRestoreId] = useState<{ id: number; name: string } | null>(null);
 
   useEffect(() => {
     if (activeTab === 'backup') {
@@ -174,9 +167,7 @@ export default function ServerSettings() {
     try {
       setLoading(true);
       const response = await fetch('/api/database-backup/list', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) {
@@ -190,27 +181,15 @@ export default function ServerSettings() {
   };
 
   const createBackup = async () => {
-    if (!backupName.trim()) {
-      setMessage({ type: 'error', text: 'Please enter a backup name' });
-      return;
-    }
-
     try {
-      setLoading(true);
+      setCreatingBackup(true);
       const response = await fetch('/api/database-backup/create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ backupName })
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await response.json();
-
       if (data.success) {
-        setMessage({ type: 'success', text: `Backup created: ${data.settingsCount} settings saved` });
-        setBackupName('');
-        setShowCreateBackup(false);
+        setMessage({ type: 'success', text: 'Backup created successfully' });
         loadBackups();
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to create backup' });
@@ -218,73 +197,29 @@ export default function ServerSettings() {
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
     } finally {
-      setLoading(false);
+      setCreatingBackup(false);
     }
   };
 
-  const viewBackup = async (backupId: number) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/database-backup/${backupId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        setSelectedBackup(data.backup);
-      }
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setLoading(false);
-    }
+  const deleteBackup = async (filename: string) => {
+    setDeletingFilename(filename);
   };
 
-  const restoreBackup = async (backupId: number, backupName: string) => {
+  const confirmDeleteBackup = async () => {
+    if (!deletingFilename) return;
     try {
       setLoading(true);
-      const response = await fetch(`/api/database-backup/${backupId}/restore`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        setMessage({ type: 'success', text: `Settings restored successfully! ${data.restored} settings applied.` });
-        loadSettings();
-      } else {
-        setMessage({ type: 'error', text: data.message || 'Failed to restore backup' });
-      }
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteBackup = async (backupId: number, backupName: string) => {
-    if (!confirm(`Are you sure you want to delete backup "${backupName}"?`)) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/database-backup/${backupId}`, {
+      const response = await fetch(`/api/database-backup/${encodeURIComponent(deletingFilename)}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await response.json();
-
       if (data.success) {
-        setMessage({ type: 'success', text: 'Backup deleted successfully' });
-        setSelectedBackup(null);
+        setMessage({ type: 'success', text: 'Backup deleted' });
+        setDeletingFilename(null);
         loadBackups();
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to delete backup' });
       }
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
@@ -499,187 +434,82 @@ export default function ServerSettings() {
             </div>
           </div>
 
-          {/* Create Backup Section */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
+          {/* Create Backup */}
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 flex items-center justify-between">
+            <div>
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Create New Backup</h2>
-              <Tooltip text="Snapshot all current UrBackup server settings into a named backup">
-                <button
-                  onClick={() => setShowCreateBackup(!showCreateBackup)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <DocumentDuplicateIcon className="h-5 w-5 mr-2" />
-                  New Backup
-                </button>
-              </Tooltip>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Saves a compressed MySQL dump of the St0r database. Auto-named with current date and time.
+              </p>
             </div>
-
-            {showCreateBackup && (
-              <div className="mt-4 space-y-4">
-                <div>
-                  <Tooltip text="A descriptive name so you can identify this backup later" position="bottom">
-                    <label htmlFor="backup-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Backup Name
-                    </label>
-                  </Tooltip>
-                  <input
-                    type="text"
-                    id="backup-name"
-                    value={backupName}
-                    onChange={(e) => setBackupName(e.target.value)}
-                    placeholder="e.g., Before changing internet settings"
-                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  />
-                </div>
-                <div className="flex justify-end space-x-3">
-                  <Tooltip text="Discard this new backup without saving">
-                    <button
-                      onClick={() => {
-                        setShowCreateBackup(false);
-                        setBackupName('');
-                      }}
-                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                    >
-                      Cancel
-                    </button>
-                  </Tooltip>
-                  <Tooltip text="Save a snapshot of all current server settings under this name">
-                    <button
-                      onClick={createBackup}
-                      disabled={loading || !backupName.trim()}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loading ? (
-                        <>
-                          <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        <>
-                          <CloudArrowDownIcon className="h-5 w-5 mr-2" />
-                          Create Backup
-                        </>
-                      )}
-                    </button>
-                  </Tooltip>
-                </div>
-              </div>
-            )}
+            <Tooltip text="Create a database backup now — auto-named with date and time">
+              <button
+                onClick={createBackup}
+                disabled={creatingBackup}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {creatingBackup ? (
+                  <><ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />Creating...</>
+                ) : (
+                  <><CloudArrowDownIcon className="h-5 w-5 mr-2" />Create Backup</>
+                )}
+              </button>
+            </Tooltip>
           </div>
 
           {/* Backups List */}
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Saved Backups</h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {backups.length} backup{backups.length !== 1 ? 's' : ''} available
-              </p>
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Saved Backups</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {backups.length} backup{backups.length !== 1 ? 's' : ''} — stored in /opt/urbackup-gui/backups/
+                </p>
+              </div>
+              <button onClick={loadBackups} disabled={loading} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <ArrowPathIcon className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
 
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {loading && backups.length === 0 ? (
                 <div className="px-6 py-8 text-center">
                   <ArrowPathIcon className="h-8 w-8 mx-auto text-gray-400 animate-spin" />
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading backups...</p>
                 </div>
               ) : backups.length === 0 ? (
                 <div className="px-6 py-8 text-center">
                   <DocumentDuplicateIcon className="h-12 w-12 mx-auto text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No backups yet. Create your first backup above.</p>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No backups yet.</p>
                 </div>
               ) : (
-                backups.map((backup) => (
-                  <div key={backup.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">{backup.name}</h3>
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          Created {new Date(backup.createdAt).toLocaleString()} by {backup.createdBy}
+                backups.map((backup) => {
+                  const sizeKb = (backup.size / 1024).toFixed(1);
+                  const sizeMb = (backup.size / (1024 * 1024)).toFixed(1);
+                  const sizeLabel = backup.size >= 1024 * 1024 ? `${sizeMb} MB` : `${sizeKb} KB`;
+                  return (
+                    <div key={backup.name} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {new Date(backup.created).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {backup.name} &middot; {sizeLabel} &middot; {backup.age}
                         </p>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Tooltip text="View the raw settings stored in this backup">
-                          <button
-                            onClick={() => viewBackup(backup.id)}
-                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                          >
-                            View
-                          </button>
-                        </Tooltip>
-                        <Tooltip text="Overwrite current server settings with this backup's values">
-                          <button
-                            onClick={() => setPendingRestoreId({ id: backup.id, name: backup.name })}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700"
-                          >
-                            <ArrowPathIcon className="h-4 w-4 mr-1" />
-                            Restore
-                          </button>
-                        </Tooltip>
-                        <Tooltip text="Permanently delete this backup snapshot">
-                          <button
-                            onClick={() => deleteBackup(backup.id, backup.name)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </Tooltip>
-                      </div>
+                      <Tooltip text="Permanently delete this backup file">
+                        <button
+                          onClick={() => deleteBackup(backup.name)}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </Tooltip>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
-
-          {/* Backup Details Modal */}
-          {selectedBackup && (
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden shadow-xl">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">{selectedBackup.name}</h3>
-                    <button
-                      onClick={() => setSelectedBackup(null)}
-                      className="text-gray-400 hover:text-gray-500"
-                    >
-                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {selectedBackup.settingsCount} settings • Created {new Date(selectedBackup.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <div className="px-6 py-4 overflow-y-auto max-h-[60vh]">
-                  <pre className="text-xs bg-gray-50 dark:bg-gray-900 p-4 rounded overflow-x-auto">
-                    {JSON.stringify(selectedBackup.settings, null, 2)}
-                  </pre>
-                </div>
-                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                  <Tooltip text="Close this detail view without making changes">
-                    <button
-                      onClick={() => setSelectedBackup(null)}
-                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      Close
-                    </button>
-                  </Tooltip>
-                  <Tooltip text="Apply this backup's settings to the UrBackup server now">
-                    <button
-                      onClick={() => {
-                        setPendingRestoreId({ id: selectedBackup.id, name: selectedBackup.name });
-                        setSelectedBackup(null);
-                      }}
-                      className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                    >
-                      Restore This Backup
-                    </button>
-                  </Tooltip>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -1115,27 +945,24 @@ export default function ServerSettings() {
         </div>
       )}
 
-      {/* Restore backup confirm dialog */}
-      {pendingRestoreId && (
+      {/* Delete backup confirm dialog */}
+      {deletingFilename && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Restore Backup?</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Restore settings from <strong>"{pendingRestoreId.name}"</strong>? This will overwrite current server settings.
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Delete Backup?</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+              This will permanently delete:
             </p>
+            <p className="text-sm font-mono text-gray-800 dark:text-gray-200 mb-4 break-all">{deletingFilename}</p>
             <div className="flex justify-end gap-3">
-              <Tooltip text="Abort the restore — current settings remain unchanged">
-                <button onClick={() => setPendingRestoreId(null)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  Cancel
-                </button>
-              </Tooltip>
-              <Tooltip text="Overwrite current server settings with this backup's values">
-                <button onClick={() => { const r = pendingRestoreId; setPendingRestoreId(null); restoreBackup(r.id, r.name); }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium">
-                  Restore
-                </button>
-              </Tooltip>
+              <button onClick={() => setDeletingFilename(null)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Cancel
+              </button>
+              <button onClick={confirmDeleteBackup} disabled={loading}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium disabled:opacity-50">
+                Delete
+              </button>
             </div>
           </div>
         </div>

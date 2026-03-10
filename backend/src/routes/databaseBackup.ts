@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createBackup,
   listBackups,
+  deleteBackup,
   getBackupStats,
   cleanupOldBackups,
 } from '../controllers/databaseBackup.js';
@@ -14,6 +15,7 @@ router.use(authenticate);
 
 router.post('/create', createBackup);
 router.get('/list', listBackups);
+router.delete('/:filename', deleteBackup);
 router.get('/stats', getBackupStats);
 router.post('/cleanup', cleanupOldBackups);
 

@@ -1,8 +1,9 @@
 {
-  "version": "3.2.70",
+  "version": "3.2.71",
   "releaseDate": "2026-03-10",
   "changelog": [
-    "Fix: Server Settings page now shows sidebar/menu (was missing Layout wrapper)",
-    "Feature: Storage by Customer tab — backup usage per customer with file/image breakdown and percentage bar"
+    "Fix: Configuration Backup tab now works — backend/frontend were completely mismatched",
+    "Feature: Backups auto-named with date and time (no manual name entry needed)",
+    "Feature: Delete backup button with confirmation dialog"
   ]
 }
