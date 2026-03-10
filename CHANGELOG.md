@@ -5,6 +5,13 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.72] - 2026-03-10
+
+### Added
+- **Download backup**: Each backup row has a Download button — fetches the `.sql.gz` file directly to the browser
+- **Restore from existing backup**: Restore button per row shows a warning confirm dialog before overwriting the database
+- **Upload & Restore**: File picker at the bottom of the Configuration Backup tab — upload a `.sql` or `.sql.gz` file from your computer to restore; uploaded file is also saved to the backup list
+
 ## [3.2.71] - 2026-03-10
 
 ### Fixed

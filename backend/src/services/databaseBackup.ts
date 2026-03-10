@@ -1,7 +1,7 @@
 import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
-import { readdir, stat, unlink, mkdir, writeFile } from 'fs/promises';
-import { existsSync, createWriteStream } from 'fs';
+import { readdir, stat, unlink, mkdir, writeFile, copyFile } from 'fs/promises';
+import { existsSync, createWriteStream, createReadStream } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { logger } from '../utils/logger.js';
@@ -223,6 +223,110 @@ export class DatabaseBackupService {
       return { success: true };
     } catch (error: any) {
       logger.error('Failed to delete backup:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get full path for a validated backup filename (for download streaming)
+   */
+  getBackupPath(filename: string): string | null {
+    if (!/^urbackup_gui_db_backup_[\d\-_]+\.sql\.gz$/.test(filename)) return null;
+    const filePath = join(this.backupDir, filename);
+    return existsSync(filePath) ? filePath : null;
+  }
+
+  /**
+   * Restore database from a backup file (by filename in backupDir, or a temp path)
+   */
+  async restoreBackup(sourcePath: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const config = this.getMySQLConfig();
+      const tmpConfig = join(tmpdir(), `mysqlrestore-${Date.now()}.cnf`);
+      await writeFile(tmpConfig, `[client]\npassword=${config.password}\n`, { mode: 0o600 });
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          // Decompress with gunzip piped into mysql
+          const gunzip = spawn('gunzip', ['-c', sourcePath], { stdio: ['ignore', 'pipe', 'pipe'] });
+          const mysql = spawn(
+            'mysql',
+            [`--defaults-extra-file=${tmpConfig}`, '-h', config.host, '-u', config.user, config.database],
+            { stdio: ['pipe', 'pipe', 'pipe'] }
+          );
+
+          gunzip.stdout.pipe(mysql.stdin);
+
+          const errChunks: Buffer[] = [];
+          mysql.stderr.on('data', (c: Buffer) => errChunks.push(c));
+          gunzip.stderr.on('data', (c: Buffer) => errChunks.push(c));
+
+          gunzip.on('error', reject);
+          mysql.on('error', reject);
+          mysql.on('close', (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(`mysql restore exited ${code}: ${Buffer.concat(errChunks).toString().trim()}`));
+          });
+        });
+
+        logger.info(`Database restored from: ${sourcePath}`);
+        return { success: true };
+      } finally {
+        await unlink(tmpConfig).catch(() => {});
+      }
+    } catch (error: any) {
+      logger.error('Failed to restore database:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Accept an uploaded file (already saved to uploadPath), validate, move to backupDir, restore
+   */
+  async restoreFromUpload(uploadPath: string, originalName: string): Promise<{ success: boolean; savedAs?: string; error?: string }> {
+    try {
+      // Accept .sql.gz or .sql files
+      const isGz = originalName.endsWith('.sql.gz') || originalName.endsWith('.gz');
+      const isSql = originalName.endsWith('.sql');
+      if (!isGz && !isSql) {
+        return { success: false, error: 'File must be a .sql or .sql.gz backup' };
+      }
+
+      let restorePath = uploadPath;
+      let savedPath: string | undefined;
+
+      // If it's plain SQL, gzip it before storing
+      if (isSql) {
+        const gzPath = `${uploadPath}.gz`;
+        await new Promise<void>((resolve, reject) => {
+          const gz = spawn('gzip', ['-c', uploadPath], { stdio: ['ignore', 'pipe', 'pipe'] });
+          const out = createWriteStream(gzPath);
+          gz.stdout.pipe(out);
+          gz.on('error', reject);
+          gz.on('close', (code) => code === 0 ? resolve() : reject(new Error(`gzip failed: ${code}`)));
+        });
+        await unlink(uploadPath).catch(() => {});
+        restorePath = gzPath;
+      }
+
+      // Restore
+      const result = await this.restoreBackup(restorePath);
+      if (!result.success) {
+        await unlink(restorePath).catch(() => {});
+        return result;
+      }
+
+      // Save to backupDir with auto-name
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
+      const savedFilename = `urbackup_gui_db_backup_${timestamp}_restored.sql.gz`;
+      savedPath = join(this.backupDir, savedFilename);
+      await copyFile(restorePath, savedPath);
+      await unlink(restorePath).catch(() => {});
+
+      logger.info(`Uploaded backup restored and saved as: ${savedFilename}`);
+      return { success: true, savedAs: savedFilename };
+    } catch (error: any) {
+      logger.error('Failed to restore from upload:', error);
       return { success: false, error: error.message };
     }
   }

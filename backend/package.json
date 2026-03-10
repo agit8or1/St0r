@@ -1,6 +1,6 @@
 {
   "name": "urbackup-gui-backend",
-  "version": "3.2.71",
+  "version": "3.2.72",
   "description": "Backend API for UrBackup GUI",
   "main": "dist/server.js",
   "type": "module",
@@ -20,6 +20,7 @@
   "license": "MIT",
   "dependencies": {
     "@types/cookie-parser": "^1.4.10",
+    "@types/multer": "^2.1.0",
     "@types/qrcode": "^1.5.6",
     "@types/speakeasy": "^2.0.10",
     "axios": "^1.13.1",
@@ -32,6 +33,7 @@
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
     "mysql2": "^3.6.5",
     "nodemailer": "^7.0.10",
     "qrcode": "^1.5.4",

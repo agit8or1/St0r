@@ -50,6 +50,9 @@ export default function ServerSettings() {
   const [loading, setLoading] = useState(false);
   const [creatingBackup, setCreatingBackup] = useState(false);
   const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
+  const [restoringFilename, setRestoringFilename] = useState<string | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadRestoring, setUploadRestoring] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Settings state
@@ -225,6 +228,74 @@ export default function ServerSettings() {
       setMessage({ type: 'error', text: error.message });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadBackup = (filename: string) => {
+    const a = document.createElement('a');
+    a.href = `/api/database-backup/${encodeURIComponent(filename)}/download`;
+    a.download = filename;
+    // Include auth token via header not possible with anchor — use window.open with token in URL would expose it.
+    // Instead fetch as blob.
+    setLoading(true);
+    fetch(`/api/database-backup/${encodeURIComponent(filename)}/download`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    }).then(r => r.blob()).then(blob => {
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }).catch(e => setMessage({ type: 'error', text: `Download failed: ${e.message}` }))
+      .finally(() => setLoading(false));
+  };
+
+  const confirmRestoreBackup = async () => {
+    if (!restoringFilename) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/database-backup/${encodeURIComponent(restoringFilename)}/restore`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Database restored successfully. You may need to log in again.' });
+        setRestoringFilename(null);
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Restore failed' });
+      }
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUploadRestore = async () => {
+    if (!uploadFile) return;
+    try {
+      setUploadRestoring(true);
+      const form = new FormData();
+      form.append('backup', uploadFile);
+      const response = await fetch('/api/database-backup/upload-restore', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: form
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: `Backup restored successfully. You may need to log in again.` });
+        setUploadFile(null);
+        loadBackups();
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Upload restore failed' });
+      }
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setUploadRestoring(false);
     }
   };
 
@@ -496,19 +567,73 @@ export default function ServerSettings() {
                           {backup.name} &middot; {sizeLabel} &middot; {backup.age}
                         </p>
                       </div>
-                      <Tooltip text="Permanently delete this backup file">
-                        <button
-                          onClick={() => deleteBackup(backup.name)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      </Tooltip>
+                      <div className="flex items-center space-x-2">
+                        <Tooltip text="Download this backup file">
+                          <button
+                            onClick={() => downloadBackup(backup.name)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                          >
+                            <CloudArrowDownIcon className="h-4 w-4 mr-1" />
+                            Download
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Restore database from this backup">
+                          <button
+                            onClick={() => setRestoringFilename(backup.name)}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700"
+                          >
+                            <ArrowPathIcon className="h-4 w-4 mr-1" />
+                            Restore
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Permanently delete this backup file">
+                          <button
+                            onClick={() => deleteBackup(backup.name)}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </Tooltip>
+                      </div>
                     </div>
                   );
                 })
               )}
             </div>
+          </div>
+
+          {/* Upload & Restore */}
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-1">Upload &amp; Restore</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Upload a <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">.sql.gz</code> or <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">.sql</code> backup file from your computer to restore the database.
+            </p>
+            <div className="flex items-center space-x-3">
+              <label className="flex-1">
+                <input
+                  type="file"
+                  accept=".sql,.gz,.sql.gz"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900/30 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50"
+                />
+              </label>
+              <button
+                onClick={handleUploadRestore}
+                disabled={!uploadFile || uploadRestoring}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadRestoring ? (
+                  <><ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />Restoring...</>
+                ) : (
+                  <><ArrowPathIcon className="h-4 w-4 mr-2" />Restore</>
+                )}
+              </button>
+            </div>
+            {uploadFile && (
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                Selected: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -940,6 +1065,32 @@ export default function ServerSettings() {
                   Save
                 </button>
               </Tooltip>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore backup confirm dialog */}
+      {restoringFilename && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Restore Database?</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+              This will overwrite the current database with the contents of:
+            </p>
+            <p className="text-sm font-mono text-gray-800 dark:text-gray-200 mb-3 break-all">{restoringFilename}</p>
+            <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-4">
+              ⚠ All current data (users, customers, settings) will be replaced. You may need to log in again afterwards.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setRestoringFilename(null)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Cancel
+              </button>
+              <button onClick={confirmRestoreBackup} disabled={loading}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium disabled:opacity-50">
+                Restore
+              </button>
             </div>
           </div>
         </div>
