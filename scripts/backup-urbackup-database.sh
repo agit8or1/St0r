@@ -1,6 +1,6 @@
 #!/bin/bash
 # UrBackup Database Backup Script
-# Run this script on the UrBackup server (192.168.22.251) as root
+# Run this script on the UrBackup server as root
 
 BACKUP_DIR="/var/urbackup"
 BACKUP_DEST="/root/urbackup-db-backups"

@@ -24,7 +24,7 @@ UrBackup creates **nightly automatic backups** in the same directory with timest
 
 ## Manual Backup Procedure
 
-### On UrBackup Server (192.168.22.251)
+### On UrBackup Server
 
 Run this script as root:
 
