@@ -31,6 +31,7 @@ interface ReplicationTarget {
   standby_service_mode: 'running_readonly' | 'stopped';
   service_stop_cmd: string;
   service_start_cmd: string;
+  btrfs_mode: 'auto' | 'btrfs_send' | 'rsync';
 }
 
 interface ReplicationSettings {
@@ -38,6 +39,15 @@ interface ReplicationSettings {
   default_bandwidth_limit_mbps: number;
   default_verify_after_sync: boolean;
   default_checksum_verify: boolean;
+}
+
+interface BtrfsSubvol {
+  relPath: string;      // relative to btrfs mount root
+  absPath: string;      // absolute path on local filesystem
+  name: string;         // basename
+  uuid: string;
+  parentUuid: string | null;
+  gen: number;
 }
 
 const MAX_LOG_BYTES = 50 * 1024; // 50KB
@@ -130,6 +140,7 @@ class ReplicationEngine {
       );
       if (!targets.length) throw new Error('Target not found');
       const target: ReplicationTarget = targets[0];
+      target.btrfs_mode = target.btrfs_mode || 'auto';
       target.target_repo_paths_map = target.target_repo_paths_map
         ? (typeof target.target_repo_paths_map === 'string'
             ? JSON.parse(target.target_repo_paths_map)
@@ -172,9 +183,18 @@ class ReplicationEngine {
       await this.updateStep(runId, 'preflight: testing SSH connectivity');
       await this.sshExec(target, sshArgs, 'echo replication_ok', 10000);
 
-      // Preflight: check rsync available on remote
-      await this.updateStep(runId, 'preflight: checking rsync on remote');
-      await this.sshExec(target, sshArgs, 'which rsync', 10000);
+      // Preflight: check tools on remote (rsync or btrfs depending on mode)
+      if (target.btrfs_mode === 'rsync') {
+        await this.updateStep(runId, 'preflight: checking rsync on remote');
+        await this.sshExec(target, sshArgs, 'which rsync', 10000);
+      } else if (target.btrfs_mode === 'btrfs_send') {
+        await this.updateStep(runId, 'preflight: checking btrfs-progs on remote');
+        await this.sshExec(target, sshArgs, 'which btrfs', 10000);
+      } else {
+        // auto — check rsync at minimum; btrfs checked per-path later
+        await this.updateStep(runId, 'preflight: checking rsync on remote');
+        await this.sshExec(target, sshArgs, 'which rsync', 10000);
+      }
 
       // Stop standby service if configured
       if (target.standby_service_mode === 'stopped' && target.service_stop_cmd) {
@@ -200,7 +220,7 @@ class ReplicationEngine {
         }
       }
 
-      // rsync include paths (state files)
+      // rsync include paths (state files — always use rsync, not btrfs)
       const bwlimit = target.bandwidth_limit_mbps || settings.default_bandwidth_limit_mbps || 0;
       let totalBytesSent = 0;
 
@@ -217,30 +237,37 @@ class ReplicationEngine {
         totalBytesSent += bytes;
       }
 
-      // rsync repo paths
+      // Sync repo paths — btrfs send/receive or rsync depending on mode + fs detection
       if (target.target_repo_paths_map && Object.keys(target.target_repo_paths_map).length > 0) {
-        // Use explicit source→target path mappings
-        for (const [srcPath, dstRelPath] of Object.entries(target.target_repo_paths_map)) {
+        // Explicit source→target path mappings
+        for (const [srcPath, dstPath] of Object.entries(target.target_repo_paths_map)) {
           await this.updateStep(runId, `syncing repo: ${srcPath}`);
-          const targetPath = `${target.ssh_user}@${target.host}:${dstRelPath}/`;
-          const bytes = await this.rsyncPath(
-            runId, target, sshArgs, `${srcPath}/`, targetPath,
-            [], bwlimit,
-            target.checksum_verify || settings.default_checksum_verify
-          );
-          totalBytesSent += bytes;
+          if (await this.shouldUseBtrfs(target, srcPath)) {
+            await this.replicateBtrfsPath(runId, target, sshArgs, srcPath, dstPath);
+          } else {
+            const remotePath = `${target.ssh_user}@${target.host}:${dstPath}/`;
+            const bytes = await this.rsyncPath(
+              runId, target, sshArgs, `${srcPath}/`, remotePath,
+              [], bwlimit, target.checksum_verify || settings.default_checksum_verify
+            );
+            totalBytesSent += bytes;
+          }
         }
       } else {
         // Fall back to stateSet repo_paths → target_root_path/<path>
         for (const repoPath of (stateSet.repo_paths || [])) {
           await this.updateStep(runId, `syncing repo: ${repoPath}`);
-          const targetPath = `${target.ssh_user}@${target.host}:${target.target_root_path}${repoPath}/`;
-          const bytes = await this.rsyncPath(
-            runId, target, sshArgs, `${repoPath}/`, targetPath,
-            [], bwlimit,
-            target.checksum_verify || settings.default_checksum_verify
-          );
-          totalBytesSent += bytes;
+          if (await this.shouldUseBtrfs(target, repoPath)) {
+            const remoteDestPath = `${target.target_root_path}${repoPath}`;
+            await this.replicateBtrfsPath(runId, target, sshArgs, repoPath, remoteDestPath);
+          } else {
+            const remotePath = `${target.ssh_user}@${target.host}:${target.target_root_path}${repoPath}/`;
+            const bytes = await this.rsyncPath(
+              runId, target, sshArgs, `${repoPath}/`, remotePath,
+              [], bwlimit, target.checksum_verify || settings.default_checksum_verify
+            );
+            totalBytesSent += bytes;
+          }
         }
       }
 
@@ -309,6 +336,271 @@ class ReplicationEngine {
       }
     }
   }
+
+  // ── btrfs helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Decide whether to use btrfs send/receive for a given source path.
+   * btrfs_mode='rsync'      → always false
+   * btrfs_mode='btrfs_send' → always true
+   * btrfs_mode='auto'       → detect filesystem type at runtime
+   */
+  private async shouldUseBtrfs(target: ReplicationTarget, srcPath: string): Promise<boolean> {
+    const mode = target.btrfs_mode || 'auto';
+    if (mode === 'rsync') return false;
+    if (mode === 'btrfs_send') return true;
+    return this.detectBtrfs(srcPath);
+  }
+
+  /** Returns true if path is on a btrfs filesystem */
+  private async detectBtrfs(fsPath: string): Promise<boolean> {
+    try {
+      const result = await execFileAsync(
+        'findmnt', ['-n', '-o', 'FSTYPE', '--target', fsPath],
+        { timeout: 5000 }
+      );
+      return result.stdout.trim() === 'btrfs';
+    } catch {
+      return false;
+    }
+  }
+
+  /** Returns the btrfs mount point that contains fsPath */
+  private async getBtrfsMountPoint(fsPath: string): Promise<string> {
+    const result = await execFileAsync(
+      'findmnt', ['-n', '-o', 'TARGET', '--target', fsPath],
+      { timeout: 5000 }
+    );
+    return result.stdout.trim();
+  }
+
+  /**
+   * List all btrfs subvolumes under underPath (absolute), sorted by generation asc.
+   * Uses `btrfs subvolume list -u -q <mountPoint>` and filters by path prefix.
+   */
+  private async listLocalSubvols(mountPoint: string, underPath: string): Promise<BtrfsSubvol[]> {
+    const result = await execFileAsync(
+      'btrfs', ['subvolume', 'list', '-u', '-q', '-g', mountPoint],
+      { timeout: 60000 }
+    );
+
+    const mountNorm = mountPoint.replace(/\/$/, '');
+    const underNorm = underPath.replace(/\/$/, '');
+    const subvols: BtrfsSubvol[] = [];
+
+    for (const line of result.stdout.split('\n')) {
+      // Format: "ID N gen G top level N uuid UUID parent_uuid UUID|-- path REL/PATH"
+      const m = line.match(
+        /gen\s+(\d+)\s+top\s+level\s+\d+\s+uuid\s+([a-f0-9-]+)\s+parent_uuid\s+([a-f0-9-]+|--|-)\s+path\s+(.+)/
+      );
+      if (!m) continue;
+      const [, genStr, uuid, parentUuidRaw, relPath] = m;
+      const absPath = `${mountNorm}/${relPath}`;
+      if (!absPath.startsWith(underNorm + '/') && absPath !== underNorm) continue;
+
+      subvols.push({
+        relPath,
+        absPath,
+        name: path.basename(absPath),
+        uuid,
+        parentUuid: (parentUuidRaw === '-' || parentUuidRaw === '--') ? null : parentUuidRaw,
+        gen: parseInt(genStr, 10),
+      });
+    }
+
+    return subvols.sort((a, b) => a.gen - b.gen);
+  }
+
+  /**
+   * Get the set of subvolume basenames already received on the remote path.
+   * Uses `btrfs subvolume list <remotePath>` and extracts basenames.
+   */
+  private async listRemoteSubvolNames(
+    target: ReplicationTarget,
+    sshArgs: string[],
+    remotePath: string
+  ): Promise<Set<string>> {
+    try {
+      const out = await this.sshExec(
+        target, sshArgs,
+        `btrfs subvolume list "${remotePath}" 2>/dev/null | awk '{print $NF}' || true`,
+        30000
+      );
+      const names = new Set<string>();
+      for (const line of out.trim().split('\n')) {
+        const name = path.basename(line.trim());
+        if (name && name !== '.') names.add(name);
+      }
+      return names;
+    } catch {
+      return new Set();
+    }
+  }
+
+  /**
+   * Stream btrfs send output to remote via SSH btrfs receive.
+   * parentAbsPath: if set, uses incremental send (-p <parent>).
+   */
+  private btrfsSendSubvol(
+    target: ReplicationTarget,
+    sshArgs: string[],
+    srcAbsPath: string,
+    remoteReceiveDir: string,
+    parentAbsPath: string | null,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const sendArgs = ['send'];
+      if (parentAbsPath) sendArgs.push('-p', parentAbsPath);
+      sendArgs.push(srcAbsPath);
+
+      const sshReceiveArgs = [
+        ...sshArgs,
+        `${target.ssh_user}@${target.host}`,
+        `btrfs receive "${remoteReceiveDir}"`,
+      ];
+
+      const sendProc = spawn('btrfs', sendArgs);
+      const sshProc  = spawn('ssh', sshReceiveArgs);
+
+      sendProc.stdout.pipe(sshProc.stdin);
+
+      let sendErr = '';
+      let sshErr  = '';
+      sendProc.stderr.on('data', (d: Buffer) => { sendErr += d.toString(); });
+      sshProc.stderr.on('data',  (d: Buffer) => { sshErr  += d.toString(); });
+
+      let sendDone = false;
+      let sshDone  = false;
+      let failed   = false;
+
+      const checkDone = () => { if (sendDone && sshDone && !failed) resolve(); };
+
+      sendProc.on('close', (code) => {
+        sendDone = true;
+        if (code !== 0 && !failed) {
+          failed = true;
+          try { sshProc.kill(); } catch {}
+          reject(new Error(`btrfs send exited ${code}: ${sendErr.slice(0, 400)}`));
+        } else {
+          checkDone();
+        }
+      });
+
+      sshProc.on('close', (code) => {
+        sshDone = true;
+        if (code !== 0 && !failed) {
+          failed = true;
+          try { sendProc.kill(); } catch {}
+          reject(new Error(`btrfs receive exited ${code}: ${sshErr.slice(0, 400)}`));
+        } else {
+          checkDone();
+        }
+      });
+
+      sendProc.on('error', (err) => { if (!failed) { failed = true; reject(err); } });
+      sshProc.on('error',  (err) => { if (!failed) { failed = true; reject(err); } });
+    });
+  }
+
+  /**
+   * Replicate a btrfs backup path using send/receive.
+   *
+   * srcPath:       absolute local path (e.g. /home/administrator/urbackup-storage)
+   * remoteDestPath: absolute path on target that mirrors srcPath
+   *                 (e.g. /opt/urbackup-replica/home/administrator/urbackup-storage)
+   *
+   * The client folders (e.g. .../Home/) are plain directories — NOT subvolumes.
+   * The backup directories inside them (e.g. .../Home/260310-0800) ARE subvolumes.
+   * We enumerate subvolumes, skip already-received ones, and send new ones
+   * with incremental parent chaining where available.
+   */
+  private async replicateBtrfsPath(
+    runId: string,
+    target: ReplicationTarget,
+    sshArgs: string[],
+    srcPath: string,
+    remoteDestPath: string,
+  ): Promise<void> {
+    const srcNorm    = srcPath.replace(/\/$/, '');
+    const remoteNorm = remoteDestPath.replace(/\/$/, '');
+
+    // Find btrfs mount point containing this path
+    const mountPoint = await this.getBtrfsMountPoint(srcNorm);
+    await this.appendLog(runId, `btrfs: mount point is ${mountPoint}`);
+
+    // List all subvolumes under srcPath, sorted by generation (send parents first)
+    const subvols = await this.listLocalSubvols(mountPoint, srcNorm);
+    await this.appendLog(runId, `btrfs: found ${subvols.length} subvolumes under ${srcNorm}`);
+
+    if (subvols.length === 0) {
+      await this.appendLog(runId, 'btrfs: no subvolumes found — falling back to rsync for this path');
+      // Fall back to rsync if no subvolumes found (maybe not btrfs after all)
+      const bwlimit = target.bandwidth_limit_mbps || 0;
+      const remotePath = `${target.ssh_user}@${target.host}:${remoteNorm}/`;
+      await this.rsyncPath(runId, target, sshArgs, `${srcNorm}/`, remotePath, [], bwlimit, false);
+      return;
+    }
+
+    // Build uuid → subvol map for parent lookup
+    const uuidToSubvol = new Map<string, BtrfsSubvol>();
+    for (const sv of subvols) uuidToSubvol.set(sv.uuid, sv);
+
+    // Ensure base remote dest dir exists
+    await this.sshExec(target, sshArgs, `mkdir -p "${remoteNorm}"`, 10000);
+
+    // List subvol names already received on remote
+    const remoteHave = await this.listRemoteSubvolNames(target, sshArgs, remoteNorm);
+    await this.appendLog(runId, `btrfs: remote already has ${remoteHave.size} subvolumes`);
+
+    // Track what's available on remote (existing + newly sent this run)
+    const available = new Set<string>(remoteHave);
+    let sentCount = 0;
+    let skipCount = 0;
+
+    for (const sv of subvols) {
+      if (available.has(sv.name)) {
+        skipCount++;
+        continue;
+      }
+
+      // Determine receive directory on remote (parent dir of where the subvol will land)
+      const svRelToSrc = sv.absPath.slice(srcNorm.length + 1); // e.g. "Home/260310-0800"
+      const remoteReceiveDir = path.dirname(`${remoteNorm}/${svRelToSrc}`); // e.g. ".../Home"
+
+      // Ensure receive dir exists
+      await this.sshExec(target, sshArgs, `mkdir -p "${remoteReceiveDir}"`, 10000);
+
+      // Find parent for incremental send: look up parentUuid in local map,
+      // then check if that parent's name has already been sent/available on remote
+      let parentAbsPath: string | null = null;
+      if (sv.parentUuid) {
+        const parentSv = uuidToSubvol.get(sv.parentUuid);
+        if (parentSv && available.has(parentSv.name)) {
+          parentAbsPath = parentSv.absPath;
+        }
+      }
+
+      const sendMode = parentAbsPath ? 'incremental' : 'full';
+      await this.updateStep(runId, `btrfs send (${sendMode}): ${sv.name}`);
+
+      try {
+        await this.btrfsSendSubvol(target, sshArgs, sv.absPath, remoteReceiveDir, parentAbsPath);
+        available.add(sv.name);
+        sentCount++;
+        await this.appendLog(runId, `  ✓ ${sv.name} (${sendMode})`);
+      } catch (err: any) {
+        await this.appendLog(runId, `  ✗ ${sv.name}: ${err.message}`);
+        // Non-fatal: continue with other subvolumes
+      }
+    }
+
+    await this.appendLog(
+      runId,
+      `btrfs: done — ${sentCount} sent, ${skipCount} already present, ${subvols.length - sentCount - skipCount} failed`
+    );
+  }
+
+  // ── SSH / rsync helpers ──────────────────────────────────────────────────
 
   private buildSshArgs(target: ReplicationTarget, keyFile: string | null, knownHostsFile: string | null): string[] {
     const args = ['-p', String(target.port), '-o', 'BatchMode=yes'];

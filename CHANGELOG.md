@@ -5,6 +5,22 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.74] - 2026-03-12
+
+### Added
+- **btrfs-aware replication**: Replication now correctly handles btrfs-based UrBackup storage
+  - Auto-detects whether backup storage is on btrfs at run time (`findmnt -o FSTYPE`)
+  - If btrfs detected: uses `btrfs send | ssh btrfs receive` instead of rsync, preserving all snapshot parent/child relationships and deduplication on the target
+  - Incremental sends: each subvolume's btrfs parent is tracked — if the parent is already on the target, an incremental send (`btrfs send -p`) is used instead of a full send
+  - Already-received subvolumes are skipped on subsequent runs (idempotent)
+  - Falls back gracefully: if no subvolumes found (e.g. empty dir), reverts to rsync for that path; individual subvolume failures are logged but don't abort the run
+  - Per-target **Storage Transfer Mode** selector in the target modal:
+    - **Auto-detect** (default): btrfs send/receive if source is btrfs, rsync otherwise
+    - **Force btrfs send/receive**: for when you know the storage is btrfs
+    - **Force rsync**: bypass detection and always use rsync
+  - `btrfs-progs` must be installed on both source and target servers when using btrfs mode
+  - Setup instructions updated to mention btrfs-progs requirement
+
 ## [3.2.73] - 2026-03-10
 
 ### Fixed

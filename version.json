@@ -1,7 +1,7 @@
 {
-  "version": "3.2.73",
-  "releaseDate": "2026-03-10",
+  "version": "3.2.74",
+  "releaseDate": "2026-03-12",
   "changelog": [
-    "Fix: Client image_ok status no longer shows OK when all image backups have been deleted"
+    "Feature: btrfs-aware replication — auto-detects btrfs storage and uses btrfs send/receive to preserve snapshot relationships and deduplication"
   ]
 }

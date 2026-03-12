@@ -37,6 +37,7 @@ export function ReplicationTargetModal({ target, onClose, onSaved }: Props) {
   const [standbyMode, setStandbyMode] = useState<'running_readonly' | 'stopped'>('stopped');
   const [stopCmd, setStopCmd] = useState('systemctl stop urbackupsrv');
   const [startCmd, setStartCmd] = useState('systemctl start urbackupsrv');
+  const [btrfsMode, setBtrfsMode] = useState<'auto' | 'btrfs_send' | 'rsync'>('auto');
 
   useEffect(() => {
     if (target) {
@@ -60,6 +61,7 @@ export function ReplicationTargetModal({ target, onClose, onSaved }: Props) {
       setStandbyMode(target.standby_service_mode);
       setStopCmd(target.service_stop_cmd || 'systemctl stop urbackupsrv');
       setStartCmd(target.service_start_cmd || 'systemctl start urbackupsrv');
+      setBtrfsMode(target.btrfs_mode || 'auto');
     }
   }, [target]);
 
@@ -91,6 +93,7 @@ export function ReplicationTargetModal({ target, onClose, onSaved }: Props) {
         standby_service_mode: standbyMode,
         service_stop_cmd: stopCmd,
         service_start_cmd: startCmd,
+        btrfs_mode: btrfsMode,
       };
 
       // Only include secret fields if changed
@@ -273,6 +276,20 @@ export function ReplicationTargetModal({ target, onClose, onSaved }: Props) {
                   <option value="running_readonly">Keep running (read-only)</option>
                 </select>
               </div>
+            </div>
+            <div className="mt-3">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Storage Transfer Mode</label>
+              <select value={btrfsMode} onChange={e => setBtrfsMode(e.target.value as any)} className="input w-full">
+                <option value="auto">Auto-detect (use btrfs send/receive if source is btrfs, otherwise rsync)</option>
+                <option value="btrfs_send">Force btrfs send/receive</option>
+                <option value="rsync">Force rsync</option>
+              </select>
+              {btrfsMode !== 'rsync' && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  btrfs send/receive preserves snapshot relationships and deduplication — target storage must also be btrfs.
+                  Requires <code className="font-mono">btrfs-progs</code> on both servers.
+                </p>
+              )}
             </div>
             <div className="mt-3 flex gap-6">
               <label className="flex items-center gap-2 cursor-pointer">

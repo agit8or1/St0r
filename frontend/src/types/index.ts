@@ -226,6 +226,7 @@ export interface ReplicationTarget {
   standby_service_mode: 'running_readonly' | 'stopped';
   service_stop_cmd: string;
   service_start_cmd: string;
+  btrfs_mode: 'auto' | 'btrfs_send' | 'rsync';
   created_at: string;
   updated_at: string;
 }

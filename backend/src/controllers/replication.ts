@@ -123,6 +123,7 @@ export async function createTarget(req: AuthRequest, res: Response): Promise<voi
       verify_after_sync = false, checksum_verify = false,
       bandwidth_limit_mbps = 0, exclude_patterns,
       standby_service_mode = 'stopped', service_stop_cmd, service_start_cmd,
+      btrfs_mode = 'auto',
     } = req.body;
 
     if (!host) {
@@ -140,8 +141,8 @@ export async function createTarget(req: AuthRequest, res: Response): Promise<voi
         ssh_private_key_encrypted, ssh_password_encrypted, ssh_known_host_fingerprint,
         target_root_path, target_repo_paths_map, target_db_type, target_db_dsn_encrypted,
         verify_after_sync, checksum_verify, bandwidth_limit_mbps, exclude_patterns,
-        standby_service_mode, service_stop_cmd, service_start_cmd)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        standby_service_mode, service_stop_cmd, service_start_cmd, btrfs_mode)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id, name || `Target ${id.slice(0, 8)}`, enabled ? 1 : 0, mode,
         host, port, ssh_user, auth_type,
@@ -155,6 +156,7 @@ export async function createTarget(req: AuthRequest, res: Response): Promise<voi
         standby_service_mode,
         service_stop_cmd || 'systemctl stop urbackupsrv',
         service_start_cmd || 'systemctl start urbackupsrv',
+        btrfs_mode,
       ]
     );
 
@@ -208,6 +210,7 @@ export async function updateTarget(req: AuthRequest, res: Response): Promise<voi
     if (body.standby_service_mode !== undefined) addField('standby_service_mode', body.standby_service_mode);
     if (body.service_stop_cmd !== undefined) addField('service_stop_cmd', body.service_stop_cmd);
     if (body.service_start_cmd !== undefined) addField('service_start_cmd', body.service_start_cmd);
+    if (body.btrfs_mode !== undefined) addField('btrfs_mode', body.btrfs_mode);
 
     // Encrypted fields: only update if new plaintext provided
     if (body.ssh_private_key && body.ssh_private_key !== REDACTED) {
@@ -465,9 +468,12 @@ export async function getSetupInstructions(_req: AuthRequest, res: Response): Pr
         ],
       },
       {
-        title: 'Install rsync on Target',
-        description: 'Ensure rsync is installed on the target server.',
-        commands: ['apt-get install rsync'],
+        title: 'Install rsync and/or btrfs-progs on Target',
+        description: 'Install rsync for standard replication. If your backup storage is on btrfs, install btrfs-progs on both servers and format the target storage as btrfs to use space-efficient send/receive.',
+        commands: [
+          'apt-get install rsync',
+          'apt-get install btrfs-progs  # only needed for btrfs send/receive mode',
+        ],
       },
       {
         title: 'Configure Replication Target',
