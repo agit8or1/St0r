@@ -1,6 +1,6 @@
 {
   "version": "3.2.75",
-  "releaseDate": "2026-03-12",
+  "releaseDate": "2026-03-14",
   "changelog": [
     "Feature: btrfs-aware replication — auto-detects btrfs storage and uses btrfs send/receive to preserve snapshot relationships and deduplication"
   ]
