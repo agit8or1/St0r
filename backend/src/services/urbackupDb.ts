@@ -317,12 +317,12 @@ export class UrBackupDbService {
           // Check how long the backup has been running
           const runningTime = Date.now() / 1000 - activity.backuptime;
           if (runningTime > 120) {  // If running more than 2 minutes
-            action = `${activity.incremental === 1 ? 'Incremental' : 'Full'} ${activity.backup_type} backup in progress`;
+            action = `${activity.incremental !== 0 ? 'Incremental' : 'Full'} ${activity.backup_type} backup in progress`;
           } else {
             action = 'Indexing files';
           }
         } else {
-          action = `${activity.incremental === 1 ? 'Incremental' : 'Full'} ${activity.backup_type} backup`;
+          action = `${activity.incremental !== 0 ? 'Incremental' : 'Full'} ${activity.backup_type} backup`;
         }
 
         return {
@@ -332,7 +332,7 @@ export class UrBackupDbService {
           name: activity.client_name,
           client: activity.client_name,
           backuptime: activity.backuptime * 1000,
-          incremental: activity.incremental === 1,
+          incremental: activity.incremental !== 0,
           type: activity.backup_type,
           path: activity.path,
           size_bytes: activity.size_bytes,
@@ -478,7 +478,7 @@ export class UrBackupDbService {
         clientName: activity.client_name,
         customerName: customerMap.get(activity.client_name) || null,
         backuptime: activity.backuptime * 1000,
-        incremental: activity.incremental === 1,
+        incremental: activity.incremental !== 0,
         complete: activity.complete === 1,
         type: activity.backup_type,
         size_bytes: activity.size_bytes,

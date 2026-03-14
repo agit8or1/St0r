@@ -5,6 +5,11 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.75] - 2026-03-14
+
+### Fixed
+- **Backup history showing all backups as "Full"**: UrBackup's `incremental` column is not a 0/1 flag — it uses 0 for full and 1, 2, 3... (incrementing counter) for incrementals. The Activities/backup-history query used `=== 1` (only matched level 1) instead of `!== 0` (matches any incremental level). Only the very first incremental after a full was correctly labelled; all subsequent ones appeared as "Full".
+
 ## [3.2.74] - 2026-03-12
 
 ### Added
