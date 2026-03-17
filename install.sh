@@ -5,8 +5,8 @@
 set -e
 
 # Version
-INSTALLER_VERSION="3.2.23"
-INSTALLER_DATE="2026-03-04"
+INSTALLER_VERSION="3.2.75"
+INSTALLER_DATE="2026-03-17"
 
 echo "============================================"
 echo "St0r Universal Installer"
@@ -479,7 +479,11 @@ SQLEOF
     chmod +x $INSTALL_DIR/auto-update.sh
 
     # Create systemd service for backend
-    cp $INSTALL_DIR/setup/urbackup-gui.service /etc/systemd/system/
+    # Substitute the actual runtime user and node path into the service file
+    NODE_BIN=$(command -v node || echo /usr/bin/node)
+    sed -e "s|User=administrator|User=${ACTUAL_USER}|g" \
+        -e "s|ExecStart=/usr/bin/node|ExecStart=${NODE_BIN}|g" \
+        $INSTALL_DIR/setup/urbackup-gui.service > /etc/systemd/system/urbackup-gui.service
     systemctl daemon-reload
 
     # Create .env file if it doesn't exist
