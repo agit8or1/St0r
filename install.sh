@@ -434,12 +434,15 @@ SQLEOF
     echo "[7/9] Installing backend dependencies..."
     cd $INSTALL_DIR/backend
     rm -rf node_modules
-    sudo -u $ACTUAL_USER npm install --omit=dev --silent
-
     if [ "$IS_SOURCE_INSTALL" = true ]; then
+        # Need devDependencies (typescript/tsc) to build from source
+        sudo -u $ACTUAL_USER npm install --silent
         echo "  Building backend from source..."
         sudo -u $ACTUAL_USER npm run build
+        # Remove dev deps from production install
+        sudo -u $ACTUAL_USER npm prune --omit=dev --silent
     else
+        sudo -u $ACTUAL_USER npm install --omit=dev --silent
         echo "  ✓ Using pre-built backend files"
     fi
 
@@ -450,6 +453,7 @@ SQLEOF
         rm -rf node_modules
         sudo -u $ACTUAL_USER npm install --silent
         sudo -u $ACTUAL_USER npm run build
+        sudo -u $ACTUAL_USER npm prune --omit=dev --silent
     else
         echo "[8/9] Frontend setup..."
         echo "  ✓ Using pre-built frontend files"
