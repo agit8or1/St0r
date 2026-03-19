@@ -75,7 +75,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     res.cookie('auth_token', token, {
       httpOnly: true,
       sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.COOKIE_SECURE === 'true',
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
 
