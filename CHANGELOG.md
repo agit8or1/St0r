@@ -5,6 +5,11 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.76] - 2026-03-21
+
+### Fixed
+- **Fresh install missing replication tables**: The installer only ran `database/init/01_schema.sql` on new installs, skipping all migrations. Any feature added via a migration (replication, managed mode tables) was absent, causing 500 errors (`Table 'urbackup_gui.replication_settings' doesn't exist`) that broke the endpoints page and other views. The installer now also runs all migration files on fresh installs.
+
 ## [3.2.75] - 2026-03-14
 
 ### Fixed

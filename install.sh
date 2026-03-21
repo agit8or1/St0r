@@ -5,8 +5,8 @@
 set -e
 
 # Version
-INSTALLER_VERSION="3.2.75"
-INSTALLER_DATE="2026-03-17"
+INSTALLER_VERSION="3.2.76"
+INSTALLER_DATE="2026-03-21"
 
 echo "============================================"
 echo "St0r Universal Installer"
@@ -418,6 +418,11 @@ SQLEOF
         # Run database schema
         echo "[6/9] Setting up database schema..."
         mysql -u root urbackup_gui < $INSTALL_DIR/database/init/01_schema.sql
+        # Also run all migrations on fresh install (adds replication, managed mode, etc.)
+        for mig in $INSTALL_DIR/database/migrations/*.sql; do
+            echo "  Applying migration: $(basename $mig)..."
+            mysql -u root urbackup_gui < "$mig" 2>/dev/null || true
+        done
 
         # Store generated password for .env creation below
         GENERATED_DB_PASS="$DB_PASS"
