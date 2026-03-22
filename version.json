@@ -1,7 +1,8 @@
 {
-  "version": "3.2.81",
+  "version": "3.2.82",
   "releaseDate": "2026-03-22",
   "changelog": [
-    "Security: comprehensive audit — all 24 vulnerabilities remediated"
+    "Fix: server outage caused by CORS blocking production domain",
+    "Fix: update-log route missing after security refactor"
   ]
 }

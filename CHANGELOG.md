@@ -5,6 +5,12 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.82] - 2026-03-22
+
+### Fixed
+- **Server outage: CORS blocked production domain**: The CORS allowlist added in v3.2.80 only included localhost variants. The production domain `https://stor.agit8or.net` was not included, causing 500 errors on every browser request. Reverted CORS to `origin: true` (reflect origin) with `credentials: true` — appropriate for a self-hosted internal tool where the auth layer is the actual security boundary.
+- **Update-log route dropped**: `GET /api/system-update/update-log` was accidentally omitted when refactoring `system.ts` to use `router.use(authenticate)` at the top. The floating update window and About page update polling both returned 404. Route re-added.
+
 ## [3.2.81] - 2026-03-22
 
 ### Security
