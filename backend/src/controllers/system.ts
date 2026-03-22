@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
-import { existsSync } from 'fs';
+import { existsSync, truncateSync } from 'fs';
 import { readFile } from 'fs/promises';
 
 // --- /proc-based metrics helpers ---
@@ -174,6 +174,15 @@ export async function triggerUpdate(req: Request, res: Response) {
       await execFileAsync('sudo', ['systemctl', 'reset-failed', 'urbackup-gui-update.service']);
     } catch (_e) {
       // Ignore errors - unit may not exist
+    }
+
+    // Clear the log NOW (synchronously) so the first poll from the frontend
+    // never reads stale "SUCCESS" output from a previous run and false-completes.
+    const updateLogPath = '/var/log/urbackup-gui-update.log';
+    try {
+      truncateSync(updateLogPath, 0);
+    } catch (_e) {
+      // Log may not exist yet on first run — ignore
     }
 
     // Run the script as root in the background via systemd-run.

@@ -177,10 +177,16 @@ export function Activities() {
   const matchesClient = (name: string) =>
     selectedClient === 'all' || name === selectedClient;
 
+  const todayMidnightMs = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  })();
+
   const matchesDate = (ms: number): boolean => {
     if (dateRange === 'all') return true;
+    if (dateRange === 'today') return ms >= todayMidnightMs;
     const diffDays = (Date.now() - ms) / 86400000;
-    if (dateRange === 'today') return diffDays < 1;
     if (dateRange === 'week') return diffDays <= 7;
     if (dateRange === 'month') return diffDays <= 30;
     return true;
@@ -208,13 +214,13 @@ export function Activities() {
     return true;
   });
 
-  // Stats
+  // Stats — always use calendar-day (since midnight) regardless of active date filter
   const totalStorage = clients.reduce((s, c) => s + (c.bytes_used_files || 0) + (c.bytes_used_images || 0), 0);
   const errorsToday = lastActivities.filter(a => {
     const d = a as any;
-    return (d.errors || 0) > 0 && matchesDate(d.backuptime || 0);
+    return (d.errors || 0) > 0 && (a as any).backuptime >= todayMidnightMs;
   }).length;
-  const completedToday = lastActivities.filter(a => matchesDate((a as any).backuptime || 0)).length;
+  const completedToday = lastActivities.filter(a => (a as any).backuptime >= todayMidnightMs).length;
 
   if (loading) return <Layout><Loading /></Layout>;
 

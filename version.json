@@ -1,7 +1,8 @@
 {
-  "version": "3.2.77",
+  "version": "3.2.78",
   "releaseDate": "2026-03-22",
   "changelog": [
-    "Fix: backup storage path now read from UrBackup settings DB instead of hardcoded /home/administrator/urbackup-storage — storage dashboard now works on any install regardless of username"
+    "Fix: Activities 'Completed Today' now counts since midnight instead of last 24 hours",
+    "Fix: auto-update no longer false-completes instantly due to stale SUCCESS in previous run log"
   ]
 }

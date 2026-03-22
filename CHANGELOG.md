@@ -5,6 +5,12 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.78] - 2026-03-22
+
+### Fixed
+- **"Completed Today" showing last 24h instead of current day**: The date filter for "today" used `diffDays < 1` (rolling 24-hour window) instead of comparing against midnight. Now uses `ms >= todayMidnight` so the count resets at 00:00 like you'd expect. The "Errors Today" stat tile uses the same fix. The "Today" tab filter for the history table is also corrected.
+- **Auto-update false-completes instantly**: The update-log endpoint kept the log from the previous run on disk. When a new update was triggered, the first poll (within ~1s) read the stale log which already contained "SUCCESS", causing the frontend to show "Update complete!" and reload before anything had actually run. Fixed by: (1) the backend now truncates the log file synchronously before firing the update script, and (2) the frontend now requires seeing `inProgress=true` at least once before acting on a SUCCESS/FAILED state (using a `useRef` to avoid stale closures).
+
 ## [3.2.77] - 2026-03-22
 
 ### Fixed

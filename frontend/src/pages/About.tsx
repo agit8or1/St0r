@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Logo } from '../components/Logo';
@@ -42,6 +42,10 @@ export function About() {
   const [confirmingUpdate, setConfirmingUpdate] = useState(false);
   const [confirmingReinstall, setConfirmingReinstall] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  // Guard: only act on SUCCESS after we've seen inProgress=true at least once.
+  // Prevents stale SUCCESS from a previous run's log from false-completing immediately.
+  // Must be a ref (not state) so the setInterval closure always reads the current value.
+  const hasSeenInProgressRef = useRef(false);
 
   const [currentVersion, setCurrentVersion] = useState('Loading...');
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -103,6 +107,10 @@ export function About() {
         setUpdateLog(log);
         setUpdateInProgress(data.inProgress);
 
+        if (data.inProgress) {
+          hasSeenInProgressRef.current = true;
+        }
+
         // Calculate progress based on log content
         const steps = [
           { text: 'Creating backup', progress: 10 },
@@ -123,8 +131,9 @@ export function About() {
           }
         }
 
-        // If update is complete, wait a bit then reload
-        if (log.includes('SUCCESS') || log.includes('Update completed successfully')) {
+        // Only act on SUCCESS after we've seen the update actually running (inProgress=true).
+        // This prevents stale SUCCESS from a previous run's log from false-completing.
+        if ((log.includes('SUCCESS') || log.includes('Update completed successfully')) && hasSeenInProgressRef.current) {
           setUpdateProgress(100);
           setUpdateStep('Update complete!');
           setUpdateInProgress(false);
@@ -136,7 +145,7 @@ export function About() {
         }
 
         // If update failed, stop polling and surface the error
-        if (!data.inProgress && log.includes('FAILED')) {
+        if (!data.inProgress && log.includes('FAILED') && hasSeenInProgressRef.current) {
           setUpdateInProgress(false);
           setUpdateStep('Update failed');
           clearInterval(pollInterval);
@@ -211,6 +220,7 @@ export function About() {
     setShowProgressModal(true);
     setUpdateInProgress(true);
     setReconnecting(false);
+    hasSeenInProgressRef.current = false; // Reset for this new run
     setUpdateLog(force ? 'Starting reinstall (repair mode)...\n' : 'Starting update...\n');
 
     try {

@@ -5,7 +5,7 @@
 set -e
 
 # Version
-INSTALLER_VERSION="3.2.77"
+INSTALLER_VERSION="3.2.78"
 INSTALLER_DATE="2026-03-22"
 
 echo "============================================"
