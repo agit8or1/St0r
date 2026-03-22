@@ -1,8 +1,9 @@
 {
-  "version": "3.2.78",
+  "version": "3.2.79",
   "releaseDate": "2026-03-22",
   "changelog": [
     "Fix: Activities 'Completed Today' now counts since midnight instead of last 24 hours",
-    "Fix: auto-update no longer false-completes instantly due to stale SUCCESS in previous run log"
+    "Fix: auto-update no longer false-completes instantly due to stale SUCCESS in previous run log",
+    "Fix: endpoints not visible when UrBackup stores delete_pending as NULL instead of 0"
   ]
 }

@@ -5,6 +5,11 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.79] - 2026-03-22
+
+### Fixed
+- **Endpoints page empty on some installs**: UrBackup may store `delete_pending` as `NULL` rather than `0` for active clients (observed on root installs). All SQL queries used `WHERE delete_pending = 0` which, per SQLite semantics, excludes `NULL` rows. Changed to `(delete_pending = 0 OR delete_pending IS NULL)` across all 10 affected queries. Clients that were visible in UrBackup's own UI but invisible in St0r's Endpoints page will now appear correctly.
+
 ## [3.2.78] - 2026-03-22
 
 ### Fixed

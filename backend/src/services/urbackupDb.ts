@@ -44,7 +44,7 @@ export class UrBackupDbService {
           (SELECT COUNT(*) FROM backups WHERE clientid = c.id AND running IS NOT NULL AND complete = 0) as file_backup_running,
           (SELECT COUNT(*) FROM backup_images WHERE clientid = c.id AND running IS NOT NULL AND complete = 0) as image_backup_running
         FROM clients c
-        WHERE c.delete_pending = 0
+        WHERE (c.delete_pending = 0 OR c.delete_pending IS NULL)
         ORDER BY c.name
       `);
 
@@ -79,7 +79,7 @@ export class UrBackupDbService {
           c.uid,
           c.created
         FROM clients c
-        WHERE c.id = ? AND c.delete_pending = 0
+        WHERE c.id = ? AND (c.delete_pending = 0 OR c.delete_pending IS NULL)
       `, clientId);
 
       return client ? this.formatClient(client) : null;
@@ -98,7 +98,7 @@ export class UrBackupDbService {
       const tenMinutesAgo = Math.floor(Date.now() / 1000) - 600;
       const clients = await db.all(`
         SELECT * FROM clients
-        WHERE delete_pending = 0 AND lastseen > ?
+        WHERE (delete_pending = 0 OR delete_pending IS NULL) AND lastseen > ?
         ORDER BY name
       `, tenMinutesAgo);
 
@@ -118,7 +118,7 @@ export class UrBackupDbService {
       const tenMinutesAgo = Math.floor(Date.now() / 1000) - 600;
       const clients = await db.all(`
         SELECT * FROM clients
-        WHERE delete_pending = 0 AND (lastseen IS NULL OR lastseen <= ?)
+        WHERE (delete_pending = 0 OR delete_pending IS NULL) AND (lastseen IS NULL OR lastseen <= ?)
         ORDER BY name
       `, tenMinutesAgo);
 
@@ -137,7 +137,7 @@ export class UrBackupDbService {
       const db = await getUrBackupDb();
       const clients = await db.all(`
         SELECT * FROM clients
-        WHERE delete_pending = 0 AND (file_ok = 0 OR image_ok = 0)
+        WHERE (delete_pending = 0 OR delete_pending IS NULL) AND (file_ok = 0 OR image_ok = 0)
         ORDER BY name
       `);
 
@@ -156,7 +156,7 @@ export class UrBackupDbService {
       const db = await getUrBackupDb();
       const clients = await db.all(`
         SELECT * FROM clients
-        WHERE delete_pending = 0 AND file_ok = 1 AND image_ok = 1
+        WHERE (delete_pending = 0 OR delete_pending IS NULL) AND file_ok = 1 AND image_ok = 1
         ORDER BY name
       `);
 
@@ -531,9 +531,9 @@ export class UrBackupDbService {
 
       const stats = await db.get(`
         SELECT
-          (SELECT COUNT(*) FROM clients WHERE delete_pending = 0) as total_clients,
-          (SELECT COUNT(*) FROM clients WHERE delete_pending = 0 AND lastseen > ?) as online_clients,
-          (SELECT COUNT(*) FROM clients WHERE delete_pending = 0 AND (file_ok = 0 OR image_ok = 0)) as failed_clients,
+          (SELECT COUNT(*) FROM clients WHERE (delete_pending = 0 OR delete_pending IS NULL)) as total_clients,
+          (SELECT COUNT(*) FROM clients WHERE (delete_pending = 0 OR delete_pending IS NULL) AND lastseen > ?) as online_clients,
+          (SELECT COUNT(*) FROM clients WHERE (delete_pending = 0 OR delete_pending IS NULL) AND (file_ok = 0 OR image_ok = 0)) as failed_clients,
           (SELECT COUNT(*) FROM backups WHERE running IS NOT NULL AND complete = 0) as running_file_backups,
           (SELECT COUNT(*) FROM backup_images WHERE running IS NOT NULL AND complete = 0) as running_image_backups,
           (SELECT COALESCE(SUM(size_bytes), 0) FROM backups WHERE delete_pending = 0 OR delete_pending IS NULL) as total_file_bytes,
@@ -899,7 +899,7 @@ export class UrBackupDbService {
           COALESCE((SELECT SUM(size_bytes) FROM backups WHERE clientid = c.id AND (delete_pending = 0 OR delete_pending IS NULL)), 0) AS file_bytes,
           COALESCE((SELECT SUM(size_bytes) FROM backup_images WHERE clientid = c.id AND (delete_pending = 0 OR delete_pending IS NULL)), 0) AS image_bytes
         FROM clients c
-        WHERE c.delete_pending = 0
+        WHERE (c.delete_pending = 0 OR c.delete_pending IS NULL)
       `) as { client_name: string; file_bytes: number; image_bytes: number }[];
 
       const clientMap = new Map<string, { file_bytes: number; image_bytes: number }>();
