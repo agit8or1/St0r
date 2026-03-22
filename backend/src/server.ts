@@ -45,8 +45,11 @@ app.use(cors({
   origin: (origin, cb) => {
     // Allow same-origin requests (no Origin header = curl/server-to-server/same-origin)
     if (!origin) return cb(null, true);
+    const fqdn = process.env.URBACKUP_SERVER_FQDN;
     const allowed = [
       process.env.FRONTEND_URL,
+      fqdn ? `https://${fqdn}` : null,
+      fqdn ? `http://${fqdn}` : null,
       'http://localhost:5173',
       'http://127.0.0.1:5173',
       'http://localhost:3000',
