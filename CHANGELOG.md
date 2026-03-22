@@ -5,6 +5,26 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.80] - 2026-03-22
+
+### Security
+- **[Critical] SSH command injection**: `service_stop_cmd` / `service_start_cmd` on replication targets were embedded in SSH remote commands without validation. Now validated against an allowlist (`systemctl stop|start|restart|reload <unit>` or `service <unit> stop|start|restart`) before execution.
+- **[Critical] `.env` file injection**: Admin-supplied settings values could contain newlines, injecting arbitrary keys (e.g. `JWT_SECRET`) into the `.env` file. Values are now stripped of `\r\n` before writing.
+- **[Critical] SQLite `.backup` command injection**: Replication sqlite_path was user-controlled and embedded in a SQLite dot-command. Now validated to `[a-zA-Z0-9/_. -]+` and passed via `-cmd` flag instead of shell-interpolated argument.
+- **[High] Path traversal in file browser**: `getFilesInBackup` had no containment check on the user-supplied `path` query parameter — `../../etc` would traverse outside the backup directory. Added the same `startsWith(backupBasePath)` guard that `downloadFile` had.
+- **[High] Authorization bypass on user/customer/storage routes**: `POST /api/users`, `PUT /api/users/:id`, `DELETE /api/users/:id`, all customer mutation routes, and storage limit mutations only required `authenticate`, not admin. Any authenticated user could create admins, delete accounts, or modify customer records. Added `requireAdmin` to all mutating routes.
+- **[High] JWT token in response body**: Login response returned `token` in JSON body in addition to setting it as an HttpOnly cookie, defeating XSS protection. Removed from response body.
+- **[High] Insecure backup code generation**: 2FA backup codes used `Math.random()` (not cryptographically secure). Now uses `crypto.randomBytes(5).toString('hex')`.
+- **[Medium] HTML injection in bug report emails**: User-supplied fields were interpolated into the HTML email template unescaped. All fields now passed through an HTML-escaping function.
+- **[Medium] Unbounded replication query limit**: `getRuns` accepted arbitrary `limit` values. Now capped at 500, minimum 1, non-numeric values default to 50.
+- **[Medium] Synchronous file copy blocks event loop**: `fs.copyFileSync` on multi-GB VHD files blocked all requests during copy. Changed to `fs.promises.copyFile`.
+- **[Medium] Recursive `pump()` without await**: `clientInstaller.ts` called `pump()` without `await`, building an unbounded call stack on large files. Added `await`.
+- **[Medium] Inactive users returned by getAllUsers**: `getAllUsers()` returned all rows including `is_active = FALSE`. Added `WHERE is_active = TRUE`.
+- **[Medium] Content-Disposition filename injection**: Download filename used `filename="..."` which breaks on filenames containing `"`. Changed to RFC 5987 `filename*=UTF-8''...` encoding.
+- **[Low] StrictHostKeyChecking=no**: SSH connections without a known-hosts fingerprint used `no`, which accepts any host key (MITM risk). Changed to `accept-new` (trust on first connect, reject changes).
+- **[Low] Self-deletion / last-admin deletion**: Admins could delete their own account or the last admin account, locking everyone out. `removeUser` now rejects both cases.
+- **[Low] Weak JWT secret warning**: Added startup warning if `JWT_SECRET` is unset or equals the insecure default value.
+
 ## [3.2.79] - 2026-03-22
 
 ### Fixed

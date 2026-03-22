@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 import { pool } from '../config/database.js';
 import { createRequire } from 'module';
+import { randomBytes } from 'crypto';
 
 const require = createRequire(import.meta.url);
 const speakeasy = require('speakeasy');
@@ -115,10 +116,10 @@ export async function verify2FA(req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    // Generate backup codes
+    // Generate cryptographically secure backup codes
     const backupCodes: string[] = [];
     for (let i = 0; i < 8; i++) {
-      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const code = randomBytes(5).toString('hex').toUpperCase();
       backupCodes.push(code);
     }
 

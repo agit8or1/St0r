@@ -110,15 +110,17 @@ async function updateEnvFile(updates: Record<string, string>): Promise<void> {
   let newContent = content;
 
   for (const [key, value] of Object.entries(updates)) {
+    // Strip newlines to prevent .env injection (a value with \n could inject new KEY=val lines)
+    const safeValue = String(value).replace(/[\r\n]/g, '');
     // Escape key so it is safe to embed in a RegExp
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`^${escapedKey}=.*$`, 'm');
     if (regex.test(newContent)) {
       // Use a function replacer so special $ sequences in value are treated literally
-      newContent = newContent.replace(regex, () => `${key}=${value}`);
+      newContent = newContent.replace(regex, () => `${key}=${safeValue}`);
     } else {
       // Add new key if it doesn't exist
-      newContent += `\n${key}=${value}`;
+      newContent += `\n${key}=${safeValue}`;
     }
   }
 

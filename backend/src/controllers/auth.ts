@@ -80,7 +80,6 @@ export async function login(req: Request, res: Response): Promise<void> {
     });
 
     res.json({
-      token,
       user: {
         id: user.id,
         username: user.username,

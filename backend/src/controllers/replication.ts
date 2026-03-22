@@ -337,7 +337,11 @@ export async function getStatus(req: AuthRequest, res: Response): Promise<void> 
 
 export async function getRuns(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { target_id, limit = 50, offset = 0 } = req.query;
+    const { target_id } = req.query;
+    const rawLimit = parseInt(String(req.query.limit || '50'), 10);
+    const rawOffset = parseInt(String(req.query.offset || '0'), 10);
+    const safeLimit = Math.min(Math.max(1, isNaN(rawLimit) ? 50 : rawLimit), 500);
+    const safeOffset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
     let sql = 'SELECT * FROM replication_runs';
     const params: any[] = [];
 
@@ -347,7 +351,7 @@ export async function getRuns(req: AuthRequest, res: Response): Promise<void> {
     }
 
     sql += ' ORDER BY started_at DESC LIMIT ? OFFSET ?';
-    params.push(Number(limit), Number(offset));
+    params.push(safeLimit, safeOffset);
 
     const rows = await query<any[]>(sql, params);
     res.json(rows);

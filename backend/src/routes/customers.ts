@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../config/database.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
@@ -47,8 +47,8 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 });
 
-// Create customer
-router.post('/', authenticate, async (req, res) => {
+// Create customer (admin only)
+router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const { name, email, phone, company, address, notes } = req.body;
 
@@ -79,8 +79,8 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-// Update customer
-router.put('/:id', authenticate, async (req, res) => {
+// Update customer (admin only)
+router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { name, email, phone, company, address, notes, is_active } = req.body;
 
@@ -104,8 +104,8 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 });
 
-// Delete customer (soft delete)
-router.delete('/:id', authenticate, async (req, res) => {
+// Delete customer (soft delete, admin only)
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const [result] = await pool.query(
       'UPDATE customers SET is_active = 0 WHERE id = ?',
@@ -142,8 +142,8 @@ router.get('/:id/clients', authenticate, async (req, res) => {
   }
 });
 
-// Add client to customer
-router.post('/:id/clients', authenticate, async (req, res) => {
+// Add client to customer (admin only)
+router.post('/:id/clients', authenticate, requireAdmin, async (req, res) => {
   try {
     const { server_id, client_name, client_id, notes } = req.body;
 
@@ -174,8 +174,8 @@ router.post('/:id/clients', authenticate, async (req, res) => {
   }
 });
 
-// Remove client from customer
-router.delete('/:customerId/clients/:clientId', authenticate, async (req, res) => {
+// Remove client from customer (admin only)
+router.delete('/:customerId/clients/:clientId', authenticate, requireAdmin, async (req, res) => {
   try {
     const [result] = await pool.query(
       'DELETE FROM customer_clients WHERE customer_id = ? AND id = ?',

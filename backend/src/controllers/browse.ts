@@ -99,11 +99,18 @@ export async function getFilesInBackup(req: Request, res: Response): Promise<voi
     }
 
     // Construct full path: /backupfolder/clientname/backuppath/requestedpath
-    let fullPath = pathModule.join(backupFolder, client.name, backup.path);
+    const backupBasePath = pathModule.normalize(pathModule.join(backupFolder, client.name, backup.path));
+    let fullPath = backupBasePath;
 
     // If a subdirectory is requested, append it
     if (backupPath !== '/') {
-      fullPath = pathModule.join(fullPath, backupPath);
+      fullPath = pathModule.normalize(pathModule.join(backupBasePath, backupPath));
+    }
+
+    // Security check: ensure the path stays within the backup directory
+    if (!fullPath.startsWith(backupBasePath)) {
+      res.status(403).json({ error: 'Invalid path' });
+      return;
     }
 
     try {
@@ -237,7 +244,7 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
 
     // Send file
     const fileName = pathModule.basename(fullPath);
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`);
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', stats.size);
 

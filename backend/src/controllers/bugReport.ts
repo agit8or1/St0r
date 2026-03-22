@@ -33,6 +33,9 @@ interface BugReport {
   username?: string;
 }
 
+const esc = (s: string | undefined): string =>
+  (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
 export async function submitBugReport(req: Request, res: Response) {
   try {
     const user = (req as any).user;
@@ -56,10 +59,10 @@ export async function submitBugReport(req: Request, res: Response) {
         </h2>
 
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #1f2937;">${bugReport.title}</h3>
+          <h3 style="margin-top: 0; color: #1f2937;">${esc(bugReport.title)}</h3>
           <p style="color: #4b5563; margin: 5px 0;">
-            <strong>Submitted by:</strong> ${user?.username || 'Unknown'}
-            ${bugReport.userEmail ? `(${bugReport.userEmail})` : ''}
+            <strong>Submitted by:</strong> ${esc(user?.username || 'Unknown')}
+            ${bugReport.userEmail ? `(${esc(bugReport.userEmail)})` : ''}
           </p>
           <p style="color: #4b5563; margin: 5px 0;">
             <strong>Date:</strong> ${new Date().toLocaleString()}
@@ -70,7 +73,7 @@ export async function submitBugReport(req: Request, res: Response) {
           <h4 style="color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">
             Description
           </h4>
-          <p style="color: #4b5563; white-space: pre-wrap;">${bugReport.description}</p>
+          <p style="color: #4b5563; white-space: pre-wrap;">${esc(bugReport.description)}</p>
         </div>
 
         ${bugReport.stepsToReproduce ? `
@@ -78,7 +81,7 @@ export async function submitBugReport(req: Request, res: Response) {
           <h4 style="color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">
             Steps to Reproduce
           </h4>
-          <p style="color: #4b5563; white-space: pre-wrap;">${bugReport.stepsToReproduce}</p>
+          <p style="color: #4b5563; white-space: pre-wrap;">${esc(bugReport.stepsToReproduce)}</p>
         </div>
         ` : ''}
 
@@ -87,7 +90,7 @@ export async function submitBugReport(req: Request, res: Response) {
           <h4 style="color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">
             Expected Behavior
           </h4>
-          <p style="color: #4b5563; white-space: pre-wrap;">${bugReport.expectedBehavior}</p>
+          <p style="color: #4b5563; white-space: pre-wrap;">${esc(bugReport.expectedBehavior)}</p>
         </div>
         ` : ''}
 
@@ -96,7 +99,7 @@ export async function submitBugReport(req: Request, res: Response) {
           <h4 style="color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">
             Actual Behavior
           </h4>
-          <p style="color: #4b5563; white-space: pre-wrap;">${bugReport.actualBehavior}</p>
+          <p style="color: #4b5563; white-space: pre-wrap;">${esc(bugReport.actualBehavior)}</p>
         </div>
         ` : ''}
 
@@ -105,7 +108,7 @@ export async function submitBugReport(req: Request, res: Response) {
           <h4 style="color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">
             Browser Information
           </h4>
-          <p style="color: #4b5563; font-family: monospace; font-size: 12px;">${bugReport.browserInfo}</p>
+          <p style="color: #4b5563; font-family: monospace; font-size: 12px;">${esc(bugReport.browserInfo)}</p>
         </div>
         ` : ''}
 

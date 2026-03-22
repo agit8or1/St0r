@@ -199,17 +199,27 @@ class ReplicationEngine {
       // Stop standby service if configured
       if (target.standby_service_mode === 'stopped' && target.service_stop_cmd) {
         await this.updateStep(runId, 'stopping standby service');
-        await this.sshExec(target, sshArgs, target.service_stop_cmd, 30000);
+        // Validate: only allow systemctl start/stop/restart <unit> or service <unit> start/stop
+        const stopCmd = target.service_stop_cmd.trim();
+        if (!/^(systemctl\s+(stop|start|restart|reload)\s+[\w@.:-]+|service\s+[\w@.:-]+\s+(stop|start|restart))$/.test(stopCmd)) {
+          throw new Error(`Refused to run service_stop_cmd with unsafe characters: ${stopCmd}`);
+        }
+        await this.sshExec(target, sshArgs, stopCmd, 30000);
       }
 
       // Snapshot UrBackup SQLite DB
       if (stateSet.db?.type === 'sqlite' && stateSet.db?.sqlite_path) {
         await this.updateStep(runId, 'creating SQLite snapshot');
+        // Validate sqlite_path to only allow safe filesystem characters
+        if (!/^[a-zA-Z0-9/_. -]+$/.test(stateSet.db.sqlite_path)) {
+          await this.appendLog(runId, `Warning: SQLite path contains invalid characters, skipping snapshot`);
+        } else {
         snapshotFile = path.join(os.tmpdir(), `repl_db_${runId}.sqlite`);
         try {
+          // Use -cmd to pass dot-command as a separate argument (not shell-expanded)
           await execFileAsync('sqlite3', [
+            '-cmd', `.backup ${snapshotFile}`,
             stateSet.db.sqlite_path,
-            `.backup '${snapshotFile}'`
           ], { timeout: 60000 });
           await query(
             'UPDATE replication_runs SET snapshot_timestamp = NOW() WHERE id = ?',
@@ -218,6 +228,7 @@ class ReplicationEngine {
         } catch (err: any) {
           await this.appendLog(runId, `Warning: SQLite snapshot failed: ${err.message}`);
         }
+        } // end else (valid sqlite_path)
       }
 
       // rsync include paths (state files — always use rsync, not btrfs)
@@ -289,6 +300,8 @@ class ReplicationEngine {
       if (target.verify_after_sync || settings.default_verify_after_sync) {
         await this.updateStep(runId, 'verifying transfer');
         try {
+          // Validate path before embedding in shell command
+          if (!/^[a-zA-Z0-9/_. -]+$/.test(target.target_root_path)) throw new Error('Invalid target_root_path characters');
           await this.sshExec(target, sshArgs, `ls "${target.target_root_path}"`, 15000);
         } catch (err: any) {
           await this.appendLog(runId, `Verify warning: ${err.message}`);
@@ -299,7 +312,11 @@ class ReplicationEngine {
       if (target.standby_service_mode === 'stopped' && target.service_start_cmd) {
         await this.updateStep(runId, 'starting standby service');
         try {
-          await this.sshExec(target, sshArgs, target.service_start_cmd, 30000);
+          const startCmd = target.service_start_cmd.trim();
+          if (!/^(systemctl\s+(stop|start|restart|reload)\s+[\w@.:-]+|service\s+[\w@.:-]+\s+(stop|start|restart))$/.test(startCmd)) {
+            throw new Error(`Refused to run service_start_cmd with unsafe characters: ${startCmd}`);
+          }
+          await this.sshExec(target, sshArgs, startCmd, 30000);
         } catch (err: any) {
           await this.appendLog(runId, `Warning: could not start standby service: ${err.message}`);
         }
@@ -421,6 +438,7 @@ class ReplicationEngine {
     remotePath: string
   ): Promise<Set<string>> {
     try {
+      if (!/^[a-zA-Z0-9/_. -]+$/.test(remotePath)) return new Set();
       const out = await this.sshExec(
         target, sshArgs,
         `btrfs subvolume list "${remotePath}" 2>/dev/null | awk '{print $NF}' || true`,
@@ -611,7 +629,7 @@ class ReplicationEngine {
       args.push('-o', `UserKnownHostsFile=${knownHostsFile}`);
       args.push('-o', 'StrictHostKeyChecking=yes');
     } else {
-      args.push('-o', 'StrictHostKeyChecking=no');
+      args.push('-o', 'StrictHostKeyChecking=accept-new');
     }
     return args;
   }

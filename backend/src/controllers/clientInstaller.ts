@@ -114,7 +114,7 @@ router.get('/windows', authenticate, async (req: Request, res: Response): Promis
             return;
           }
           res.write(value);
-          pump();
+          await pump();
         };
         await pump();
       }

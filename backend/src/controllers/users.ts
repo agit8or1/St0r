@@ -104,13 +104,33 @@ export async function modifyUser(req: Request, res: Response) {
 export async function removeUser(req: Request, res: Response) {
   try {
     const { id } = req.params;
+    const requestingUser = (req as any).user;
 
     if (!id) {
       res.status(400).json({ error: 'User ID is required' });
       return;
     }
 
-    await deleteUserById(parseInt(id));
+    const targetId = parseInt(id);
+
+    // Prevent self-deletion
+    if (requestingUser?.userId === targetId) {
+      res.status(400).json({ error: 'Cannot delete your own account' });
+      return;
+    }
+
+    // Prevent deleting the last admin
+    const allUsers = await getAllUsers();
+    const targetUser = allUsers.find(u => u.id === targetId);
+    if (targetUser?.is_admin) {
+      const adminCount = allUsers.filter(u => u.is_admin).length;
+      if (adminCount <= 1) {
+        res.status(400).json({ error: 'Cannot delete the last administrator account' });
+        return;
+      }
+    }
+
+    await deleteUserById(targetId);
 
     res.json({
       success: true,

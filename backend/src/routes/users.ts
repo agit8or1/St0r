@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getUsers, addUser, modifyUser, removeUser } from '../controllers/users.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -10,13 +10,13 @@ router.use(authenticate);
 // Get all users
 router.get('/', getUsers);
 
-// Create a new user
-router.post('/', addUser);
+// Create a new user (admin only)
+router.post('/', requireAdmin, addUser);
 
-// Update a user
-router.put('/:id', modifyUser);
+// Update a user (admin only)
+router.put('/:id', requireAdmin, modifyUser);
 
-// Delete a user
-router.delete('/:id', removeUser);
+// Delete a user (admin only)
+router.delete('/:id', requireAdmin, removeUser);
 
 export default router;

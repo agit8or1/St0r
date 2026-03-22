@@ -592,7 +592,7 @@ export async function convertAndDownloadImageBackup(req: AuthRequest, res: Respo
     tmpFile = path.join(tmpDir, fileName);
 
     logger.info(`[convertVhd] Copying ${srcPath} → ${tmpFile} (${(srcStat.size / 1e9).toFixed(1)} GB)`);
-    fs.copyFileSync(srcPath, tmpFile);
+    await fs.promises.copyFile(srcPath, tmpFile);
     fs.chmodSync(tmpFile, 0o644); // urbackup user (internal drop) needs read access
 
     // Decompress in-place inside tmpDir

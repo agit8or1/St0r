@@ -52,7 +52,7 @@ export async function updateLastLogin(userId: number): Promise<void> {
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  return await query<UserRow[]>('SELECT * FROM app_users ORDER BY created_at DESC');
+  return await query<UserRow[]>('SELECT * FROM app_users WHERE is_active = TRUE ORDER BY created_at DESC');
 }
 
 export async function getUserByUsername(username: string): Promise<User | null> {
