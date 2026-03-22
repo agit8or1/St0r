@@ -15,4 +15,7 @@ router.get('/metrics', getSystemMetrics);
 // Trigger system update
 router.post('/update', triggerUpdate);
 
+// Get update progress log
+router.get('/update-log', getUpdateLog);
+
 export default router;
