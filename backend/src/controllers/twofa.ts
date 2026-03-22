@@ -3,7 +3,6 @@ import { AuthRequest } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 import { pool } from '../config/database.js';
 import { createRequire } from 'module';
-import { randomBytes } from 'crypto';
 
 const require = createRequire(import.meta.url);
 const speakeasy = require('speakeasy');
@@ -46,6 +45,17 @@ export async function setup2FA(req: AuthRequest, res: Response): Promise<void> {
   try {
     const userId = (req.user as any)?.userId;
     const username = (req.user as any)?.username;
+
+    // Don't overwrite secret if 2FA is already enabled — force disable first
+    const [existingRows] = await pool.query(
+      'SELECT totp_enabled FROM app_users WHERE id = ?',
+      [userId]
+    );
+    const existing = (existingRows as any[])[0];
+    if (existing?.totp_enabled) {
+      res.status(400).json({ error: '2FA is already enabled. Disable it first before re-enrolling.' });
+      return;
+    }
 
     // Generate a new secret
     const secret = speakeasy.generateSecret({
@@ -116,13 +126,6 @@ export async function verify2FA(req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    // Generate cryptographically secure backup codes
-    const backupCodes: string[] = [];
-    for (let i = 0; i < 8; i++) {
-      const code = randomBytes(5).toString('hex').toUpperCase();
-      backupCodes.push(code);
-    }
-
     // Enable 2FA
     await pool.query(
       'UPDATE app_users SET totp_enabled = TRUE WHERE id = ?',
@@ -132,7 +135,6 @@ export async function verify2FA(req: AuthRequest, res: Response): Promise<void> 
     res.json({
       success: true,
       message: '2FA enabled successfully',
-      backupCodes
     });
   } catch (error: any) {
     logger.error('Failed to verify 2FA:', error);

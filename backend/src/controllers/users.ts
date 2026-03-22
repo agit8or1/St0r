@@ -16,7 +16,7 @@ export async function getUsers(req: Request, res: Response) {
     logger.error('Failed to get users:', error);
     res.status(500).json({
       error: 'Failed to get users',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }
@@ -57,7 +57,7 @@ export async function addUser(req: Request, res: Response) {
     logger.error('Failed to create user:', error);
     res.status(500).json({
       error: 'Failed to create user',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }
@@ -93,7 +93,7 @@ export async function modifyUser(req: Request, res: Response) {
     logger.error('Failed to update user:', error);
     res.status(500).json({
       error: 'Failed to update user',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }
@@ -140,7 +140,7 @@ export async function removeUser(req: Request, res: Response) {
     logger.error('Failed to delete user:', error);
     res.status(500).json({
       error: 'Failed to delete user',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }

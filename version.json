@@ -1,7 +1,7 @@
 {
-  "version": "3.2.80",
+  "version": "3.2.81",
   "releaseDate": "2026-03-22",
   "changelog": [
-    "Security: comprehensive audit — critical/high/medium vulnerabilities remediated"
+    "Security: comprehensive audit — all 24 vulnerabilities remediated"
   ]
 }

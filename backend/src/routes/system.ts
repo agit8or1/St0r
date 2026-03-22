@@ -4,10 +4,9 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
-// update-log is unauthenticated — needed during restarts when the session cookie may be invalid
-router.get('/update-log', getUpdateLog);
-
-// All other routes require authentication
+// All routes require authentication
+// Note: JWT is stateless — the cookie remains valid through service restarts.
+// If the cookie has expired, the user will need to log in again.
 router.use(authenticate);
 
 // System resource metrics (CPU, memory, network)

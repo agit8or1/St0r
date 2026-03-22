@@ -120,7 +120,7 @@ export async function getSystemMetrics(req: Request, res: Response) {
     res.json({ cpu, memory, network, uptime, hostname });
   } catch (error: any) {
     logger.error('Failed to get system metrics:', error);
-    res.status(500).json({ error: 'Failed to get system metrics', message: error.message });
+    res.status(500).json({ error: 'Failed to get system metrics' });
   }
 }
 
@@ -211,7 +211,7 @@ export async function triggerUpdate(req: Request, res: Response) {
     logger.error('Failed to trigger update:', error);
     res.status(500).json({
       error: 'Failed to trigger update',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }
@@ -247,7 +247,7 @@ export async function getUpdateLog(req: Request, res: Response) {
     logger.error('Failed to get update log:', error);
     res.status(500).json({
       error: 'Failed to get update log',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }

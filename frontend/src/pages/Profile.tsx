@@ -31,7 +31,6 @@ export function Profile() {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [secret, setSecret] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
-  const [backupCodes, setBackupCodes] = useState<string[]>([]);
 
   useEffect(() => {
     loadTwoFactorStatus();
@@ -139,12 +138,10 @@ export function Profile() {
         throw new Error('Invalid verification code');
       }
 
-      const data = await response.json();
-      setBackupCodes(data.backupCodes);
       setTwoFactorEnabled(true);
       setShowQRCode(false);
       setVerificationCode('');
-      setMessage({ type: 'success', text: '2FA enabled successfully! Save your backup codes.' });
+      setMessage({ type: 'success', text: '2FA enabled successfully!' });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
     } finally {
@@ -171,7 +168,6 @@ export function Profile() {
       }
 
       setTwoFactorEnabled(false);
-      setBackupCodes([]);
       setMessage({ type: 'success', text: '2FA disabled successfully' });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
@@ -183,11 +179,6 @@ export function Profile() {
   const copySecret = () => {
     navigator.clipboard.writeText(secret);
     setMessage({ type: 'success', text: 'Secret copied to clipboard' });
-  };
-
-  const copyBackupCodes = () => {
-    navigator.clipboard.writeText(backupCodes.join('\n'));
-    setMessage({ type: 'success', text: 'Backup codes copied to clipboard' });
   };
 
   return (
@@ -448,38 +439,6 @@ export function Profile() {
                   </div>
                 </div>
               </Tooltip>
-
-              {backupCodes.length > 0 && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
-                    <Key className="h-4 w-4" />
-                    Backup Codes
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Save these backup codes in a safe place. You can use them to access your account if you lose your authenticator device.
-                  </p>
-
-                  <Tooltip text="Each code can be used once as a substitute for a 2FA code" className="block">
-                    <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 mb-3">
-                      <div className="grid grid-cols-2 gap-2 font-mono text-sm text-green-400">
-                        {backupCodes.map((code, index) => (
-                          <div key={index}>{code}</div>
-                        ))}
-                      </div>
-                    </div>
-                  </Tooltip>
-
-                  <Tooltip text="Copy all backup codes to clipboard so you can store them safely">
-                    <button
-                      onClick={copyBackupCodes}
-                      className="btn btn-secondary text-sm"
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy Backup Codes
-                    </button>
-                  </Tooltip>
-                </div>
-              )}
 
               <Tooltip text="Remove 2FA from your account — login will require only password">
                 <button

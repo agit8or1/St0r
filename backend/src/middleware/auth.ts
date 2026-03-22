@@ -23,8 +23,12 @@ export function authenticate(
     else if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
     }
-    // Fall back to query parameter (for file downloads)
-    else if (req.query.token && typeof req.query.token === 'string') {
+    // Fall back to query parameter — only permitted for file download endpoints
+    else if (
+      req.query.token &&
+      typeof req.query.token === 'string' &&
+      req.path.startsWith('/download')
+    ) {
       token = req.query.token;
     }
 

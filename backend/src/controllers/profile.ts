@@ -51,7 +51,7 @@ export async function changePassword(req: Request, res: Response) {
     logger.error('Failed to change password:', error);
     res.status(500).json({
       error: 'Failed to change password',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }

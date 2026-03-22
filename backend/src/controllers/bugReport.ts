@@ -193,7 +193,7 @@ This bug report was automatically generated from St0r GUI v1.6.4
     logger.error('Failed to process bug report:', error);
     res.status(500).json({
       error: 'Failed to submit bug report',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }

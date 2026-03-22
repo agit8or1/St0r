@@ -41,7 +41,22 @@ app.set('trust proxy', 'loopback');
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow same-origin requests (no Origin header = curl/server-to-server/same-origin)
+    if (!origin) return cb(null, true);
+    const allowed = [
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ].filter(Boolean);
+    if (allowed.includes(origin)) return cb(null, true);
+    return cb(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+}));
 
 // Rate limiting - only for auth endpoints to prevent brute force
 const authLimiter = rateLimit({

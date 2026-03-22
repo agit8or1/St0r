@@ -104,7 +104,7 @@ export async function getLogs(req: AuthRequest, res: Response): Promise<void> {
     logger.error('Failed to get logs:', error);
     res.status(500).json({
       error: 'Failed to get logs',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }
@@ -166,7 +166,7 @@ export async function getLiveLog(req: AuthRequest, res: Response): Promise<void>
     logger.error('Failed to get live logs:', error);
     res.status(500).json({
       error: 'Failed to get live logs',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }

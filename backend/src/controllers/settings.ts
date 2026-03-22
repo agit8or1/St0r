@@ -80,7 +80,7 @@ export async function getSettings(req: AuthRequest, res: Response): Promise<void
     logger.error('Failed to get settings:', error);
     res.status(500).json({
       error: 'Failed to get settings',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }
@@ -184,7 +184,7 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
     logger.error('Failed to update settings:', error);
     res.status(500).json({
       error: 'Failed to update settings',
-      message: error.message
+      message: 'An internal error occurred'
     });
   }
 }

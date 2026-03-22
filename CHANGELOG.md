@@ -5,6 +5,16 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.81] - 2026-03-22
+
+### Security
+- **Update-log endpoint now requires authentication**: Previously unauthenticated; JWT is stateless so the HttpOnly cookie remains valid through service restarts.
+- **CORS restricted to known origins**: `cors()` with no options allowed any origin. Now only allows `localhost:5173`, `localhost:3000`, and `FRONTEND_URL` env var. Unknown origins receive a 500 CORS error.
+- **Token query-param restricted to download routes**: The `?token=` fallback in the auth middleware was available on all routes. Now only permitted on paths starting with `/download` (file download endpoint only).
+- **2FA race condition fixed**: `setup2FA` previously overwrote the TOTP secret on every call, invalidating any QR code already being scanned. Now returns 400 if 2FA is already enabled — user must disable first before re-enrolling.
+- **Fake backup codes removed**: 2FA backup codes were generated and shown to the user but never stored or validated — login would always reject them. Removed the misleading UI section and response field. The `backupCodes` response field is no longer returned.
+- **Internal error details removed from API responses**: `message: error.message` was returned to authenticated clients in 12 error paths across 6 controllers, potentially leaking DB schema details, file paths, or stack traces. All replaced with `'An internal error occurred'` (full error still logged server-side).
+
 ## [3.2.80] - 2026-03-22
 
 ### Security
