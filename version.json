@@ -1,8 +1,7 @@
 {
-  "version": "3.2.82",
+  "version": "3.2.83",
   "releaseDate": "2026-03-22",
   "changelog": [
-    "Fix: server outage caused by CORS blocking production domain",
-    "Fix: update-log route missing after security refactor"
+    "Fix: SMTP Server and SSL/TLS checkbox not persisting in Settings → Email & Alerts"
   ]
 }

@@ -167,11 +167,16 @@ export async function getServerSettings(req: AuthRequest, res: Response): Promis
       onlineClients: stats.online_clients || 0,
       failedClients: stats.failed_clients || 0,
 
-      // All UrBackup settings from API (if available) - overrides defaults
+      // Direct SQLite settings as fallback (may include stale/empty values)
+      ...dbSettings,
+
+      // UrBackup API settings take priority — authoritative source for settings
+      // saved via the API (e.g. mail_server, mail_ssl). Direct SQLite reads can
+      // contain stale empty-string rows that would otherwise overwrite API values.
       ...urbackupSettings,
 
-      // Override with database settings if present - highest priority
-      ...dbSettings,
+      // Re-pin env-managed fields so they always win over UrBackup's own values
+      ...(fqdn ? { serverFqdn: fqdn, internet_server: fqdn } : {}),
 
       // Note for users
       note: 'Settings shown are defaults or database values. Configure via UrBackup web interface at http://localhost:55414'
