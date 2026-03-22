@@ -1,7 +1,7 @@
 {
-  "version": "3.2.76",
-  "releaseDate": "2026-03-21",
+  "version": "3.2.77",
+  "releaseDate": "2026-03-22",
   "changelog": [
-    "Fix: fresh install now applies all database migrations (replication tables were missing, causing 'Table replication_settings doesn't exist' errors)"
+    "Fix: backup storage path now read from UrBackup settings DB instead of hardcoded /home/administrator/urbackup-storage — storage dashboard now works on any install regardless of username"
   ]
 }

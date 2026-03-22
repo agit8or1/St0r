@@ -634,6 +634,26 @@ export class UrBackupDbService {
   }
 
   /**
+   * Get the UrBackup backup storage folder path from backup_server_settings.db.
+   * Falls back to /var/urbackup if not found (UrBackup default).
+   */
+  async getBackupFolder(): Promise<string> {
+    try {
+      const { open } = await import('sqlite');
+      const sqlite3 = await import('sqlite3');
+      const settingsPath = process.env.URBACKUP_DB_PATH?.replace('backup_server.db', 'backup_server_settings.db')
+        || '/var/urbackup/backup_server_settings.db';
+      const settingsDb = await open({ filename: settingsPath, driver: sqlite3.default.Database });
+      const row = await settingsDb.get(`SELECT value FROM settings WHERE key='backupfolder' AND clientid=0 LIMIT 1`);
+      await settingsDb.close();
+      return resolve(row?.value || '/var/urbackup');
+    } catch (err) {
+      logger.warn('Could not read backupfolder from settings DB, using /var/urbackup:', err);
+      return '/var/urbackup';
+    }
+  }
+
+  /**
    * Add a new client directly to the database
    */
   async addClient(clientName: string) {
@@ -752,15 +772,7 @@ export class UrBackupDbService {
       mainDb = null;
 
       // Look up backup storage folder from settings DB
-      const { open } = await import('sqlite');
-      const sqlite3 = await import('sqlite3');
-      const settingsDb = await open({
-        filename: process.env.URBACKUP_DB_PATH?.replace('backup_server.db', 'backup_server_settings.db') || '/var/urbackup/backup_server_settings.db',
-        driver: sqlite3.default.Database,
-      });
-      const row = await settingsDb.get(`SELECT value FROM settings WHERE key='backupfolder'`);
-      await settingsDb.close();
-      const backupFolder = resolve(row?.value || '/home/administrator/urbackup-storage');
+      const backupFolder = await this.getBackupFolder();
 
       // Determine directory to delete
       let dirToDelete: string | null = null;

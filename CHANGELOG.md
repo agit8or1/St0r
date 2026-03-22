@@ -5,6 +5,11 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.77] - 2026-03-22
+
+### Fixed
+- **Storage dashboard error on non-administrator installs**: Backup storage path was hardcoded to `/home/administrator/urbackup-storage` in two places. It now reads the actual path from UrBackup's `backup_server_settings.db` (`backupfolder` key), falling back to `/var/urbackup` if unset. The `URBACKUP_BACKUP_PATH` env var can still override it. Fixes `df: /home/administrator/urbackup-storage: No such file or directory` errors on servers where the install user isn't `administrator`.
+
 ## [3.2.76] - 2026-03-21
 
 ### Fixed

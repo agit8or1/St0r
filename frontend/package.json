@@ -1,6 +1,6 @@
 {
   "name": "urbackup-gui-frontend",
-  "version": "3.2.76",
+  "version": "3.2.77",
   "type": "module",
   "scripts": {
     "dev": "vite",

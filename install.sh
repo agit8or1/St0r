@@ -5,8 +5,8 @@
 set -e
 
 # Version
-INSTALLER_VERSION="3.2.76"
-INSTALLER_DATE="2026-03-21"
+INSTALLER_VERSION="3.2.77"
+INSTALLER_DATE="2026-03-22"
 
 echo "============================================"
 echo "St0r Universal Installer"

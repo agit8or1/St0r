@@ -13,8 +13,8 @@ const dbService = new UrBackupDbService();
  */
 export async function getTotalStorage(req: AuthRequest, res: Response): Promise<void> {
   try {
-    // Get UrBackup backup path from environment or use default
-    const backupPath = process.env.URBACKUP_BACKUP_PATH || '/home/administrator/urbackup-storage';
+    // Get UrBackup backup path from settings DB (env override still supported)
+    const backupPath = process.env.URBACKUP_BACKUP_PATH || await dbService.getBackupFolder();
 
     // Use df to get partition capacity and free space (fast — single syscall)
     const { stdout: dfOut } = await execFileAsync('df', ['-B1', backupPath]);
