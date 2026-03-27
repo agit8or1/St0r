@@ -22,6 +22,7 @@ import { Profile } from './pages/Profile';
 import ServerSettings from './pages/ServerSettings';
 import { Replication } from './pages/Replication';
 import { ReplicationTargetDetail } from './pages/ReplicationTargetDetail';
+import { Servers } from './pages/Servers';
 import { Loading } from './components/Loading';
 import { UpdateNotification } from './components/UpdateNotification';
 
@@ -197,6 +198,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ReplicationTargetDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/servers"
+            element={
+              <ProtectedRoute>
+                <Servers />
               </ProtectedRoute>
             }
           />

@@ -31,6 +31,7 @@ import storageRoutes from './routes/storage.js';
 import browseRoutes from './routes/browse.js';
 import replicationRoutes from './routes/replication.js';
 import storageLimitsRoutes from './routes/storageLimits.js';
+import serversRoutes from './routes/servers.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -100,6 +101,7 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/browse', browseRoutes);
 app.use('/api/replication', replicationRoutes);
 app.use('/api/storage-limits', storageLimitsRoutes);
+app.use('/api/servers', serversRoutes);
 
 // Serve frontend static files in production
 const __dirname = dirname(fileURLToPath(import.meta.url));

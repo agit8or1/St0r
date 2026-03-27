@@ -52,6 +52,7 @@ export function Layout({ children }: LayoutProps) {
     { path: '/alerts', label: 'Alerts', icon: Bell, tip: 'View and manage backup alerts' },
     { path: '/reports', label: 'Reports', icon: FileText, tip: 'Generate and view backup reports' },
     { path: '/replication', label: 'Replication', icon: GitBranch, tip: 'Configure offsite backup replication targets' },
+    { path: '/servers', label: 'Servers', icon: Server, tip: 'Manage this server and remote servers' },
     { path: '/users', label: 'Users', icon: Users, tip: 'Manage St0r user accounts and permissions' },
     { path: '/docs', label: 'Documentation', icon: FileText, tip: 'View and generate endpoint documentation' },
     { path: '/settings', label: 'Settings', icon: Settings, tip: 'Configure server, backup, and notification settings' },

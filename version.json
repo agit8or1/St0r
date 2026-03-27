@@ -1,7 +1,13 @@
 {
-  "version": "3.2.87",
+  "version": "3.2.88",
   "releaseDate": "2026-03-27",
   "changelog": [
-    "Docs: Documentation page updated with current features (replication, storage limits, 2FA, update management, Pushover, internet client setup)"
+    "Add: Servers page — manage this server and remote servers from the UI",
+    "Add: stor-agent — lightweight management daemon for remote Linux servers",
+    "Add: Auto-install agent on remote servers via SSH or manual API key registration",
+    "Add: Per-server CPU/memory/disk/network metrics with 30s auto-refresh",
+    "Add: OS package updates (apt), reboot, and St0r/UrBackup updates per server",
+    "Fix: Settings page — removed 'Automatic Backup Database Repair' checkbox (autoshutdown key is read-only in UrBackup and was mislabeled)",
+    "Fix: File Browser — replaced backup card grid with calendar date picker"
   ]
 }

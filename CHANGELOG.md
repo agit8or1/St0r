@@ -5,6 +5,22 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.88] - 2026-03-27
+
+### Added
+- **Servers page** (`/servers`): New page in the sidebar for managing this server and remote Linux servers from the UI. The local server is always present; remote servers can be added and managed.
+- **stor-agent**: Lightweight Express.js management daemon (`agent/`) that runs on remote servers. Exposes a REST API (port 7420, API key auth) for metrics, OS updates, reboots, and St0r/UrBackup updates. Systemd service, auto-generates API key on first run.
+- **Agent installation**: SSH-based auto-install pushes the agent to a remote server in one click. Alternatively, copy a `curl` command to run manually on the remote server, then paste the API key into St0r.
+- **Per-server metrics**: CPU %, memory %, disk %, network throughput, uptime, hostname — fetched from `/proc` locally or via agent remotely. Auto-refreshes every 30 seconds.
+- **Per-server operations**: Check OS updates (apt list --upgradable), apply OS updates, reboot — all from the server card. Remote servers also get St0r update and UrBackup update buttons.
+- **Operation log viewer**: Live scrolling terminal log (same polling pattern as About page) for OS update and St0r update operations.
+- **DB migration 006**: `managed_servers` table stores server config including encrypted SSH credentials and agent API keys.
+- **Backend**: `services/agentClient.ts` (HTTP client), `services/serverSsh.ts` (SSH for install), `controllers/servers.ts`, `routes/servers.ts`, registered at `/api/servers`.
+
+### Fixed
+- **Settings page**: Removed "Automatic Backup Database Repair" checkbox (`autoshutdown` key). Testing confirmed UrBackup ignores this key in `general_save` — it always returns `false` regardless of what is saved. The label was also incorrect (`autoshutdown` means "shutdown after backup" in UrBackup, not database repair).
+- **File Browser**: Replaced the flat backup card grid with a calendar date picker. Days with backups are highlighted with a colored dot. Clicking a day auto-selects single backups or shows a card picker for multiple backups on the same day.
+
 ## [3.2.87] - 2026-03-27
 
 ### Changed

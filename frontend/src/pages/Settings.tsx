@@ -408,7 +408,6 @@ export function Settings() {
                 Options
               </h3>
               <div className="space-y-3">
-                {renderSettingField('Automatic Backup Database Repair', 'autoshutdown', 'checkbox', 'Automatically repair backup database on startup')}
                 {renderSettingField('Enable Download from Client', 'allow_restore', 'checkbox', 'Allow clients to download files from backups')}
                 {renderSettingField('Enable Internet Clients', 'internet_mode_enabled', 'checkbox', 'Allow backups from internet clients')}
                 {renderSettingField('Headless Mode (API Only)', 'no_images', 'checkbox', 'Run UrBackup server without web interface, API only')}

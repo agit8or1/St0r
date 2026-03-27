@@ -1,0 +1,19 @@
+[Unit]
+Description=St0r Agent — remote server management daemon
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/stor-agent
+ExecStart=/usr/bin/node /opt/stor-agent/dist/index.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=stor-agent
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
