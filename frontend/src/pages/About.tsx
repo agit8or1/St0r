@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Logo } from '../components/Logo';
-import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText, Heart, Star, X, Smartphone } from 'lucide-react';
+import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText, Heart, Star, X } from 'lucide-react';
 
 /**
  * Compare two semantic version strings
@@ -23,84 +23,6 @@ function compareVersions(version1: string, version2: string): boolean {
   return false; // Versions are equal
 }
 
-function UrBackupClientVersionsCard() {
-  const [clients, setClients] = useState<Array<{ id: number; name: string; online: boolean; client_version_string: string | null; os_simple: string | null }>>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const fetchClientVersions = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const resp = await fetch('/api/system-update/client-versions', { credentials: 'include' });
-      if (!resp.ok) throw new Error('Failed to fetch client versions');
-      const data = await resp.json();
-      setClients(data.clients || []);
-    } catch (e: any) {
-      setError(e.message || 'Failed to fetch client versions');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchClientVersions(); }, []);
-
-  return (
-    <div className="card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-          <Smartphone className="h-5 w-5" />
-          UrBackup Client Versions
-        </h3>
-        <button onClick={fetchClientVersions} disabled={loading} className="btn btn-secondary flex items-center gap-2 text-sm">
-          {loading ? <><Loader className="h-3 w-3 animate-spin" />Loading...</> : <><RefreshCw className="h-3 w-3" />Refresh</>}
-        </button>
-      </div>
-      {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200 mb-4">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />{error}
-        </div>
-      )}
-      {!loading && clients.length === 0 && !error && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">No clients connected.</p>
-      )}
-      {clients.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-2 pr-4 font-medium text-gray-700 dark:text-gray-300">Client</th>
-                <th className="text-left py-2 pr-4 font-medium text-gray-700 dark:text-gray-300">Status</th>
-                <th className="text-left py-2 pr-4 font-medium text-gray-700 dark:text-gray-300">OS</th>
-                <th className="text-left py-2 font-medium text-gray-700 dark:text-gray-300">Client Version</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map(c => (
-                <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800">
-                  <td className="py-2 pr-4 font-medium text-gray-900 dark:text-gray-100">{c.name}</td>
-                  <td className="py-2 pr-4">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                      c.online ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                    }`}>
-                      {c.online ? 'Online' : 'Offline'}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-4 text-gray-600 dark:text-gray-400">{c.os_simple || '—'}</td>
-                  <td className="py-2 text-gray-600 dark:text-gray-400 font-mono text-xs">{c.client_version_string || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-        Client versions are reported by connected clients. Offline clients show their last known version.
-        UrBackup clients update themselves automatically when a new version is available from the server.
-      </p>
-    </div>
-  );
-}
 
 export function About() {
   const [searchParams] = useSearchParams();
@@ -749,9 +671,6 @@ export function About() {
             )}
           </div>
         </div>
-
-        {/* UrBackup Client Versions */}
-        <UrBackupClientVersionsCard />
 
         {/* Changelog Section */}
         {changelog.length > 0 && (

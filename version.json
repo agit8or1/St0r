@@ -1,7 +1,7 @@
 {
-  "version": "3.2.85",
+  "version": "3.2.86",
   "releaseDate": "2026-03-27",
   "changelog": [
-    "Feature: UrBackup client version shown under endpoint name on Clients page"
+    "Remove: UrBackup Client Versions card removed from About page (versions shown on Clients page instead)"
   ]
 }
