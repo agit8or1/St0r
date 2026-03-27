@@ -4,8 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 import {
   Server, Plus, Wifi, WifiOff, RefreshCw, Trash2, Edit3, Terminal,
   Cpu, HardDrive, MemoryStick, Network, Clock, ChevronDown, ChevronUp,
-  CheckCircle, AlertCircle, Download, RotateCcw, Power, X, Eye, EyeOff,
-  Key, Loader
+  CheckCircle, Download, RotateCcw, Power, X, Eye, EyeOff,
+  Key, Loader, Copy, Check, Link
 } from 'lucide-react';
 
 interface ManagedServer {
@@ -295,6 +295,12 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
   const [manualKey, setManualKey] = useState('');
   const [confirmReboot, setConfirmReboot] = useState(false);
 
+  // Install command state
+  const [installCmd, setInstallCmd] = useState('');
+  const [installCmdLoading, setInstallCmdLoading] = useState(false);
+  const [installCmdCopied, setInstallCmdCopied] = useState(false);
+  const [showInstallCmd, setShowInstallCmd] = useState(false);
+
   // OS upgradable count
   const [upgradableCount, setUpgradableCount] = useState<number | null>(null);
 
@@ -403,6 +409,30 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
     }
   };
 
+  const getInstallCommand = async () => {
+    setInstallCmdLoading(true);
+    setInstallError('');
+    try {
+      const resp = await fetch(`/api/servers/${server.id}/generate-token`, { method: 'POST', credentials: 'include' });
+      const d = await resp.json();
+      if (!resp.ok || !d.command) throw new Error(d.error || 'Failed to generate token');
+      setInstallCmd(d.command);
+      setShowInstallCmd(true);
+      setInstallCmdCopied(false);
+    } catch (e: any) {
+      setInstallError(e.message);
+    } finally {
+      setInstallCmdLoading(false);
+    }
+  };
+
+  const copyInstallCmd = () => {
+    navigator.clipboard.writeText(installCmd).then(() => {
+      setInstallCmdCopied(true);
+      setTimeout(() => setInstallCmdCopied(false), 2000);
+    });
+  };
+
   const doReboot = async () => {
     setConfirmReboot(false);
     try {
@@ -477,9 +507,13 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
                   Enter API Key Manually
                 </button>
               </div>
+              <button onClick={getInstallCommand} disabled={installCmdLoading} className="btn btn-secondary text-sm flex items-center gap-2">
+                {installCmdLoading ? <Loader className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+                {installCmdLoading ? 'Generating...' : 'Get Install Command'}
+              </button>
               {(!server.has_ssh_key && !server.has_ssh_password) && (
                 <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
-                  Add SSH credentials to the server to enable auto-install, or run the install script manually.
+                  Add SSH credentials to enable auto-install, or use the install command to install manually.
                 </p>
               )}
               {showManualKey && (
@@ -489,11 +523,19 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
                   <button onClick={registerManualKey} className="btn btn-primary text-sm flex-shrink-0">Register</button>
                 </div>
               )}
+              {showInstallCmd && installCmd && (
+                <div className="mt-3 p-3 bg-gray-900 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-400">Run this on the remote server:</span>
+                    <button onClick={copyInstallCmd} className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors">
+                      {installCmdCopied ? <><Check className="h-3 w-3" /> Copied!</> : <><Copy className="h-3 w-3" /> Copy</>}
+                    </button>
+                  </div>
+                  <code className="text-xs text-green-400 font-mono break-all">{installCmd}</code>
+                  <p className="text-xs text-gray-500 mt-2">This command expires in 24 hours. The agent will register automatically when installed.</p>
+                </div>
+              )}
               {installError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{installError}</p>}
-              <div className="mt-3 p-3 bg-gray-900 rounded text-xs text-green-400 font-mono">
-                # Manual install on remote server:<br />
-                curl -fsSL {window.location.origin}/downloads/stor-agent-install.sh | sudo bash
-              </div>
             </div>
           )}
 

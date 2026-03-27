@@ -5,6 +5,12 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.89] - 2026-03-27
+
+### Added
+- **Get Install Command**: On the Servers page, remote servers without an agent now show a "Get Install Command" button. Clicking it calls the backend to generate a one-time 64-char token (24h expiry), then displays a `curl` command the user can copy and run on the remote server. The command connects back to St0r via the configured FQDN over HTTPS (e.g., `https://stor.agit8or.net`). Once run, the agent installs itself and automatically registers back with St0r — no manual key entry required.
+- **Public agent install endpoints**: Three new token-protected public routes (no JWT needed): `GET /api/agent-install/:token` serves a dynamic bash installer script; `GET /api/agent-package/:token` streams the agent tarball; `POST /api/agent-register` receives the generated API key from the newly installed agent and stores it encrypted in the DB.
+
 ## [3.2.88] - 2026-03-27
 
 ### Added

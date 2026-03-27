@@ -49,6 +49,8 @@ async function ensureTable() {
       ssh_password_encrypted TEXT  NULL,
       ssh_known_host_fingerprint TEXT NULL,
       agent_installed TINYINT(1)  NOT NULL DEFAULT 0,
+      install_token CHAR(64)      NULL,
+      install_token_expires BIGINT NULL,
       last_seen     BIGINT        NULL,
       notes         TEXT          NULL,
       enabled       TINYINT(1)    NOT NULL DEFAULT 1,
@@ -58,6 +60,13 @@ async function ensureTable() {
       PRIMARY KEY (id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  // Add token columns to existing installs (idempotent)
+  try {
+    await query('ALTER TABLE managed_servers ADD COLUMN install_token CHAR(64) NULL');
+  } catch { /* already exists */ }
+  try {
+    await query('ALTER TABLE managed_servers ADD COLUMN install_token_expires BIGINT NULL');
+  } catch { /* already exists */ }
 
   // Seed local server if none exist
   const rows: any[] = await query('SELECT id FROM managed_servers WHERE is_local = 1 LIMIT 1');
@@ -608,4 +617,224 @@ export async function getUrBackupVersion(req: Request, res: Response) {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+}
+
+// ---- Install Token + Command ----
+
+function getStorBaseUrl(): string {
+  const fqdn = process.env.URBACKUP_SERVER_FQDN || '';
+  if (fqdn) return `https://${fqdn}`;
+  // Fallback: use the server's own IP on port 3000 (dev/no-fqdn case)
+  return `http://localhost:${process.env.PORT || 3000}`;
+}
+
+export async function generateInstallToken(req: Request, res: Response) {
+  const user = (req as any).user;
+  if (!user?.isAdmin) { res.status(403).json({ error: 'Admins only' }); return; }
+
+  const rows: any[] = await query('SELECT * FROM managed_servers WHERE id = ?', [req.params.id]);
+  if (!rows.length) { res.status(404).json({ error: 'Server not found' }); return; }
+  const server = rows[0];
+  if (server.is_local) { res.status(400).json({ error: 'Not applicable for local server' }); return; }
+
+  // Generate a 32-byte random token (64 hex chars), valid for 24 hours
+  const { randomBytes } = await import('crypto');
+  const token = randomBytes(32).toString('hex');
+  const expires = Date.now() + 24 * 60 * 60 * 1000;
+
+  await query(
+    'UPDATE managed_servers SET install_token = ?, install_token_expires = ? WHERE id = ?',
+    [token, expires, server.id]
+  );
+
+  const baseUrl = getStorBaseUrl();
+  const agentPort = server.agent_port || 7420;
+  const command = `curl -fsSL "${baseUrl}/api/agent-install/${token}" | sudo AGENT_PORT=${agentPort} bash`;
+
+  logger.info(`[servers] Install token generated for server ${server.id} by ${user.username}`);
+  res.json({ token, command, expires, baseUrl });
+}
+
+/**
+ * Public endpoint — serves a dynamic bash install script.
+ * The token identifies which server entry to register against.
+ * No auth header required (token IS the auth).
+ */
+export async function serveInstallScript(req: Request, res: Response) {
+  const { token } = req.params;
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) {
+    res.status(400).send('Invalid token\n');
+    return;
+  }
+
+  const rows: any[] = await query(
+    'SELECT * FROM managed_servers WHERE install_token = ? AND install_token_expires > ? LIMIT 1',
+    [token, Date.now()]
+  );
+  if (!rows.length) {
+    res.status(410).send('# Install token not found or expired.\n# Generate a new one in St0r > Servers.\n');
+    return;
+  }
+
+  const server = rows[0];
+  const baseUrl = getStorBaseUrl();
+  const agentPort = server.agent_port || 7420;
+
+  // Build and serve the install script dynamically
+  const script = `#!/usr/bin/env bash
+set -e
+
+STOR_SERVER="${baseUrl}"
+SERVER_ID="${server.id}"
+REGISTER_TOKEN="${token}"
+AGENT_PORT="\${AGENT_PORT:-${agentPort}}"
+
+echo "=== St0r Agent Installer ==="
+echo "  Server: \$STOR_SERVER"
+echo "  Agent port: \$AGENT_PORT"
+echo ""
+
+# Require root
+if [ "\$(id -u)" != "0" ]; then
+  echo "ERROR: Run with sudo" >&2
+  exit 1
+fi
+
+# Install Node.js 20 if needed
+if ! command -v node &>/dev/null || [[ "\$(node --version 2>/dev/null | cut -d. -f1 | tr -d 'v')" -lt 20 ]]; then
+  echo "--- Installing Node.js 20 ---"
+  apt-get update -qq
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  apt-get install -y nodejs
+fi
+echo "Node.js: \$(node --version)"
+
+# Download agent package from this St0r server
+TMPDIR="\$(mktemp -d)"
+trap "rm -rf \$TMPDIR" EXIT
+
+echo "--- Downloading agent package ---"
+curl -fsSL "\$STOR_SERVER/api/agent-package/${token}" -o "\$TMPDIR/stor-agent.tar.gz"
+tar xzf "\$TMPDIR/stor-agent.tar.gz" -C "\$TMPDIR"
+
+# Run the agent install script
+cd "\$TMPDIR"
+chmod +x install.sh
+STOR_AGENT_PORT="\$AGENT_PORT" bash install.sh
+
+# Read the generated API key
+API_KEY=\$(node -e "console.log(require('/etc/stor-agent/config.json').api_key)" 2>/dev/null || echo "")
+
+if [ -z "\$API_KEY" ]; then
+  echo "ERROR: Could not read agent API key from /etc/stor-agent/config.json" >&2
+  exit 1
+fi
+
+# Register this agent back with St0r
+echo "--- Registering agent with St0r ---"
+REG_RESULT=\$(curl -fsSL -X POST "\$STOR_SERVER/api/agent-register" \\
+  -H "Content-Type: application/json" \\
+  -d "{\\\"token\\\":\\\"\$REGISTER_TOKEN\\\",\\\"api_key\\\":\\\"\$API_KEY\\\",\\\"port\\\":\$AGENT_PORT}" \\
+  2>/dev/null || echo '{"error":"connection failed"}')
+
+echo "Registration: \$REG_RESULT"
+
+if echo "\$REG_RESULT" | grep -q '"success":true'; then
+  echo ""
+  echo "=================================================="
+  echo "  St0r Agent installed and registered!"
+  echo "  The server will appear online in St0r shortly."
+  echo "=================================================="
+else
+  echo ""
+  echo "WARNING: Agent installed but registration failed."
+  echo "  Manually register in St0r > Servers using API key from /etc/stor-agent/config.json"
+fi
+`;
+
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', 'inline; filename="stor-agent-install.sh"');
+  res.send(script);
+}
+
+/**
+ * Serves the agent package tarball. Token auth only (same token from install script).
+ * This means the remote server can download the agent without any stored credentials.
+ */
+export async function serveAgentPackage(req: Request, res: Response) {
+  const { token } = req.params;
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) {
+    res.status(400).json({ error: 'Invalid token' });
+    return;
+  }
+
+  const rows: any[] = await query(
+    'SELECT id FROM managed_servers WHERE install_token = ? AND install_token_expires > ? LIMIT 1',
+    [token, Date.now()]
+  );
+  if (!rows.length) {
+    res.status(410).json({ error: 'Token not found or expired' });
+    return;
+  }
+
+  const agentDir = getAgentDir();
+  if (!existsSync(agentDir + '/install.sh')) {
+    res.status(500).json({ error: 'Agent package not found on server' });
+    return;
+  }
+
+  try {
+    const { spawn } = await import('child_process');
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', 'attachment; filename="stor-agent.tar.gz"');
+
+    const tar = spawn('tar', ['czf', '-', '-C', agentDir, '.'], { stdio: ['ignore', 'pipe', 'ignore'] });
+    tar.stdout.pipe(res);
+    tar.on('error', (e) => { logger.error('[servers] tar error:', e); res.destroy(); });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+/**
+ * Public endpoint — agent calls this after installation to register itself.
+ * Token auth (no session/JWT needed).
+ */
+export async function agentRegister(req: Request, res: Response) {
+  const { token, api_key, port } = req.body;
+
+  if (!token || !api_key || !/^[a-f0-9]{64}$/.test(token)) {
+    res.status(400).json({ error: 'token and api_key are required' });
+    return;
+  }
+
+  const rows: any[] = await query(
+    'SELECT * FROM managed_servers WHERE install_token = ? AND install_token_expires > ? LIMIT 1',
+    [token, Date.now()]
+  );
+  if (!rows.length) {
+    res.status(410).json({ error: 'Token not found or expired' });
+    return;
+  }
+
+  const server = rows[0];
+
+  // Update agent port if provided
+  const agentPort = parseInt(port) || server.agent_port || 7420;
+
+  await query(
+    `UPDATE managed_servers
+     SET agent_installed = 1,
+         agent_api_key_encrypted = ?,
+         agent_port = ?,
+         last_seen = ?,
+         install_token = NULL,
+         install_token_expires = NULL,
+         updated_at = NOW()
+     WHERE id = ?`,
+    [encrypt(api_key), agentPort, Date.now(), server.id]
+  );
+
+  logger.info(`[servers] Agent registered for server "${server.name}" (id: ${server.id}) on port ${agentPort}`);
+  res.json({ success: true, message: 'Agent registered successfully' });
 }

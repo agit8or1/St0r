@@ -32,6 +32,7 @@ import browseRoutes from './routes/browse.js';
 import replicationRoutes from './routes/replication.js';
 import storageLimitsRoutes from './routes/storageLimits.js';
 import serversRoutes from './routes/servers.js';
+import { serveInstallScript, serveAgentPackage, agentRegister } from './controllers/servers.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -101,6 +102,11 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/browse', browseRoutes);
 app.use('/api/replication', replicationRoutes);
 app.use('/api/storage-limits', storageLimitsRoutes);
+// Public agent install endpoints (no auth — token-protected)
+app.get('/api/agent-install/:token', serveInstallScript);
+app.get('/api/agent-package/:token', serveAgentPackage);
+app.post('/api/agent-register', agentRegister);
+
 app.use('/api/servers', serversRoutes);
 
 // Serve frontend static files in production

@@ -5,7 +5,7 @@ import {
   getMetrics, testSsh, installAgent, registerAgentKey, pingAgentEndpoint,
   getOsUpdates, triggerOsUpdate, getOsUpdateLog,
   rebootServer, getStorVersion, triggerStorUpdate, getStorUpdateLog,
-  getUrBackupVersion,
+  getUrBackupVersion, generateInstallToken,
 } from '../controllers/servers.js';
 
 const router = Router();
@@ -25,6 +25,7 @@ router.post('/:id/test-ssh', requireAdmin, testSsh);
 // Agent management
 router.post('/:id/install-agent', requireAdmin, installAgent);
 router.post('/:id/register-agent-key', requireAdmin, registerAgentKey);
+router.post('/:id/generate-token', requireAdmin, generateInstallToken);
 
 // Metrics
 router.get('/:id/metrics', getMetrics);
