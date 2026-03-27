@@ -73,6 +73,8 @@ function GaugeBar({ label, value, color }: { label: string; value: number; color
 
 // ---------- Add/Edit Server Modal ----------
 
+type InstallMethod = 'command' | 'ssh' | 'manual';
+
 interface ServerModalProps {
   server?: ManagedServer | null;
   onClose: () => void;
@@ -80,36 +82,82 @@ interface ServerModalProps {
 }
 
 function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
+  // Step: 'method' (new only) → 'details' → 'done'
+  const [step, setStep] = useState<'method' | 'details' | 'done'>(server ? 'details' : 'method');
+  const [method, setMethod] = useState<InstallMethod>('command');
+
+  // Common fields
   const [name, setName] = useState(server?.name || '');
   const [host, setHost] = useState(server?.host || '');
   const [agentPort, setAgentPort] = useState(String(server?.agent_port || 7420));
+  const [notes, setNotes] = useState(server?.notes || '');
+
+  // SSH fields
   const [sshPort, setSshPort] = useState(String(server?.ssh_port || 22));
   const [sshUser, setSshUser] = useState(server?.ssh_user || 'root');
   const [authType, setAuthType] = useState<'ssh_key' | 'password'>(server?.auth_type || 'ssh_key');
   const [sshKey, setSshKey] = useState('');
   const [sshPassword, setSshPassword] = useState('');
-  const [notes, setNotes] = useState(server?.notes || '');
   const [showPw, setShowPw] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; hostname?: string; os?: string; fingerprint?: string; error?: string } | null>(null);
+
+  // Manual key field
+  const [apiKey, setApiKey] = useState('');
+
+  // Status
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Install command result
+  const [installCmd, setInstallCmd] = useState('');
+  const [cmdCopied, setCmdCopied] = useState(false);
+
+  const saveServer = async (): Promise<string> => {
+    const body: any = { name, host, agent_port: agentPort, notes };
+    if (method === 'ssh' || server) {
+      Object.assign(body, { ssh_port: sshPort, ssh_user: sshUser, auth_type: authType });
+      if (authType === 'ssh_key' && sshKey) body.ssh_private_key = sshKey;
+      if (authType === 'password' && sshPassword) body.ssh_password = sshPassword;
+    }
+    const url = server ? `/api/servers/${server.id}` : '/api/servers';
+    const httpMethod = server ? 'PUT' : 'POST';
+    const resp = await fetch(url, { method: httpMethod, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
+    if (!resp.ok) { const d = await resp.json(); throw new Error(d.error || 'Save failed'); }
+    const d = await resp.json();
+    return d.id || server?.id || '';
+  };
 
   const handleSave = async () => {
     if (!name.trim()) { setError('Name is required'); return; }
     if (!host.trim()) { setError('Host / IP is required'); return; }
     setSaving(true); setError('');
     try {
-      const body: any = { name, host, agent_port: agentPort, ssh_port: sshPort, ssh_user: sshUser, auth_type: authType, notes };
-      if (authType === 'ssh_key' && sshKey) body.ssh_private_key = sshKey;
-      if (authType === 'password' && sshPassword) body.ssh_password = sshPassword;
-
-      const url = server ? `/api/servers/${server.id}` : '/api/servers';
-      const method = server ? 'PUT' : 'POST';
-      const resp = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
-      if (!resp.ok) { const d = await resp.json(); throw new Error(d.error || 'Save failed'); }
+      const serverId = await saveServer();
       onSaved();
-      onClose();
+
+      if (method === 'command') {
+        const tokenResp = await fetch(`/api/servers/${serverId}/generate-token`, { method: 'POST', credentials: 'include' });
+        const td = await tokenResp.json();
+        if (!tokenResp.ok || !td.command) throw new Error(td.error || 'Failed to generate install command');
+        setInstallCmd(td.command);
+        setStep('done');
+      } else if (method === 'ssh') {
+        // Trigger install in background; user sees server card with progress
+        fetch(`/api/servers/${serverId}/install-agent`, { method: 'POST', credentials: 'include' }).catch(() => {});
+        onClose();
+      } else if (method === 'manual') {
+        if (apiKey.trim()) {
+          await fetch(`/api/servers/${serverId}/register-agent-key`, {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: apiKey.trim() }),
+          });
+        }
+        onClose();
+      } else {
+        onClose();
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -122,8 +170,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
     setTesting(true); setTestResult(null);
     try {
       const resp = await fetch(`/api/servers/${server.id}/test-ssh`, { method: 'POST', credentials: 'include' });
-      const d = await resp.json();
-      setTestResult(d);
+      setTestResult(await resp.json());
     } catch (e: any) {
       setTestResult({ ok: false, error: e.message });
     } finally {
@@ -131,24 +178,132 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
     }
   };
 
+  const copyCmd = () => {
+    navigator.clipboard.writeText(installCmd).then(() => {
+      setCmdCopied(true);
+      setTimeout(() => setCmdCopied(false), 2000);
+    });
+  };
+
+  // ---- Step 1: Method selection ----
+  if (step === 'method') {
+    const methods: { id: InstallMethod; icon: React.ReactNode; title: string; desc: string }[] = [
+      {
+        id: 'command',
+        icon: <Link className="h-6 w-6 text-blue-600 dark:text-blue-400" />,
+        title: 'Install Command',
+        desc: 'Get a one-time curl command to run on the remote server. No SSH access needed from here.',
+      },
+      {
+        id: 'ssh',
+        icon: <Terminal className="h-6 w-6 text-green-600 dark:text-green-400" />,
+        title: 'Auto-Install via SSH',
+        desc: 'Provide SSH credentials and St0r will install the agent automatically.',
+      },
+      {
+        id: 'manual',
+        icon: <Key className="h-6 w-6 text-purple-600 dark:text-purple-400" />,
+        title: 'Agent Already Installed',
+        desc: 'The agent is already running on the remote server — just enter the API key.',
+      },
+    ];
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+          <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Add Remote Server</h2>
+            <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">How would you like to install the St0r agent on the remote server?</p>
+            <div className="space-y-3">
+              {methods.map(m => (
+                <button key={m.id} onClick={() => { setMethod(m.id); setStep('details'); }}
+                  className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all text-left group">
+                  <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 flex-shrink-0 group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors">
+                    {m.icon}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{m.title}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{m.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Step 3: Show install command ----
+  if (step === 'done') {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+          <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Install Command</h2>
+            <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+          </div>
+          <div className="p-6 space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Run this command on <strong>{name}</strong> as root. The agent will install itself and register automatically.
+            </p>
+            <div className="bg-gray-950 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Shell command</span>
+                <button onClick={copyCmd} className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-green-400 hover:text-green-300 transition-colors">
+                  {cmdCopied ? <><Check className="h-3.5 w-3.5" /> Copied!</> : <><Copy className="h-3.5 w-3.5" /> Copy</>}
+                </button>
+              </div>
+              <code className="text-sm text-green-400 font-mono break-all leading-relaxed">{installCmd}</code>
+            </div>
+            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>This command expires in 24 hours. Once the agent is running, the server card will show as online automatically.</span>
+            </div>
+          </div>
+          <div className="flex justify-end p-6 border-t dark:border-gray-700">
+            <button onClick={onClose} className="btn btn-primary">Done</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Step 2: Details form ----
+  const titles: Record<InstallMethod, string> = {
+    command: 'Install Command',
+    ssh: 'Auto-Install via SSH',
+    manual: 'Agent Already Installed',
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {server ? 'Edit Server' : 'Add Remote Server'}
-          </h2>
+          <div className="flex items-center gap-3">
+            {!server && (
+              <button onClick={() => setStep('method')} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+            )}
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              {server ? 'Edit Server' : titles[method]}
+            </h2>
+          </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
         </div>
 
         <div className="p-6 space-y-4">
           {error && <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
 
+          {/* Common fields */}
           <div>
             <label className="label">Display Name</label>
             <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Office Server" />
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Host / IP</label>
@@ -160,67 +315,71 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
             </div>
           </div>
 
-          <div className="border-t dark:border-gray-700 pt-4">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">SSH Credentials (for agent installation)</p>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <label className="label">SSH User</label>
-                <input className="input" value={sshUser} onChange={e => setSshUser(e.target.value)} />
-              </div>
-              <div>
-                <label className="label">SSH Port</label>
-                <input className="input" type="number" value={sshPort} onChange={e => setSshPort(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mb-3">
-              {(['ssh_key', 'password'] as const).map(t => (
-                <label key={t} className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" checked={authType === t} onChange={() => setAuthType(t)} className="text-primary-600" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{t === 'ssh_key' ? 'SSH Key' : 'Password'}</span>
-                </label>
-              ))}
-            </div>
-
-            {authType === 'ssh_key' ? (
-              <div>
-                <label className="label">Private Key (PEM){server?.has_ssh_key && ' — leave blank to keep existing'}</label>
-                <textarea className="input font-mono text-xs" rows={5} value={sshKey} onChange={e => setSshKey(e.target.value)}
-                  placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----" />
-              </div>
-            ) : (
-              <div>
-                <label className="label">SSH Password{server?.has_ssh_password && ' — leave blank to keep existing'}</label>
-                <div className="relative">
-                  <input className="input pr-10" type={showPw ? 'text' : 'password'} value={sshPassword} onChange={e => setSshPassword(e.target.value)} />
-                  <button type="button" className="absolute right-3 top-2.5" onClick={() => setShowPw(v => !v)}>
-                    {showPw ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
-                  </button>
+          {/* SSH fields */}
+          {(method === 'ssh' || server) && (
+            <div className="border-t dark:border-gray-700 pt-4 space-y-3">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">SSH Credentials</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">SSH User</label>
+                  <input className="input" value={sshUser} onChange={e => setSshUser(e.target.value)} />
+                </div>
+                <div>
+                  <label className="label">SSH Port</label>
+                  <input className="input" type="number" value={sshPort} onChange={e => setSshPort(e.target.value)} />
                 </div>
               </div>
-            )}
-
-            {server && (
-              <div className="mt-3">
-                <button onClick={handleTestSsh} disabled={testing} className="btn btn-secondary text-sm flex items-center gap-2">
-                  {testing ? <Loader className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
-                  {testing ? 'Testing...' : 'Test SSH Connection'}
-                </button>
-                {testResult && (
-                  <div className={`mt-2 p-3 rounded-lg text-sm ${testResult.ok ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
-                    {testResult.ok ? (
-                      <>
-                        <div className="font-medium">✓ Connected — {testResult.hostname} ({testResult.os})</div>
-                        {testResult.fingerprint && <div className="text-xs mt-1 font-mono opacity-70">Key: {testResult.fingerprint.slice(0, 32)}...</div>}
-                      </>
-                    ) : (
-                      <div>✗ {testResult.error}</div>
-                    )}
-                  </div>
-                )}
+              <div className="flex gap-3">
+                {(['ssh_key', 'password'] as const).map(t => (
+                  <label key={t} className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={authType === t} onChange={() => setAuthType(t)} className="text-primary-600" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{t === 'ssh_key' ? 'SSH Key' : 'Password'}</span>
+                  </label>
+                ))}
               </div>
-            )}
-          </div>
+              {authType === 'ssh_key' ? (
+                <div>
+                  <label className="label">Private Key (PEM){server?.has_ssh_key && ' — leave blank to keep existing'}</label>
+                  <textarea className="input font-mono text-xs" rows={5} value={sshKey} onChange={e => setSshKey(e.target.value)}
+                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----" />
+                </div>
+              ) : (
+                <div>
+                  <label className="label">SSH Password{server?.has_ssh_password && ' — leave blank to keep existing'}</label>
+                  <div className="relative">
+                    <input className="input pr-10" type={showPw ? 'text' : 'password'} value={sshPassword} onChange={e => setSshPassword(e.target.value)} />
+                    <button type="button" className="absolute right-3 top-2.5" onClick={() => setShowPw(v => !v)}>
+                      {showPw ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {server && (
+                <div>
+                  <button onClick={handleTestSsh} disabled={testing} className="btn btn-secondary text-sm flex items-center gap-2">
+                    {testing ? <Loader className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
+                    {testing ? 'Testing...' : 'Test SSH Connection'}
+                  </button>
+                  {testResult && (
+                    <div className={`mt-2 p-3 rounded-lg text-sm ${testResult.ok ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
+                      {testResult.ok
+                        ? <><div className="font-medium">✓ Connected — {testResult.hostname} ({testResult.os})</div>{testResult.fingerprint && <div className="text-xs mt-1 font-mono opacity-70">Key: {testResult.fingerprint.slice(0, 32)}...</div>}</>
+                        : <div>✗ {testResult.error}</div>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual API key */}
+          {method === 'manual' && !server && (
+            <div className="border-t dark:border-gray-700 pt-4">
+              <label className="label">Agent API Key</label>
+              <input className="input font-mono text-sm" value={apiKey} onChange={e => setApiKey(e.target.value)}
+                placeholder="Paste the API key from /etc/stor-agent/config.json" />
+            </div>
+          )}
 
           <div>
             <label className="label">Notes (optional)</label>
@@ -232,7 +391,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
           <button onClick={onClose} className="btn btn-secondary">Cancel</button>
           <button onClick={handleSave} disabled={saving} className="btn btn-primary flex items-center gap-2">
             {saving && <Loader className="h-4 w-4 animate-spin" />}
-            {saving ? 'Saving...' : server ? 'Save Changes' : 'Add Server'}
+            {saving ? 'Working...' : server ? 'Save Changes' : method === 'command' ? 'Save & Get Command' : method === 'ssh' ? 'Save & Install' : 'Save'}
           </button>
         </div>
       </div>
@@ -494,45 +653,42 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
           {!server.is_local && !server.agent_installed && user?.isAdmin && (
             <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
               <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-3">
-                St0r Agent is not installed on this server. Install it to enable remote management.
+                St0r Agent is not installed on this server.
               </p>
               <div className="flex flex-wrap gap-2">
-                <button onClick={installAgentAuto} disabled={installingAgent || (!server.has_ssh_key && !server.has_ssh_password)}
-                  className="btn btn-primary text-sm flex items-center gap-2">
-                  {installingAgent ? <Loader className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                  {installingAgent ? 'Installing...' : 'Auto-Install via SSH'}
+                {(server.has_ssh_key || server.has_ssh_password) && (
+                  <button onClick={installAgentAuto} disabled={installingAgent}
+                    className="btn btn-primary text-sm flex items-center gap-2">
+                    {installingAgent ? <Loader className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    {installingAgent ? 'Installing...' : 'Auto-Install via SSH'}
+                  </button>
+                )}
+                <button onClick={getInstallCommand} disabled={installCmdLoading} className="btn btn-secondary text-sm flex items-center gap-2">
+                  {installCmdLoading ? <Loader className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+                  {installCmdLoading ? 'Generating...' : 'Get Install Command'}
                 </button>
                 <button onClick={() => setShowManualKey(v => !v)} className="btn btn-secondary text-sm flex items-center gap-2">
                   <Key className="h-4 w-4" />
-                  Enter API Key Manually
+                  Enter API Key
                 </button>
               </div>
-              <button onClick={getInstallCommand} disabled={installCmdLoading} className="btn btn-secondary text-sm flex items-center gap-2">
-                {installCmdLoading ? <Loader className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
-                {installCmdLoading ? 'Generating...' : 'Get Install Command'}
-              </button>
-              {(!server.has_ssh_key && !server.has_ssh_password) && (
-                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
-                  Add SSH credentials to enable auto-install, or use the install command to install manually.
-                </p>
-              )}
               {showManualKey && (
                 <div className="mt-3 flex gap-2">
                   <input className="input text-sm font-mono" value={manualKey} onChange={e => setManualKey(e.target.value)}
-                    placeholder="Paste API key from stor-agent install output" />
+                    placeholder="Paste API key from /etc/stor-agent/config.json" />
                   <button onClick={registerManualKey} className="btn btn-primary text-sm flex-shrink-0">Register</button>
                 </div>
               )}
               {showInstallCmd && installCmd && (
-                <div className="mt-3 p-3 bg-gray-900 rounded-lg">
+                <div className="mt-3 bg-gray-950 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-400">Run this on the remote server:</span>
-                    <button onClick={copyInstallCmd} className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors">
+                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Run on remote server</span>
+                    <button onClick={copyInstallCmd} className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-green-400 hover:text-green-300 transition-colors">
                       {installCmdCopied ? <><Check className="h-3 w-3" /> Copied!</> : <><Copy className="h-3 w-3" /> Copy</>}
                     </button>
                   </div>
-                  <code className="text-xs text-green-400 font-mono break-all">{installCmd}</code>
-                  <p className="text-xs text-gray-500 mt-2">This command expires in 24 hours. The agent will register automatically when installed.</p>
+                  <code className="text-xs text-green-400 font-mono break-all leading-relaxed">{installCmd}</code>
+                  <p className="text-xs text-gray-500 mt-2">Expires in 24 hours. The agent registers automatically after install.</p>
                 </div>
               )}
               {installError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{installError}</p>}

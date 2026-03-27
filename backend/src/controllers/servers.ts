@@ -443,9 +443,9 @@ export async function getOsUpdates(req: Request, res: Response) {
     const server = rows[0];
 
     if (server.is_local) {
-      await execFileAsync('apt-get', ['update', '-qq']);
+      // Use cached apt data — no sudo needed, and apt-get update runs as root during Apply OS Updates
       const { stdout } = await execFileAsync('apt', ['list', '--upgradable', '--quiet=2']);
-      const packages = stdout.trim().split('\n').filter((l: string) => l && !l.startsWith('Listing'));
+      const packages = stdout.trim().split('\n').filter((l: string) => l && !l.startsWith('Listing') && l.trim() !== '');
       res.json({ count: packages.length, packages: packages.slice(0, 50) });
       return;
     }
