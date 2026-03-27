@@ -498,6 +498,7 @@ export class UrBackupService {
               ip,
               os_simple: api.os_simple || c.os_simple,
               os_version_string: api.os_version_string || c.os_version_string,
+              client_version_string: api.client_version_string || c.client_version_string || null,
               delete_pending: api.delete_pending === '1' || api.delete_pending === 1 || false,
               no_backup_paths: api.no_backup_paths === true || api.no_backup_paths === 1 || false,
             };

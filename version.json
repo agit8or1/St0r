@@ -1,8 +1,7 @@
 {
-  "version": "3.2.84",
+  "version": "3.2.85",
   "releaseDate": "2026-03-27",
   "changelog": [
-    "Feature: UrBackup server version check and one-click apt upgrade in About page",
-    "Feature: UrBackup client version display per connected client in About page"
+    "Feature: UrBackup client version shown under endpoint name on Clients page"
   ]
 }

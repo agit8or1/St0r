@@ -45,6 +45,8 @@ export interface Client {
   image_ok?: boolean;
   bytes_used_files?: number;
   bytes_used_images?: number;
+  client_version_string?: string | null;
+  os_simple?: string | null;
 }
 
 export interface Activity {

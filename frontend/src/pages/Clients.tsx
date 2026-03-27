@@ -390,6 +390,9 @@ export function Clients() {
                         {/* Name */}
                         <td className="px-3 py-2">
                           <span className="font-medium text-gray-900 dark:text-gray-100">{client.name}</span>
+                          {client.client_version_string && (
+                            <div className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-0.5">{client.client_version_string}</div>
+                          )}
                         </td>
                         {/* Customer (read-only) */}
                         <td className="px-3 py-2">
