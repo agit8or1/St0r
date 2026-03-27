@@ -5,6 +5,17 @@ import { logger } from '../utils/logger.js';
 import { existsSync, truncateSync } from 'fs';
 import { readFile } from 'fs/promises';
 
+function compareVersionStrings(latest: string, installed: string): boolean {
+  const a = latest.replace(/[^0-9.]/g, '').split('.').map(Number);
+  const b = installed.replace(/[^0-9.]/g, '').split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const la = a[i] || 0, lb = b[i] || 0;
+    if (la > lb) return true;
+    if (la < lb) return false;
+  }
+  return false;
+}
+
 // --- /proc-based metrics helpers ---
 
 // CPU delta state
@@ -249,5 +260,138 @@ export async function getUpdateLog(req: Request, res: Response) {
       error: 'Failed to get update log',
       message: 'An internal error occurred'
     });
+  }
+}
+
+export async function getUrBackupServerVersion(req: Request, res: Response) {
+  try {
+    // Installed version from dpkg
+    let installed = 'unknown';
+    try {
+      const { stdout } = await execFileAsync('dpkg', ['-l', 'urbackup-server']);
+      const m = stdout.match(/^ii\s+urbackup-server\s+([\d.]+)/m);
+      if (m) installed = m[1];
+    } catch (_e) { /* dpkg unavailable or package not found */ }
+
+    // Latest from GitHub
+    let latest = 'unknown';
+    let updateAvailable = false;
+    try {
+      const resp = await fetch('https://api.github.com/repos/uroni/urbackup_backend/releases/latest', {
+        headers: { 'User-Agent': 'st0r', 'Accept': 'application/vnd.github.v3+json' }
+      });
+      if (resp.ok) {
+        const data: any = await resp.json();
+        latest = (data.tag_name || '').replace(/^v/, '') || 'unknown';
+        if (installed !== 'unknown' && latest !== 'unknown') {
+          updateAvailable = compareVersionStrings(latest, installed);
+        }
+      }
+    } catch (_e) { /* no network */ }
+
+    res.json({ installed, latest, updateAvailable });
+  } catch (error: any) {
+    logger.error('Failed to get UrBackup server version:', error);
+    res.status(500).json({ error: 'Failed to get UrBackup server version' });
+  }
+}
+
+export async function triggerUrBackupServerUpdate(req: Request, res: Response) {
+  try {
+    const user = (req as any).user;
+    if (!user?.isAdmin) {
+      res.status(403).json({ error: 'Only administrators can trigger updates' });
+      return;
+    }
+
+    const logFile = '/var/log/urbackup-server-update.log';
+
+    // Check if already running
+    try {
+      const { stdout } = await execFileAsync('systemctl', ['is-active', 'urbackup-server-pkg-update']);
+      if (['active', 'activating'].includes(stdout.trim())) {
+        res.json({ success: true, alreadyRunning: true, message: 'UrBackup update already in progress' });
+        return;
+      }
+    } catch (_e) { /* not running */ }
+
+    try { await execFileAsync('sudo', ['systemctl', 'reset-failed', 'urbackup-server-pkg-update.service']); } catch (_e) {}
+
+    // Clear log
+    try { truncateSync(logFile, 0); } catch (_e) {}
+
+    execFile('sudo', [
+      'systemd-run',
+      '--unit=urbackup-server-pkg-update',
+      '--description=UrBackup Server Package Update',
+      `--property=StandardOutput=append:${logFile}`,
+      `--property=StandardError=append:${logFile}`,
+      '/bin/bash', '-c',
+      'DEBIAN_FRONTEND=noninteractive apt-get update -q 2>&1 && DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade urbackup-server 2>&1 && systemctl restart urbackupsrv && echo "SUCCESS: UrBackup server updated and restarted" || echo "FAILED: UrBackup server update failed"',
+    ], (error) => {
+      if (error) logger.error('Failed to start UrBackup server update:', error);
+    });
+
+    logger.info(`UrBackup server update triggered by ${user.username}`);
+    res.json({ success: true, message: 'UrBackup server update started' });
+  } catch (error: any) {
+    logger.error('Failed to trigger UrBackup server update:', error);
+    res.status(500).json({ error: 'Failed to trigger UrBackup server update' });
+  }
+}
+
+export async function getUrBackupUpdateLog(req: Request, res: Response) {
+  try {
+    const logFile = '/var/log/urbackup-server-update.log';
+    if (!existsSync(logFile)) {
+      res.json({ log: '', inProgress: false });
+      return;
+    }
+    const log = await readFile(logFile, 'utf-8');
+    let inProgress = false;
+    try {
+      const { stdout } = await execFileAsync('systemctl', ['is-active', 'urbackup-server-pkg-update']);
+      inProgress = ['active', 'activating'].includes(stdout.trim());
+    } catch (_e) { inProgress = false; }
+    res.json({ log, inProgress });
+  } catch (error: any) {
+    logger.error('Failed to get UrBackup update log:', error);
+    res.status(500).json({ error: 'Failed to get UrBackup update log' });
+  }
+}
+
+export async function getUrBackupClientVersions(req: Request, res: Response) {
+  try {
+    const URBACKUP_API_URL = process.env.URBACKUP_API_URL || 'http://localhost:55414/x';
+    const URBACKUP_USERNAME = process.env.URBACKUP_USERNAME || 'admin';
+    const URBACKUP_PASSWORD = process.env.URBACKUP_PASSWORD || '';
+
+    // Login to get a session
+    const loginUrl = `${URBACKUP_API_URL}?a=login&username=${encodeURIComponent(URBACKUP_USERNAME)}&password=${encodeURIComponent(URBACKUP_PASSWORD)}`;
+    const loginResp = await fetch(loginUrl);
+    const loginData: any = await loginResp.json();
+    if (!loginData.success) {
+      throw new Error('UrBackup login failed');
+    }
+    const session: string = loginData.session || '';
+
+    // Fetch status to get client list with version info
+    const statusResp = await fetch(`${URBACKUP_API_URL}?a=status&ses=${encodeURIComponent(session)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+      body: `ses=${encodeURIComponent(session)}`,
+    });
+    const data: any = await statusResp.json();
+    const clients = (data?.status || []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      online: c.online === true,
+      client_version_string: c.client_version_string || null,
+      os_simple: c.os_simple || null,
+    }));
+    res.json({ clients });
+  } catch (error: any) {
+    logger.error('Failed to get UrBackup client versions:', error);
+    res.status(500).json({ error: 'Failed to get UrBackup client versions' });
   }
 }

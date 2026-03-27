@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Logo } from '../components/Logo';
-import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText, Heart, Star, X } from 'lucide-react';
+import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText, Heart, Star, X, Smartphone } from 'lucide-react';
 
 /**
  * Compare two semantic version strings
@@ -21,6 +21,85 @@ function compareVersions(version1: string, version2: string): boolean {
   }
 
   return false; // Versions are equal
+}
+
+function UrBackupClientVersionsCard() {
+  const [clients, setClients] = useState<Array<{ id: number; name: string; online: boolean; client_version_string: string | null; os_simple: string | null }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchClientVersions = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const resp = await fetch('/api/system-update/client-versions', { credentials: 'include' });
+      if (!resp.ok) throw new Error('Failed to fetch client versions');
+      const data = await resp.json();
+      setClients(data.clients || []);
+    } catch (e: any) {
+      setError(e.message || 'Failed to fetch client versions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchClientVersions(); }, []);
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <Smartphone className="h-5 w-5" />
+          UrBackup Client Versions
+        </h3>
+        <button onClick={fetchClientVersions} disabled={loading} className="btn btn-secondary flex items-center gap-2 text-sm">
+          {loading ? <><Loader className="h-3 w-3 animate-spin" />Loading...</> : <><RefreshCw className="h-3 w-3" />Refresh</>}
+        </button>
+      </div>
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200 mb-4">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />{error}
+        </div>
+      )}
+      {!loading && clients.length === 0 && !error && (
+        <p className="text-sm text-gray-500 dark:text-gray-400">No clients connected.</p>
+      )}
+      {clients.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="text-left py-2 pr-4 font-medium text-gray-700 dark:text-gray-300">Client</th>
+                <th className="text-left py-2 pr-4 font-medium text-gray-700 dark:text-gray-300">Status</th>
+                <th className="text-left py-2 pr-4 font-medium text-gray-700 dark:text-gray-300">OS</th>
+                <th className="text-left py-2 font-medium text-gray-700 dark:text-gray-300">Client Version</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map(c => (
+                <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800">
+                  <td className="py-2 pr-4 font-medium text-gray-900 dark:text-gray-100">{c.name}</td>
+                  <td className="py-2 pr-4">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      c.online ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                    }`}>
+                      {c.online ? 'Online' : 'Offline'}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-4 text-gray-600 dark:text-gray-400">{c.os_simple || '—'}</td>
+                  <td className="py-2 text-gray-600 dark:text-gray-400 font-mono text-xs">{c.client_version_string || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+        Client versions are reported by connected clients. Offline clients show their last known version.
+        UrBackup clients update themselves automatically when a new version is available from the server.
+      </p>
+    </div>
+  );
 }
 
 export function About() {
@@ -50,6 +129,17 @@ export function About() {
   const [currentVersion, setCurrentVersion] = useState('Loading...');
   const [showSupportModal, setShowSupportModal] = useState(false);
 
+  // UrBackup server update state
+  const [ubVersion, setUbVersion] = useState<{ installed: string; latest: string; updateAvailable: boolean } | null>(null);
+  const [ubChecking, setUbChecking] = useState(false);
+  const [ubUpdating, setUbUpdating] = useState(false);
+  const [ubUpdateLog, setUbUpdateLog] = useState('');
+  const [ubInProgress, setUbInProgress] = useState(false);
+  const [ubShowLog, setUbShowLog] = useState(false);
+  const [ubError, setUbError] = useState('');
+  const [ubConfirming, setUbConfirming] = useState(false);
+  const hasSeenUbInProgressRef = useRef(false);
+
   // Generate or retrieve installation ID
   const getInstallId = () => {
     let installId = localStorage.getItem('installId');
@@ -65,6 +155,7 @@ export function About() {
     fetchCurrentVersion();
     checkForUpdates();
     fetchInstallStats();
+    checkUrBackupVersion();
   }, []);
 
   // Open progress modal whenever ?autoUpdate=true is in the URL — including
@@ -160,6 +251,26 @@ export function About() {
     return () => clearInterval(pollInterval);
   }, [showProgressModal]);
 
+  // Poll for UrBackup server update progress
+  useEffect(() => {
+    if (!ubShowLog) return;
+    const iv = setInterval(async () => {
+      try {
+        const resp = await fetch('/api/system-update/urbackup-update-log', { credentials: 'include' });
+        const data = await resp.json();
+        setUbUpdateLog(data.log || '');
+        setUbInProgress(data.inProgress);
+        if (data.inProgress) hasSeenUbInProgressRef.current = true;
+        if (!data.inProgress && hasSeenUbInProgressRef.current) {
+          setUbUpdating(false);
+          clearInterval(iv);
+          checkUrBackupVersion();
+        }
+      } catch (_e) {}
+    }, 1500);
+    return () => clearInterval(iv);
+  }, [ubShowLog]);
+
   const fetchInstallStats = async () => {
     try {
       const response = await fetch('/api/version/stats');
@@ -240,6 +351,42 @@ export function About() {
       setUpdating(false);
       setShowProgressModal(false);
       setUpdateInProgress(false);
+    }
+  };
+
+  const checkUrBackupVersion = async () => {
+    setUbChecking(true);
+    setUbError('');
+    try {
+      const resp = await fetch('/api/system-update/urbackup-version', { credentials: 'include' });
+      if (resp.ok) setUbVersion(await resp.json());
+    } catch (_e) {
+      setUbError('Failed to check UrBackup version');
+    } finally {
+      setUbChecking(false);
+    }
+  };
+
+  const triggerUrBackupUpdate = async () => {
+    setUbUpdating(true);
+    setUbShowLog(true);
+    setUbInProgress(true);
+    hasSeenUbInProgressRef.current = false;
+    setUbUpdateLog('Starting UrBackup server update...\n');
+    try {
+      const resp = await fetch('/api/system-update/urbackup-update', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!resp.ok) {
+        const d = await resp.json().catch(() => ({}));
+        throw new Error((d as any).error || 'Failed to start update');
+      }
+    } catch (e: any) {
+      setUbError(e.message);
+      setUbUpdating(false);
+      setUbShowLog(false);
+      setUbInProgress(false);
     }
   };
 
@@ -533,6 +680,78 @@ export function About() {
             </div>
           </div>
         </div>
+
+        {/* UrBackup Server Updates */}
+        <div className={`card bg-gradient-to-br ${
+          ubVersion?.updateAvailable
+            ? 'from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-2 border-orange-200 dark:border-orange-800'
+            : 'from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 border-2 border-gray-200 dark:border-gray-700'
+        }`}>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            UrBackup Server Updates
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                  Installed: <span className="text-blue-600 dark:text-blue-400">{ubVersion?.installed || '—'}</span>
+                </p>
+                {ubVersion?.latest && ubVersion.latest !== 'unknown' && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {ubVersion.updateAvailable
+                      ? <>Latest: <span className="text-orange-600 dark:text-orange-400 font-semibold">{ubVersion.latest}</span></>
+                      : <>You're running the latest version</>}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={checkUrBackupVersion}
+                  disabled={ubChecking}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  {ubChecking ? <><Loader className="h-4 w-4 animate-spin" />Checking...</> : <><RefreshCw className="h-4 w-4" />Check</>}
+                </button>
+                {ubVersion?.updateAvailable && (
+                  ubConfirming ? (
+                    <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-700 rounded-lg px-3 py-1.5">
+                      <span className="text-sm text-orange-800 dark:text-orange-200 font-medium">Update UrBackup server?</span>
+                      <button onClick={() => { setUbConfirming(false); triggerUrBackupUpdate(); }} className="btn btn-primary btn-sm flex items-center gap-1">
+                        <Download className="h-3 w-3" /> Yes, Update
+                      </button>
+                      <button onClick={() => setUbConfirming(false)} className="btn btn-secondary btn-sm">Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setUbConfirming(true)} disabled={ubUpdating} className="btn flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white">
+                      {ubUpdating ? <><Loader className="h-4 w-4 animate-spin" />Updating...</> : <><Download className="h-4 w-4" />Update UrBackup</>}
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+            {ubError && (
+              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-800 dark:text-red-200">{ubError}</p>
+              </div>
+            )}
+            {ubShowLog && (
+              <div className="bg-gray-950 rounded-lg p-4 font-mono text-xs text-green-400 whitespace-pre-wrap max-h-48 overflow-y-auto border border-gray-700">
+                {ubUpdateLog || 'Waiting for update to start...'}
+                {!ubInProgress && ubUpdateLog.includes('SUCCESS') && (
+                  <span className="text-green-300 font-bold"> ✓ Done</span>
+                )}
+                {!ubInProgress && ubUpdateLog.includes('FAILED') && (
+                  <span className="text-red-400 font-bold"> ✗ Failed</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* UrBackup Client Versions */}
+        <UrBackupClientVersionsCard />
 
         {/* Changelog Section */}
         {changelog.length > 0 && (

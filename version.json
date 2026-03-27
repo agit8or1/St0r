@@ -1,7 +1,8 @@
 {
-  "version": "3.2.83",
-  "releaseDate": "2026-03-22",
+  "version": "3.2.84",
+  "releaseDate": "2026-03-27",
   "changelog": [
-    "Fix: SMTP Server and SSL/TLS checkbox not persisting in Settings → Email & Alerts"
+    "Feature: UrBackup server version check and one-click apt upgrade in About page",
+    "Feature: UrBackup client version display per connected client in About page"
   ]
 }
