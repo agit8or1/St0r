@@ -509,8 +509,7 @@ export function Settings() {
                 Client Installer Configuration
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Configure the UrBackup server connection information for auto-generated client installer scripts.
-                Downloaded installers will be pre-configured with these settings.
+                Configure the public hostname for this St0r server. Used for auto-generated client installer scripts and remote agent install commands.
               </p>
 
               <div className="grid gap-6 md:grid-cols-2">
@@ -518,7 +517,7 @@ export function Settings() {
                   <label className="label">
                     Server Hostname / FQDN
                     <span className="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
-                      Fully qualified domain name or IP address for the UrBackup server (e.g., stor.agit8or.net)
+                      Public hostname for this St0r server (e.g., stor.agit8or.net). Used for client installer scripts and remote agent install commands.
                     </span>
                   </label>
                   <input

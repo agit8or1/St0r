@@ -112,6 +112,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
   // Install command result
   const [installCmd, setInstallCmd] = useState('');
   const [cmdCopied, setCmdCopied] = useState(false);
+  const [fqdnWarning, setFqdnWarning] = useState(false);
 
   const saveServer = async (): Promise<string> => {
     const body: any = { name, host, agent_port: agentPort, notes };
@@ -141,6 +142,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
         const td = await tokenResp.json();
         if (!tokenResp.ok || !td.command) throw new Error(td.error || 'Failed to generate install command');
         setInstallCmd(td.command);
+        setFqdnWarning(!td.baseUrl || td.baseUrl.includes('localhost'));
         setStep('done');
       } else if (method === 'ssh') {
         // Trigger install in background; user sees server card with progress
@@ -259,6 +261,12 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
               </div>
               <code className="text-sm text-green-400 font-mono break-all leading-relaxed">{installCmd}</code>
             </div>
+            {fqdnWarning && (
+              <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700 text-sm text-yellow-800 dark:text-yellow-200">
+                <svg className="h-4 w-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                <span>No FQDN configured — this command uses <code className="font-mono">localhost</code> and won't work on a remote server. Go to <strong>Settings → Client Installer</strong> and set your Server Hostname / FQDN first, then regenerate the command.</span>
+              </div>
+            )}
             <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300">
               <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <span>This command expires in 24 hours. Once the agent is running, the server card will show as online automatically.</span>
