@@ -2,7 +2,7 @@
 
 A modern, full-featured web interface for managing and monitoring [UrBackup](https://www.urbackup.org/) servers. Built with React + TypeScript, designed to run directly on your UrBackup Linux server.
 
-[![Version](https://img.shields.io/badge/version-3.2.63-blue.svg)](version.json)
+[![Version](https://img.shields.io/badge/version-3.2.86-blue.svg)](version.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -11,10 +11,11 @@ A modern, full-featured web interface for managing and monitoring [UrBackup](htt
 
 ### Core
 - **Dashboard** — Real-time overview: client health, storage usage, active tasks, replication status. All stat cards are clickable links.
-- **Client Management** — Monitor all backup clients with file/image status, last-seen, IP, OS. Filter by online/offline/failed.
+- **Client Management** — Monitor all backup clients with file/image status, last-seen, IP, OS, and UrBackup client software version. Filter by online/offline/failed.
 - **Endpoint Settings** — Per-client backup configuration: file paths, retention counts, backup windows, internet mode, auth key management.
 - **Backup Controls** — Start/stop full or incremental file and image backups from the web UI with inline status feedback.
 - **Backup History** — Complete per-client backup history with type, size, duration, and status.
+- **Storage Limits** — Set per-client storage caps with configurable warn/critical thresholds; progress bar in the endpoint list highlights clients approaching or exceeding their limit.
 
 ### File Operations
 - **File Browser** — Browse any backup snapshot by date; download individual files.
@@ -44,10 +45,15 @@ A modern, full-featured web interface for managing and monitoring [UrBackup](htt
 - **Customer Management** — Group clients by customer organization.
 - **Profile** — Change your own password and 2FA settings.
 
+### Updates
+- **St0r auto-update** — Built-in update checker polls GitHub every 30 minutes; one-click update with live log output, progress bar, and automatic rollback on failure.
+- **UrBackup server update** — About page shows installed vs latest UrBackup server version; one-click apt-based upgrade with live terminal output.
+- **Force reinstall** — Repair-mode reinstall of the current version without needing a newer release.
+
 ### UI / UX
 - **Dark Mode** — System-aware with manual toggle; preference persisted across sessions.
 - **Responsive** — Works on desktop and tablet.
-- **Auto-update** — Built-in update checker; one-click update via the UI.
+- **Tooltips** — Contextual hover hints throughout the UI; can be toggled in Settings.
 - **Bug Reporting** — In-app bug report form.
 
 ---

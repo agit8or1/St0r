@@ -5,6 +5,40 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.87] - 2026-03-27
+
+### Changed
+- **Documentation page fully updated**: In-app Documentation page now reflects all current features. Features Overview expanded from 6 generic cards to 8 accurate cards covering real-time monitoring, client management with version display, storage limits, standby replication, security/2FA, one-click updates, advanced settings, and modern UI. Added dedicated sections for Replication (setup guide, trigger modes, alert channels), Security & Access Control (user roles, 2FA setup, security defaults), and Updates (St0r auto-update, UrBackup server update). Client list description now mentions version display and color-coded storage limit bars. Settings section expanded to cover SMTP/email, Pushover notifications, and internet client installer. Quick Reference updated: default password corrected to `admin123`, UrBackup internet port (55415) added to port list.
+
+## [3.2.86] - 2026-03-27
+
+### Removed
+- **UrBackup Client Versions card removed from About page**: Client software versions are now shown directly on the Clients page under each endpoint name, making the About page dedicated to St0r update management only.
+
+## [3.2.85] - 2026-03-27
+
+### Added
+- **UrBackup client version on Clients page**: Each endpoint now shows its UrBackup client software version string as small monospace text under the endpoint name. Data comes from the UrBackup status API; only visible for clients that have reported their version.
+
+### Changed
+- `Client` TypeScript interface extended with `client_version_string` and `os_simple` fields.
+- `getClients()` now passes `client_version_string` through from the UrBackup status API merge.
+
+## [3.2.84] - 2026-03-27
+
+### Added
+- **UrBackup server update management (About page)**: New card shows the installed UrBackup server version (from `dpkg`) vs the latest release on GitHub (`uroni/urbackup_backend`). When an update is available, an orange "Update UrBackup" button triggers an `apt-get install --only-upgrade urbackup-server` in the background via systemd-run, with a live terminal log and automatic service restart.
+- **New backend endpoints**:
+  - `GET /api/system-update/urbackup-version` — installed vs latest UrBackup server version
+  - `POST /api/system-update/urbackup-update` — triggers apt-based UrBackup server upgrade
+  - `GET /api/system-update/urbackup-update-log` — polls upgrade progress log
+  - `GET /api/system-update/client-versions` — returns client version strings from UrBackup status API
+
+## [3.2.83] - 2026-03-27
+
+### Fixed
+- **SMTP Server and Use SSL/TLS not saving in Settings → Email & Alerts**: The `getServerSettings` response merged settings from three sources (defaults, UrBackup API, direct SQLite read). The direct SQLite read was applied last with highest priority, and UrBackup's database contains default empty-string rows for all email fields. These empty rows silently overwrote values that had been saved through the UrBackup API on every page reload. Fixed by swapping the merge order so the UrBackup API response takes priority over the raw SQLite read. The FQDN (managed by St0r's `.env`) is re-pinned after both spreads to remain authoritative.
+
 ## [3.2.82] - 2026-03-22
 
 ### Fixed

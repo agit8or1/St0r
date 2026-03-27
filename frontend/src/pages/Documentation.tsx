@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   BookOpen,
   Download,
-  Server,
   Users,
   Activity,
   Settings,
@@ -13,9 +12,14 @@ import {
   HardDrive,
   Database,
   Globe,
-  Search,
   Copy,
-  Check
+  Check,
+  GitBranch,
+  Lock,
+  RefreshCw,
+  Mail,
+  BarChart2,
+  Bell
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 
@@ -99,9 +103,21 @@ export function Documentation() {
               <Activity className="h-4 w-4" />
               Activities & Backups
             </a>
+            <a href="#replication" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline">
+              <GitBranch className="h-4 w-4" />
+              Replication
+            </a>
             <a href="#settings" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline">
               <Settings className="h-4 w-4" />
               Settings & Configuration
+            </a>
+            <a href="#security" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline">
+              <Lock className="h-4 w-4" />
+              Security & Access Control
+            </a>
+            <a href="#updates" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline">
+              <RefreshCw className="h-4 w-4" />
+              Updates
             </a>
             <a href="#troubleshooting" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline">
               <AlertCircle className="h-4 w-4" />
@@ -207,7 +223,7 @@ export function Documentation() {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">After installation, login with:</p>
                 <div className="font-mono text-sm">
                   <p className="text-gray-900 dark:text-gray-100">Username: <span className="text-blue-600 dark:text-blue-400">admin</span></p>
-                  <p className="text-gray-900 dark:text-gray-100">Password: <span className="text-blue-600 dark:text-blue-400">admin</span></p>
+                  <p className="text-gray-900 dark:text-gray-100">Password: <span className="text-blue-600 dark:text-blue-400">admin123</span></p>
                 </div>
                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">⚠️ Change the default password after first login!</p>
               </div>
@@ -224,26 +240,10 @@ export function Documentation() {
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="border dark:border-gray-700 rounded-lg p-4">
-              <HardDrive className="h-8 w-8 text-blue-600 dark:text-blue-400 mb-3" />
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Direct Database Access</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Fast, reliable access to your UrBackup server through direct SQLite database reads for optimal performance.
-              </p>
-            </div>
-
-            <div className="border dark:border-gray-700 rounded-lg p-4">
               <Activity className="h-8 w-8 text-purple-600 dark:text-purple-400 mb-3" />
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Real-Time Activities</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Real-Time Monitoring</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Monitor backup progress in real-time with live speed calculations, ETA estimates, and beautiful progress indicators.
-              </p>
-            </div>
-
-            <div className="border dark:border-gray-700 rounded-lg p-4">
-              <Database className="h-8 w-8 text-green-600 dark:text-green-400 mb-3" />
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Storage Analytics</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Track storage usage across all clients with detailed breakdowns of file and image backups.
+                Live backup progress with speed (MB/s), ETA, and data transferred. Completed image backups grouped by session. Auto-refresh every 3 seconds.
               </p>
             </div>
 
@@ -251,7 +251,39 @@ export function Documentation() {
               <Users className="h-8 w-8 text-orange-600 dark:text-orange-400 mb-3" />
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Client Management</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                View all clients, their status, backup history, and trigger manual backups (full or incremental, file or image).
+                Monitor all clients with online/offline status, backup health, last-seen time, IP, OS, and UrBackup client version. Filter by status. Storage limit bars highlight clients nearing their cap.
+              </p>
+            </div>
+
+            <div className="border dark:border-gray-700 rounded-lg p-4">
+              <BarChart2 className="h-8 w-8 text-green-600 dark:text-green-400 mb-3" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Storage Limits</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Set per-client storage caps with configurable warn and critical thresholds. Progress bars in the client list turn yellow or red as clients approach their limit.
+              </p>
+            </div>
+
+            <div className="border dark:border-gray-700 rounded-lg p-4">
+              <GitBranch className="h-8 w-8 text-blue-600 dark:text-blue-400 mb-3" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Standby Replication</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Mirror your UrBackup server to one or more DR targets via SSH/rsync. Schedule runs, trigger after each backup, view step-by-step run history, and receive email or webhook alerts.
+              </p>
+            </div>
+
+            <div className="border dark:border-gray-700 rounded-lg p-4">
+              <Lock className="h-8 w-8 text-indigo-600 dark:text-indigo-400 mb-3" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Security & Access Control</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Role-based access control (admin / read-only), per-user TOTP 2FA compatible with Google Authenticator and Authy, JWT via HttpOnly cookies, bcrypt password hashing, and AES-256-GCM encrypted SSH credential storage.
+              </p>
+            </div>
+
+            <div className="border dark:border-gray-700 rounded-lg p-4">
+              <RefreshCw className="h-8 w-8 text-teal-600 dark:text-teal-400 mb-3" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">One-Click Updates</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                St0r checks GitHub every 30 minutes for new releases and updates itself with live log output and automatic rollback on failure. The About page also shows installed vs. latest UrBackup server version with a one-click apt upgrade.
               </p>
             </div>
 
@@ -259,15 +291,15 @@ export function Documentation() {
               <Settings className="h-8 w-8 text-gray-600 dark:text-gray-400 mb-3" />
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Advanced Settings</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Configure server and client settings including backup intervals, windows, retention policies, and more.
+                Manage global UrBackup settings, per-client overrides, backup windows, retention, and internet mode. Generate Windows/Linux/macOS client installers with the server address pre-embedded.
               </p>
             </div>
 
             <div className="border dark:border-gray-700 rounded-lg p-4">
-              <Globe className="h-8 w-8 text-indigo-600 dark:text-indigo-400 mb-3" />
+              <Globe className="h-8 w-8 text-pink-600 dark:text-pink-400 mb-3" />
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Modern UI</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Beautiful, responsive interface with dark mode support, gradient animations, and an intuitive user experience.
+                Responsive dark/light interface with contextual tooltips, clickable dashboard stat cards, customer grouping, and an in-app bug report form.
               </p>
             </div>
           </div>
@@ -353,19 +385,23 @@ export function Documentation() {
               <ul className="space-y-2 ml-4">
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 dark:text-blue-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Status indicators (Online/Offline)</span>
+                  <span className="text-gray-600 dark:text-gray-400">Online/Offline status with last-seen time and IP address</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 dark:text-blue-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Last backup timestamps</span>
+                  <span className="text-gray-600 dark:text-gray-400">UrBackup client software version shown under the client name</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 dark:text-blue-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Storage usage per client</span>
+                  <span className="text-gray-600 dark:text-gray-400">File and image backup health indicators (last backup timestamps)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 dark:text-blue-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Backup success/failure status</span>
+                  <span className="text-gray-600 dark:text-gray-400">Storage usage with color-coded limit bars (yellow = warn, red = critical)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-600 dark:text-blue-400">•</span>
+                  <span className="text-gray-600 dark:text-gray-400">Filter by All / Online / Offline / Failed</span>
                 </li>
               </ul>
             </div>
@@ -487,21 +523,28 @@ export function Documentation() {
               <ul className="space-y-2 ml-4">
                 <li className="flex items-start gap-2">
                   <span className="text-gray-600 dark:text-gray-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Backup retention policies</span>
+                  <span className="text-gray-600 dark:text-gray-400">Backup retention policies, intervals, and global backup windows</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gray-600 dark:text-gray-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Default backup intervals</span>
+                  <span className="text-gray-600 dark:text-gray-400">Internet mode: server FQDN, port, and enable/disable internet backups</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gray-600 dark:text-gray-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Global backup windows</span>
+                  <span className="text-gray-600 dark:text-gray-400">Email / SMTP: server hostname, port, sender address, SSL/TLS, and test email</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gray-600 dark:text-gray-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Email notifications</span>
+                  <span className="text-gray-600 dark:text-gray-400">Pushover notifications: API key, user key, and notification priority</span>
                 </li>
               </ul>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Internet Client Installer</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-3">
+                Go to <strong>Settings → Internet Client Setup</strong> to generate platform-specific UrBackup client installers with your server's FQDN and port pre-embedded. Supports Windows (exe), Linux (sh), and macOS (pkg).
+              </p>
             </div>
 
             <div>
@@ -512,19 +555,19 @@ export function Documentation() {
               <ul className="space-y-2 ml-4">
                 <li className="flex items-start gap-2">
                   <span className="text-gray-600 dark:text-gray-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Backup intervals (full and incremental)</span>
+                  <span className="text-gray-600 dark:text-gray-400">Backup intervals, windows, and retention counts</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gray-600 dark:text-gray-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Backup windows (time restrictions)</span>
+                  <span className="text-gray-600 dark:text-gray-400">Backup paths, excluded files, and transfer limits</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gray-600 dark:text-gray-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Retention counts and durations</span>
+                  <span className="text-gray-600 dark:text-gray-400">Per-client storage limit with warn/critical thresholds</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-gray-600 dark:text-gray-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400">Excluded paths and file types</span>
+                  <span className="text-gray-600 dark:text-gray-400">Internet mode, auth key management, and image backup settings</span>
                 </li>
               </ul>
             </div>
@@ -532,8 +575,193 @@ export function Documentation() {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">User Management</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Create additional users, assign permissions, and manage passwords from the Users page.
+                Create additional users with admin or read-only roles, manage passwords, and enable per-user TOTP 2FA from the Users page. Each user can manage their own 2FA settings from their Profile.
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Replication Section */}
+        <div id="replication" className="card">
+          <div className="flex items-center gap-3 mb-4">
+            <GitBranch className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Replication</h2>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-gray-600 dark:text-gray-400">
+              Replication mirrors your entire UrBackup storage directory to one or more disaster-recovery targets over SSH/rsync, giving you a warm standby copy of all client backups.
+            </p>
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Setting Up a Target</h3>
+              <div className="space-y-3">
+                {[
+                  'Go to Replication → Targets → Add Target',
+                  'Enter the DR server hostname, SSH user, and authentication details (SSH key recommended)',
+                  'Configure paths: the target root path and any custom repository path mappings',
+                  'Click Test Connection to verify SSH and rsync connectivity',
+                  'Go to Replication → Settings to enable replication and set the trigger mode',
+                  'Click Run Now on any target to start an immediate replication',
+                ].map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0 text-sm font-bold text-blue-600 dark:text-blue-400">
+                      {i + 1}
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400 pt-0.5">{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Trigger Modes</h3>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 text-sm">Scheduled</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Run on a cron-style schedule (e.g., every night at 2 AM)</p>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 text-sm">After Backup</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Trigger automatically after each backup completes (with configurable debounce)</p>
+                </div>
+                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 text-sm">Both</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Combine schedule and post-backup triggers for maximum freshness</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Encrypted Credential Storage</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    SSH private keys and passwords are stored AES-256-GCM encrypted in the database. The encryption key is derived from <code className="bg-gray-900 text-green-400 px-1 rounded">APP_SECRET_KEY</code> in the backend <code className="bg-gray-900 text-green-400 px-1 rounded">.env</code>.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Alert Channels</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Configure email and/or webhook notifications under <strong>Replication → Alert Channels</strong>. Alerts fire on replication failure, when a target becomes stale (no recent successful run), and on recovery.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Security Section */}
+        <div id="security" className="card">
+          <div className="flex items-center gap-3 mb-4">
+            <Lock className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Security & Access Control</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">User Roles</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 text-sm">Admin</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Full access: manage clients, settings, users, replication, and server updates</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 text-sm">Read-Only</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">View dashboards, activities, and client status without making changes</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Two-Factor Authentication (2FA)</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-3">
+                Enable TOTP-based 2FA per user from <strong>Profile → Two-Factor Authentication</strong>. Compatible with Google Authenticator, Authy, and any TOTP app.
+              </p>
+              <div className="space-y-3">
+                {[
+                  'Go to your Profile (top-right menu)',
+                  'Click Enable Two-Factor Authentication',
+                  'Scan the QR code with your authenticator app',
+                  'Enter the 6-digit code to confirm and activate',
+                ].map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0 text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                      {i + 1}
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400 pt-0.5">{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Security Defaults</h3>
+              <ul className="space-y-2 ml-4">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">JWT tokens stored in HttpOnly cookies (not localStorage)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">bcrypt password hashing</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">helmet.js security headers on all API responses</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">Rate limiting on authentication endpoints</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">AES-256-GCM encrypted SSH credentials at rest</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Updates Section */}
+        <div id="updates" className="card">
+          <div className="flex items-center gap-3 mb-4">
+            <RefreshCw className="h-6 w-6 text-teal-600 dark:text-teal-400" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Updates</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">St0r Auto-Update</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-3">
+                St0r polls GitHub every 30 minutes for new releases. When an update is available, a banner appears on the About page.
+              </p>
+              <div className="space-y-2 ml-4">
+                <p className="text-gray-600 dark:text-gray-400 text-sm">• Go to <strong>About → St0r Updates</strong> and click <strong>Update Now</strong></p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">• A live log modal shows progress: downloading, extracting, building, restarting</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">• If the build fails, the update script automatically rolls back to the previous version</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">• <strong>Force Reinstall</strong> lets you repair-reinstall the current version without needing a newer release</p>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>Note:</strong> Updates take 2–3 minutes. The service will restart automatically. The browser will reconnect once the service is back online. Do not navigate away while the log is still scrolling.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">UrBackup Server Update</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-3">
+                The About page shows your installed UrBackup server version alongside the latest available release from GitHub. If an upgrade is available, click <strong>Upgrade UrBackup</strong> to run an apt-based upgrade with live terminal output.
+              </p>
+              <div className="space-y-2 ml-4">
+                <p className="text-gray-600 dark:text-gray-400 text-sm">• Runs <code className="bg-gray-900 text-green-400 px-1 rounded">apt-get install --only-upgrade urbackup-server</code> in the background</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">• Live log output streamed to the browser during upgrade</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">• UrBackup service restarts automatically after a successful upgrade</p>
+              </div>
             </div>
           </div>
         </div>
@@ -637,7 +865,8 @@ export function Documentation() {
               <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                 <p>St0r Web Interface: <span className="font-mono text-blue-600 dark:text-blue-400">80</span></p>
                 <p>St0r Backend API: <span className="font-mono text-blue-600 dark:text-blue-400">3000</span></p>
-                <p>UrBackup Server: <span className="font-mono text-blue-600 dark:text-blue-400">55414</span></p>
+                <p>UrBackup HTTP API: <span className="font-mono text-blue-600 dark:text-blue-400">55414</span> (localhost only)</p>
+                <p>UrBackup Internet Clients: <span className="font-mono text-blue-600 dark:text-blue-400">55415</span> (TCP, must be forwarded)</p>
               </div>
             </div>
 

@@ -401,7 +401,11 @@ export function About() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-600 dark:text-primary-400 mt-1">●</span>
-                <span>Client management with detailed backup history</span>
+                <span>Client management with backup history and client software version</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary-600 dark:text-primary-400 mt-1">●</span>
+                <span>Per-client storage limits with warn/critical thresholds</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-600 dark:text-primary-400 mt-1">●</span>
@@ -413,11 +417,11 @@ export function About() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-600 dark:text-primary-400 mt-1">●</span>
-                <span>Custom backup scheduling and reports</span>
+                <span>Full standby replication to DR targets via SSH/rsync</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-600 dark:text-primary-400 mt-1">●</span>
-                <span>Email alerts and notifications</span>
+                <span>Email and Pushover alerts and notifications</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-600 dark:text-primary-400 mt-1">●</span>
@@ -425,11 +429,15 @@ export function About() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-600 dark:text-primary-400 mt-1">●</span>
-                <span>Role-based access control (RBAC)</span>
+                <span>Role-based access control (RBAC) with 2FA</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-600 dark:text-primary-400 mt-1">●</span>
-                <span>Dark mode support</span>
+                <span>One-click St0r and UrBackup server updates with live progress</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary-600 dark:text-primary-400 mt-1">●</span>
+                <span>Dark mode and configurable tooltips</span>
               </li>
             </ul>
           </div>
