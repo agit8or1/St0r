@@ -26,7 +26,7 @@ import {
   getBackupStats,
   getStorageByCustomer,
 } from '../controllers/urbackup.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -39,7 +39,7 @@ router.get('/clients/online', getOnlineClients);
 router.get('/clients/offline', getOfflineClients);
 router.get('/clients/failed', getFailedClients);
 router.get('/clients/:clientId/backups', getBackups);
-router.get('/clients/:clientId/authkey', getClientAuthkey);
+router.get('/clients/:clientId/authkey', requireAdmin, getClientAuthkey);
 router.post('/clients', addClient);
 router.delete('/clients/:clientId', removeClient);
 router.patch('/clients/:clientId/name', updateClientName);

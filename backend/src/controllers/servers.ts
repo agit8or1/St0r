@@ -822,6 +822,7 @@ export async function agentRegister(req: Request, res: Response) {
   // Update agent port if provided
   const agentPort = parseInt(port) || server.agent_port || 7420;
 
+  // Token is cleared on registration so it cannot be reused to register a different server
   await query(
     `UPDATE managed_servers
      SET agent_installed = 1,

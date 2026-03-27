@@ -14,7 +14,7 @@ export function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<ServerSettings>({});
-  const [clientSettings, setClientSettings] = useState({ urbackupServerHost: '', urbackupServerPort: '55414' });
+  const [clientSettings, setClientSettings] = useState({ urbackupServerHost: '', urbackupServerPort: '55414', corsLock: false });
   const [tab, setTab] = useState<'general' | 'backup' | 'email' | 'client' | 'user'>('general');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -67,7 +67,7 @@ export function Settings() {
 
       if (response.ok) {
         const data = await response.json();
-        setClientSettings(data);
+        setClientSettings({ urbackupServerHost: data.urbackupServerHost || '', urbackupServerPort: data.urbackupServerPort || '55414', corsLock: !!data.corsLock });
       }
     } catch (err) {
       console.error('Failed to load client settings:', err);
@@ -556,6 +556,40 @@ export function Settings() {
                   <li>No manual configuration required on client machines</li>
                   <li>Makes client deployment simple and error-free</li>
                 </ul>
+              </div>
+
+              <div className="border-t dark:border-gray-700 pt-6 mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Security</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Control which origins can make requests to the St0r API.</p>
+                <label className="flex items-start gap-4 cursor-pointer group">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={clientSettings.corsLock}
+                      onClick={() => setClientSettings(prev => ({ ...prev, corsLock: !prev.corsLock }))}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                        clientSettings.corsLock ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        clientSettings.corsLock ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">Lock CORS to configured FQDN</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                      When enabled, the API only accepts requests from <strong>{clientSettings.urbackupServerHost || 'your FQDN'}</strong> and localhost.
+                      Disable this if you access St0r from multiple origins or an IP address.
+                    </p>
+                    {clientSettings.corsLock && !clientSettings.urbackupServerHost && (
+                      <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                        ⚠ Set a Server Hostname / FQDN above before enabling CORS lock, or you may lock yourself out.
+                      </p>
+                    )}
+                  </div>
+                </label>
               </div>
             </div>
           )}

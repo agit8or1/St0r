@@ -3,10 +3,9 @@ import jwt from 'jsonwebtoken';
 
 const FALLBACK_SECRET = 'change-this-secret-in-production';
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET === FALLBACK_SECRET) {
-  // eslint-disable-next-line no-console
-  console.error('CRITICAL: JWT_SECRET is not set or is the insecure default. Set a strong random value in .env before running in production.');
+  throw new Error('[Auth] CRITICAL: JWT_SECRET is not set or is the insecure default. Set a strong secret in backend/.env');
 }
-const JWT_SECRET = process.env.JWT_SECRET || FALLBACK_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET;
 const SALT_ROUNDS = 10;
 
 export async function hashPassword(password: string): Promise<string> {

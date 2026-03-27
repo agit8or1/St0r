@@ -42,14 +42,49 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 'loopback');
 
 // Security middleware
-app.use(helmet());
-app.use(cors({ credentials: true, origin: true }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Vite requires this
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // needed for some browser features
+}));
+
+// CORS: dynamic — reads CORS_LOCK and URBACKUP_SERVER_FQDN from process.env on each request
+// so Settings page changes take effect immediately without restart.
+app.use(cors({
+  credentials: true,
+  origin: (origin, cb) => {
+    const locked = process.env.CORS_LOCK === 'true';
+    if (!locked) { cb(null, true); return; }
+    const fqdn = process.env.URBACKUP_SERVER_FQDN;
+    const allowed = new Set(['http://localhost:5173', 'http://localhost:3000']);
+    if (fqdn) allowed.add(`https://${fqdn}`);
+    cb(null, !origin || allowed.has(origin));
+  },
+}));
+if (process.env.CORS_LOCK !== 'true') logger.warn('[Security] CORS_LOCK not enabled — allowing all origins. Enable in Settings → Security.');
 
 // Rate limiting - only for auth endpoints to prevent brute force
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 50, // Limit login attempts
   message: 'Too many login attempts, please try again later.',
+});
+
+// Stricter rate limit for sensitive endpoints (password change, 2FA, user management)
+const sensitiveLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: 'Too many requests, please try again later.',
 });
 
 // More generous rate limit for authenticated API endpoints
@@ -60,6 +95,8 @@ const apiLimiter = rateLimit({
 });
 
 app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/change-password', sensitiveLimiter);
+app.use('/api/2fa', sensitiveLimiter);
 app.use('/api/', apiLimiter);
 
 // Cookie parsing middleware
@@ -128,12 +165,12 @@ app.get('*', (req, res) => {
   res.sendFile(resolve(frontendDist, 'index.html'));
 });
 
-// Error handler
+// Error handler — only expose message for client errors (4xx), use generic for server errors
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Error:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
-  });
+  logger.error('Unhandled error:', err);
+  const status = err.status || err.statusCode || 500;
+  const message = status < 500 ? (err.message || 'Bad request') : 'Internal server error';
+  res.status(status).json({ error: message });
 });
 
 // Ensure ancillary tables exist (idempotent)
@@ -177,7 +214,7 @@ async function initializeDefaultUser() {
         ['admin', 'admin@localhost', passwordHash, true]
       );
       logger.info('Default admin user created (username: admin, password: admin123)');
-      logger.warn('IMPORTANT: Change the default password immediately!');
+      logger.warn('IMPORTANT: Change the default password immediately after first login!');
     }
   } catch (error) {
     logger.error('Failed to initialize default user:', error);
@@ -265,14 +302,16 @@ async function startAutomaticStaleJobCleanup() {
   }, CLEANUP_INTERVAL);
 }
 
-// Handle shutdown gracefully
-process.on('SIGTERM', () => {
+// Handle shutdown gracefully — close DB pool before exiting
+process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully...');
+  try { const { pool } = await import('./config/database.js'); await pool.end(); } catch {}
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully...');
+  try { const { pool } = await import('./config/database.js'); await pool.end(); } catch {}
   process.exit(0);
 });
 

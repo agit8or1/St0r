@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { logger } from '../utils/logger.js';
 import { UrBackupDbService } from '../services/urbackupDb.js';
+import { realpathSync } from 'fs';
 
 const dbService = new UrBackupDbService();
 
@@ -107,9 +108,23 @@ export async function getFilesInBackup(req: Request, res: Response): Promise<voi
       fullPath = pathModule.normalize(pathModule.join(backupBasePath, backupPath));
     }
 
-    // Security check: ensure the path stays within the backup directory
-    if (!fullPath.startsWith(backupBasePath)) {
-      res.status(403).json({ error: 'Invalid path' });
+    // Security check: use realpathSync to resolve symlinks before comparing
+    let resolvedBase: string;
+    let resolvedFull: string;
+    try {
+      resolvedBase = realpathSync(backupBasePath);
+    } catch {
+      res.status(404).json({ error: 'Backup path not found' });
+      return;
+    }
+    try {
+      resolvedFull = realpathSync(fullPath);
+    } catch {
+      res.status(404).json({ error: 'Path not found in backup' });
+      return;
+    }
+    if (!resolvedFull.startsWith(resolvedBase + '/') && resolvedFull !== resolvedBase) {
+      res.status(403).json({ error: 'Access denied' });
       return;
     }
 
@@ -215,13 +230,24 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
 
     const fullPath = pathModule.join(backupFolder, client.name, backup.path, path);
 
-    // Security check: ensure the path is within the backup directory
+    // Security check: use realpathSync to resolve symlinks before comparing
     const backupBasePath = pathModule.join(backupFolder, client.name, backup.path);
-    const normalizedBasePath = pathModule.normalize(backupBasePath);
-    const normalizedFullPath = pathModule.normalize(fullPath);
-
-    if (!normalizedFullPath.startsWith(normalizedBasePath)) {
-      logger.error(`Security check failed: ${normalizedFullPath} does not start with ${normalizedBasePath}`);
+    let resolvedDlBase: string;
+    let resolvedDlFull: string;
+    try {
+      resolvedDlBase = realpathSync(backupBasePath);
+    } catch {
+      res.status(404).json({ error: 'Backup path not found' });
+      return;
+    }
+    try {
+      resolvedDlFull = realpathSync(fullPath);
+    } catch {
+      res.status(404).json({ error: 'File not found' });
+      return;
+    }
+    if (!resolvedDlFull.startsWith(resolvedDlBase + '/') && resolvedDlFull !== resolvedDlBase) {
+      logger.error(`Security check failed: ${resolvedDlFull} does not start with ${resolvedDlBase}`);
       res.status(403).json({ error: 'Invalid file path' });
       return;
     }
@@ -239,6 +265,12 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
 
     if (stats.isDirectory()) {
       res.status(400).json({ error: 'Cannot download a directory' });
+      return;
+    }
+
+    // Reject files over 2 GB to prevent excessive memory/bandwidth usage
+    if (stats.size > 2 * 1024 * 1024 * 1024) {
+      res.status(400).json({ error: 'File too large to download directly (> 2 GB)' });
       return;
     }
 
@@ -262,6 +294,72 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
     if (!res.headersSent) {
       res.status(500).json({ error: 'Failed to download file' });
     }
+  }
+}
+
+/**
+ * Download a folder from a backup as a ZIP archive
+ */
+export async function downloadFolder(req: Request, res: Response): Promise<void> {
+  try {
+    const { clientId, backupId, path } = req.query;
+
+    if (!clientId || !backupId || !path || typeof path !== 'string') {
+      res.status(400).json({ error: 'clientId, backupId, and path are required' });
+      return;
+    }
+
+    const fileBackups = await dbService.getFileBackups(Number(clientId));
+    const backup = fileBackups.find(b => b.id === Number(backupId));
+    if (!backup) { res.status(404).json({ error: 'Backup not found' }); return; }
+
+    const pathModule = await import('path');
+    const fs = await import('fs');
+
+    let backupFolder = '/media/BACKUP/urbackup';
+    try {
+      const bf = await fs.promises.readFile('/var/urbackup/backupfolder', 'utf-8');
+      backupFolder = bf.trim();
+    } catch { /* use default */ }
+
+    const clients = await dbService.getClients();
+    const client = clients.find(c => c.id === Number(clientId));
+    if (!client) { res.status(404).json({ error: 'Client not found' }); return; }
+
+    const fullPath = pathModule.join(backupFolder, client.name, backup.path, path);
+    const backupBasePath = pathModule.join(backupFolder, client.name, backup.path);
+
+    // Resolve symlinks for security check
+    let resolvedBase: string;
+    let resolvedFull: string;
+    try { resolvedBase = realpathSync(backupBasePath); } catch { res.status(404).json({ error: 'Backup path not found' }); return; }
+    try { resolvedFull = realpathSync(fullPath); } catch { res.status(404).json({ error: 'Folder not found' }); return; }
+    if (!resolvedFull.startsWith(resolvedBase + '/') && resolvedFull !== resolvedBase) {
+      res.status(403).json({ error: 'Invalid path' }); return;
+    }
+
+    // Must be a directory
+    const stat = await fs.promises.stat(resolvedFull);
+    if (!stat.isDirectory()) { res.status(400).json({ error: 'Path is not a directory' }); return; }
+
+    const folderName = pathModule.basename(resolvedFull) || 'backup';
+    const zipName = `${folderName}.zip`;
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(zipName)}`);
+
+    const { spawn } = await import('child_process');
+    // zip -r - . streams a zip of the current directory to stdout
+    const zip = spawn('zip', ['-r', '-', '.'], { cwd: resolvedFull, stdio: ['ignore', 'pipe', 'ignore'] });
+    zip.stdout.pipe(res);
+    zip.on('error', (e) => {
+      logger.error('[browse] zip error:', e);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to create zip' });
+      else res.destroy();
+    });
+  } catch (error) {
+    logger.error('Failed to download folder:', error);
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to download folder' });
   }
 }
 

@@ -89,7 +89,7 @@ export class UrBackupService {
           throw new Error(`UrBackup login failed (error ${loginData.error})`);
         }
         this.sessionId = loginData.session || saltData.ses;
-        this.sessionExpiry = Date.now() + (30 * 60 * 1000);
+        this.sessionExpiry = Date.now() + (10 * 60 * 1000);
         logger.info(`[UrBackup API] ✓ Authenticated (no-password mode)! Session: ${this.sessionId}`);
         return this.sessionId;
       }

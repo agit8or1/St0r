@@ -2,8 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
-import { FolderOpen, File, Download, ChevronRight, ArrowLeft, ChevronLeft, Calendar, RotateCcw, CheckSquare, Square } from 'lucide-react';
-import { api } from '../services/api';
+import {
+  FolderOpen, File, Download, ChevronRight, ArrowLeft,
+  ChevronLeft, ChevronDown, RotateCcw, CheckSquare, Square,
+  Archive, Clock, HardDrive, Calendar
+} from 'lucide-react';
 
 interface FileEntry {
   name: string;
@@ -18,11 +21,31 @@ interface Backup {
   backuptime: string;
   size_bytes: number;
   archived: boolean;
+  incremental?: boolean;
+}
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function formatSize(bytes: number) {
+  if (!bytes) return '—';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let v = bytes, i = 0;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return `${v.toFixed(1)} ${units[i]}`;
+}
+
+function formatDate(ts: string | number) {
+  return new Date(ts).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function formatTime(ts: string | number) {
+  return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
 export function FileBrowser() {
   const { clientName } = useParams<{ clientName: string }>();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null);
@@ -34,49 +57,36 @@ export function FileBrowser() {
   const [restoring, setRestoring] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [confirmRestore, setConfirmRestore] = useState(false);
+  const [downloadingFolder, setDownloadingFolder] = useState<string | null>(null);
 
   // Calendar state
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
-  const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayBackups, setDayBackups] = useState<Backup[]>([]);
 
-  useEffect(() => {
-    loadBackups();
-  }, [clientName]);
-
-  useEffect(() => {
-    if (selectedBackup && clientId) {
-      loadFiles(currentPath);
-    }
-  }, [selectedBackup, currentPath, clientId]);
+  useEffect(() => { loadBackups(); }, [clientName]);
+  useEffect(() => { if (selectedBackup && clientId) loadFiles(currentPath); }, [selectedBackup, currentPath, clientId]);
 
   const loadBackups = async () => {
     try {
       setLoading(true);
       const data = await fetch(`/api/browse/backups?clientName=${encodeURIComponent(clientName!)}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      }).then(res => res.json());
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      }).then(r => r.json());
 
       if (data.backups && Array.isArray(data.backups)) {
         setBackups(data.backups);
-        if (data.backups.length > 0 && data.backups[0].clientid) {
-          setClientId(data.backups[0].clientid);
-        }
-        // Initialize calendar to the month of the most recent backup
+        if (data.backups[0]?.clientid) setClientId(data.backups[0].clientid);
+        // Jump calendar to most recent backup
         if (data.backups.length > 0) {
-          const mostRecent = data.backups.reduce((a: Backup, b: Backup) =>
-            new Date(a.backuptime) > new Date(b.backuptime) ? a : b
-          );
-          setCalendarDate(new Date(mostRecent.backuptime));
+          const latest = data.backups.reduce((a: Backup, b: Backup) =>
+            new Date(a.backuptime) > new Date(b.backuptime) ? a : b);
+          setCalendarDate(new Date(latest.backuptime));
         }
       }
-    } catch (err) {
-      console.error('Failed to load backups:', err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
   const loadFiles = async (path: string) => {
@@ -84,150 +94,14 @@ export function FileBrowser() {
       setLoadingFiles(true);
       const data = await fetch(
         `/api/browse/files?clientId=${clientId}&backupId=${selectedBackup!.id}&path=${encodeURIComponent(path)}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      ).then(res => res.json());
-
-      if (data.files && Array.isArray(data.files)) {
-        setFiles(data.files);
-      } else if (Array.isArray(data)) {
-        setFiles(data);
-      } else {
-        setFiles([]);
-      }
-    } catch (err) {
-      console.error('Failed to load files:', err);
-      setFiles([]);
-    } finally {
-      setLoadingFiles(false);
-    }
+        { credentials: 'include', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+      ).then(r => r.json());
+      setFiles(Array.isArray(data.files) ? data.files : Array.isArray(data) ? data : []);
+    } catch { setFiles([]); }
+    finally { setLoadingFiles(false); }
   };
 
-  const navigateToFolder = (folderPath: string) => {
-    setCurrentPath(folderPath);
-  };
-
-  const navigateUp = () => {
-    if (currentPath === '/' || currentPath === '') return;
-    const parts = currentPath.split('/').filter(p => p);
-    parts.pop();
-    const newPath = '/' + parts.join('/');
-    setCurrentPath(newPath || '/');
-  };
-
-  const downloadFile = async (file: FileEntry) => {
-    try {
-      const downloadUrl = `/api/browse/download?clientId=${clientId}&backupId=${selectedBackup!.id}&path=${encodeURIComponent(file.path)}`;
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = file.name;
-      link.style.display = 'none';
-
-      const token = localStorage.getItem('token');
-      const response = await fetch(downloadUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Download failed');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Failed to download file:', err);
-      setMessage({ type: 'error', text: 'Failed to download file. Please try again.' });
-    }
-  };
-
-  const formatSize = (bytes: number) => {
-    if (!bytes) return 'N/A';
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let size = bytes;
-    let unitIndex = 0;
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
-  };
-
-  const formatDate = (timestamp: string | number) => {
-    return new Date(timestamp).toLocaleString();
-  };
-
-  const toggleFileSelection = (filePath: string) => {
-    const newSelection = new Set(selectedFiles);
-    if (newSelection.has(filePath)) {
-      newSelection.delete(filePath);
-    } else {
-      newSelection.add(filePath);
-    }
-    setSelectedFiles(newSelection);
-  };
-
-  const selectAll = () => {
-    if (selectedFiles.size === files.length) {
-      setSelectedFiles(new Set());
-    } else {
-      setSelectedFiles(new Set(files.map(f => f.path)));
-    }
-  };
-
-  const restoreFiles = async () => {
-    if (selectedFiles.size === 0) {
-      setMessage({ type: 'error', text: 'Please select files to restore' });
-      return;
-    }
-    setConfirmRestore(true);
-  };
-
-  const doRestore = async () => {
-    setConfirmRestore(false);
-    setRestoring(true);
-    try {
-      const response = await fetch('/api/browse/restore', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          clientId,
-          backupId: selectedBackup!.id,
-          paths: Array.from(selectedFiles),
-          restorePath: ''
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Restore failed');
-      }
-
-      setMessage({ type: 'success', text: `Restore initiated successfully for ${selectedFiles.size} file(s)!` });
-      setSelectedFiles(new Set());
-    } catch (err: any) {
-      console.error('Failed to restore files:', err);
-      setMessage({ type: 'error', text: `Failed to restore files: ${err.message}` });
-    } finally {
-      setRestoring(false);
-    }
-  };
-
-  // Calendar helpers
+  // ---- Calendar helpers ----
   const backupsByDay = useMemo(() => {
     const map: Record<string, Backup[]> = {};
     backups.forEach(b => {
@@ -238,75 +112,123 @@ export function FileBrowser() {
     return map;
   }, [backups]);
 
-  const handleCalendarDayClick = (day: string) => {
-    const dayList = backupsByDay[day];
-    if (!dayList || dayList.length === 0) return;
-    setSelectedCalendarDay(day);
-    setDayBackups(dayList);
-    if (dayList.length === 1) {
-      setSelectedBackup(dayList[0]);
-      setCurrentPath('/');
-    }
-  };
-
-  const prevMonth = () => {
-    setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
-  };
-
-  const nextMonth = () => {
-    setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
-  };
-
   const calendarCells = useMemo(() => {
-    const year = calendarDate.getFullYear();
-    const month = calendarDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const y = calendarDate.getFullYear(), m = calendarDate.getMonth();
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
     const cells: (string | null)[] = [];
     for (let i = 0; i < firstDay; i++) cells.push(null);
     for (let d = 1; d <= daysInMonth; d++) {
-      const mm = String(month + 1).padStart(2, '0');
-      const dd = String(d).padStart(2, '0');
-      cells.push(`${year}-${mm}-${dd}`);
+      cells.push(`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
     }
-    while (cells.length < 42) cells.push(null);
+    while (cells.length % 7 !== 0) cells.push(null);
     return cells;
   }, [calendarDate]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
-
   const monthLabel = calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-  if (loading) {
-    return (
-      <Layout>
-        <Loading />
-      </Layout>
-    );
-  }
+  const handleDayClick = (day: string) => {
+    const list = backupsByDay[day];
+    if (!list?.length) return;
+    setSelectedDay(day);
+    setDayBackups(list);
+    if (list.length === 1) {
+      setSelectedBackup(list[0]);
+      setCurrentPath('/');
+    }
+  };
+
+  // ---- File operations ----
+  const downloadFile = async (file: FileEntry) => {
+    try {
+      const url = `/api/browse/download?clientId=${clientId}&backupId=${selectedBackup!.id}&path=${encodeURIComponent(file.path)}`;
+      const resp = await fetch(url, { credentials: 'include', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+      if (!resp.ok) throw new Error('Download failed');
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = file.name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch { setMessage({ type: 'error', text: 'Download failed' }); }
+  };
+
+  const downloadFolderAsZip = async (file: FileEntry) => {
+    setDownloadingFolder(file.path);
+    try {
+      const url = `/api/browse/download-folder?clientId=${clientId}&backupId=${selectedBackup!.id}&path=${encodeURIComponent(file.path)}`;
+      const resp = await fetch(url, { credentials: 'include', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+      if (!resp.ok) throw new Error('Download failed');
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${file.name}.zip`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch { setMessage({ type: 'error', text: 'Folder download failed' }); }
+    finally { setDownloadingFolder(null); }
+  };
+
+  const toggleSelect = (path: string) => {
+    const s = new Set(selectedFiles);
+    s.has(path) ? s.delete(path) : s.add(path);
+    setSelectedFiles(s);
+  };
+
+  const selectAll = () => {
+    setSelectedFiles(selectedFiles.size === files.length ? new Set() : new Set(files.map(f => f.path)));
+  };
+
+  const doRestore = async () => {
+    setConfirmRestore(false);
+    setRestoring(true);
+    try {
+      const resp = await fetch('/api/browse/restore', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ clientId, backupId: selectedBackup!.id, paths: Array.from(selectedFiles), restorePath: '' })
+      });
+      const d = await resp.json();
+      if (!resp.ok) throw new Error(d.error || 'Restore failed');
+      setMessage({ type: 'success', text: `Restore initiated for ${selectedFiles.size} item(s)` });
+      setSelectedFiles(new Set());
+    } catch (e: any) {
+      setMessage({ type: 'error', text: e.message });
+    } finally { setRestoring(false); }
+  };
+
+  const navigateUp = () => {
+    if (currentPath === '/') return;
+    const parts = currentPath.split('/').filter(Boolean);
+    parts.pop();
+    setCurrentPath('/' + parts.join('/') || '/');
+  };
+
+  if (loading) return <Layout><Loading /></Layout>;
 
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Message */}
+        {/* Message toast */}
         {message && (
-          <div className={`rounded-lg p-4 ${
+          <div className={`rounded-xl p-4 flex items-center justify-between ${
             message.type === 'success'
               ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
               : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
           }`}>
-            {message.text}
-            <button onClick={() => setMessage(null)} className="ml-2 underline text-sm">Dismiss</button>
+            <span>{message.text}</span>
+            <button onClick={() => setMessage(null)} className="ml-4 text-sm underline opacity-70 hover:opacity-100">Dismiss</button>
           </div>
         )}
 
-        {/* Restore confirm dialog */}
+        {/* Confirm restore */}
         {confirmRestore && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Confirm Restore</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Are you sure you want to restore {selectedFiles.size} file(s) to {clientName}? This will overwrite existing files on the client.
+                Restore {selectedFiles.size} item(s) to <strong>{clientName}</strong>? This will overwrite existing files.
               </p>
               <div className="flex gap-3 justify-end">
                 <button onClick={() => setConfirmRestore(false)} className="btn btn-secondary">Cancel</button>
@@ -317,291 +239,269 @@ export function FileBrowser() {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <button
-              onClick={() => navigate('/clients')}
-              className="mb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Clients
-            </button>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              File Browser - {clientName}
-            </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Browse and restore files from backups
-            </p>
+        <div>
+          <button onClick={() => navigate('/clients')}
+            className="mb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
+            <ArrowLeft className="h-4 w-4" /> Back to Clients
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">File Browser</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{clientName} — {backups.length} backup{backups.length !== 1 ? 's' : ''} available</p>
+        </div>
+
+        {/* Backup calendar + selector */}
+        {backups.length === 0 ? (
+          <div className="card text-center py-16">
+            <Calendar className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
+            <p className="text-gray-500 dark:text-gray-400">No backups available for this client</p>
           </div>
-        </div>
+        ) : (
+          <div className="card">
+            <div className="flex flex-col lg:flex-row lg:gap-8">
+              {/* Left: Calendar */}
+              <div className="flex-shrink-0 lg:w-72">
+                {/* Month nav */}
+                <div className="flex items-center justify-between mb-4">
+                  <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">{monthLabel}</span>
+                  <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
 
-        {/* Backup Selection — Calendar */}
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-            Select Backup
-          </h2>
+                {/* Day headers */}
+                <div className="grid grid-cols-7 mb-1">
+                  {DAYS.map(d => (
+                    <div key={d} className="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-1">{d}</div>
+                  ))}
+                </div>
 
-          {backups.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-400">No backups available</p>
-          ) : (
-            <>
-              {/* Month navigator */}
-              <div className="flex items-center justify-between mb-3">
-                <button
-                  onClick={prevMonth}
-                  className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-                  aria-label="Previous month"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  {monthLabel}
-                </span>
-                <button
-                  onClick={nextMonth}
-                  className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
-                  aria-label="Next month"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
+                {/* Calendar grid */}
+                <div className="grid grid-cols-7 gap-0.5">
+                  {calendarCells.map((day, i) => {
+                    if (!day) return <div key={`e${i}`} />;
+                    const hasBackups = !!backupsByDay[day];
+                    const count = backupsByDay[day]?.length || 0;
+                    const isToday = day === todayStr;
+                    const isSelected = day === selectedDay;
 
-              {/* Day-of-week header */}
-              <div className="grid grid-cols-7 mb-1">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                  <div key={d} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1">
-                    {d}
-                  </div>
-                ))}
-              </div>
-
-              {/* Calendar grid */}
-              <div className="grid grid-cols-7 gap-1">
-                {calendarCells.map((day, idx) => {
-                  if (!day) {
-                    return <div key={`empty-${idx}`} />;
-                  }
-                  const hasBackups = !!backupsByDay[day];
-                  const isToday = day === todayStr;
-                  const isSelected = day === selectedCalendarDay;
-
-                  return (
-                    <button
-                      key={day}
-                      onClick={() => handleCalendarDayClick(day)}
-                      disabled={!hasBackups}
-                      className={[
-                        'relative flex flex-col items-center justify-center rounded-lg py-1.5 text-sm transition-colors',
-                        isToday && !isSelected
-                          ? 'ring-2 ring-primary-400 dark:ring-primary-500'
-                          : '',
-                        isSelected
-                          ? 'bg-primary-600 text-white dark:bg-primary-500'
-                          : hasBackups
-                            ? 'hover:bg-primary-50 dark:hover:bg-primary-900/30 text-gray-900 dark:text-gray-100 cursor-pointer font-medium'
-                            : 'text-gray-400 dark:text-gray-600 cursor-default',
-                      ].join(' ')}
-                    >
-                      <span>{parseInt(day.slice(8), 10)}</span>
-                      {hasBackups && (
-                        <span className={`mt-0.5 h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-primary-500 dark:bg-primary-400'}`} />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Backups for selected day (when multiple) */}
-              {selectedCalendarDay && dayBackups.length > 1 && (
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {dayBackups.length} backups on {new Date(selectedCalendarDay + 'T12:00:00').toLocaleDateString()} — choose one:
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {dayBackups.map(backup => (
-                      <button
-                        key={backup.id}
-                        onClick={() => { setSelectedBackup(backup); setCurrentPath('/'); }}
-                        className={`p-3 rounded-lg border-2 text-left transition-colors ${
-                          selectedBackup?.id === backup.id
-                            ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-500'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                        }`}
+                    return (
+                      <button key={day} onClick={() => handleDayClick(day)} disabled={!hasBackups}
+                        className={[
+                          'relative flex flex-col items-center justify-center rounded-lg h-9 w-full text-sm font-medium transition-all',
+                          isSelected
+                            ? 'bg-primary-600 dark:bg-primary-500 text-white shadow-sm'
+                            : hasBackups
+                              ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 cursor-pointer'
+                              : 'text-gray-300 dark:text-gray-600 cursor-default',
+                          isToday && !isSelected ? 'ring-2 ring-primary-500 ring-offset-1 dark:ring-offset-gray-800' : '',
+                        ].join(' ')}
                       >
-                        <span className="block font-medium text-gray-900 dark:text-gray-100 text-sm">
-                          {new Date(backup.backuptime).toLocaleTimeString()}
-                        </span>
-                        <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {formatSize(backup.size_bytes)}
-                          {backup.archived && (
-                            <span className="ml-2 rounded bg-yellow-100 dark:bg-yellow-900 px-1.5 py-0.5 text-yellow-800 dark:text-yellow-200">
-                              Archived
-                            </span>
-                          )}
-                        </span>
+                        <span className="leading-none">{parseInt(day.slice(8), 10)}</span>
+                        {hasBackups && (
+                          <span className={`mt-0.5 text-[9px] font-semibold leading-none ${isSelected ? 'text-primary-200' : 'text-primary-500 dark:text-primary-400'}`}>
+                            {count > 1 ? `×${count}` : '●'}
+                          </span>
+                        )}
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              )}
 
-              {/* Currently selected backup summary */}
-              {selectedBackup && (
-                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-3">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">Selected:</span>
-                  {formatDate(selectedBackup.backuptime)} — {formatSize(selectedBackup.size_bytes)}
-                  {selectedBackup.archived && (
-                    <span className="rounded bg-yellow-100 dark:bg-yellow-900 px-2 py-0.5 text-xs text-yellow-800 dark:text-yellow-200">
-                      Archived
-                    </span>
-                  )}
+                {/* Legend */}
+                <div className="mt-4 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-3 rounded-sm bg-primary-100 dark:bg-primary-900/40 border border-primary-300 dark:border-primary-700" />
+                    Has backup
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-3 rounded-sm ring-2 ring-primary-500" />
+                    Today
+                  </span>
                 </div>
-              )}
-            </>
-          )}
-        </div>
+              </div>
+
+              {/* Right: Backup selection for selected day */}
+              <div className="flex-1 mt-6 lg:mt-0 lg:border-l lg:dark:border-gray-700 lg:pl-8">
+                {!selectedDay ? (
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <Calendar className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">Select a date with a backup</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Highlighted days have backups available</p>
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                      {new Date(selectedDay + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                      {dayBackups.length} backup{dayBackups.length !== 1 ? 's' : ''} — {dayBackups.length > 1 ? 'choose one to browse' : 'click to browse'}
+                    </p>
+
+                    <div className="space-y-2">
+                      {dayBackups.map(backup => {
+                        const isActive = selectedBackup?.id === backup.id;
+                        return (
+                          <button key={backup.id} onClick={() => { setSelectedBackup(backup); setCurrentPath('/'); }}
+                            className={[
+                              'w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all',
+                              isActive
+                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/40',
+                            ].join(' ')}>
+                            <div className={`p-2.5 rounded-lg flex-shrink-0 ${isActive ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                              {backup.incremental
+                                ? <ChevronDown className={`h-5 w-5 ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'}`} />
+                                : <Archive className={`h-5 w-5 ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'}`} />
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                  {formatTime(backup.backuptime)}
+                                </span>
+                                {backup.incremental && (
+                                  <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded">Incremental</span>
+                                )}
+                                {backup.archived && (
+                                  <span className="text-xs px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded">Archived</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                <span className="flex items-center gap-1"><HardDrive className="h-3 w-3" />{formatSize(backup.size_bytes)}</span>
+                                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatDate(backup.backuptime)}</span>
+                              </div>
+                            </div>
+                            {isActive && <span className="text-xs font-medium text-primary-600 dark:text-primary-400 flex-shrink-0">Browsing</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* File Browser */}
         {selectedBackup && (
           <div className="card">
-            <div className="mb-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Files
-                  </h2>
-                  {currentPath !== '/' && (
-                    <button
-                      onClick={navigateUp}
-                      className="btn btn-secondary flex items-center gap-1 text-sm"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                      Up
-                    </button>
-                  )}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Path: {currentPath}
+            {/* Toolbar */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0">Files</h2>
+                {currentPath !== '/' && (
+                  <button onClick={navigateUp} className="btn btn-secondary flex items-center gap-1 text-sm flex-shrink-0">
+                    <ArrowLeft className="h-4 w-4" /> Up
+                  </button>
+                )}
+                <div className="text-xs text-gray-400 dark:text-gray-500 font-mono truncate hidden sm:block ml-2">
+                  {currentPath}
                 </div>
               </div>
-
-              {files.length > 0 && (
-                <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={selectAll}
-                      className="btn btn-secondary flex items-center gap-2 text-sm"
-                    >
-                      {selectedFiles.size === files.length ? (
-                        <>
-                          <CheckSquare className="h-4 w-4" />
-                          Deselect All
-                        </>
-                      ) : (
-                        <>
-                          <Square className="h-4 w-4" />
-                          Select All
-                        </>
-                      )}
-                    </button>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {selectedFiles.size} selected
-                    </span>
-                  </div>
-                  {selectedFiles.size > 0 && (
-                    <button
-                      onClick={restoreFiles}
-                      disabled={restoring}
-                      className="btn bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-                    >
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {selectedFiles.size > 0 && (
+                  <>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{selectedFiles.size} selected</span>
+                    <button onClick={() => setConfirmRestore(true)} disabled={restoring}
+                      className="btn text-sm bg-green-600 hover:bg-green-700 text-white border-green-600 flex items-center gap-1.5">
                       <RotateCcw className={`h-4 w-4 ${restoring ? 'animate-spin' : ''}`} />
-                      {restoring ? 'Restoring...' : `Restore ${selectedFiles.size} file(s)`}
+                      {restoring ? 'Restoring…' : 'Restore'}
                     </button>
-                  )}
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
 
-            {loadingFiles ? (
-              <div className="py-12 text-center">
-                <Loading />
+            {/* Select all row */}
+            {files.length > 0 && (
+              <div className="flex items-center gap-2 mb-2 px-1">
+                <button onClick={selectAll} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                  {selectedFiles.size === files.length
+                    ? <><CheckSquare className="h-4 w-4" /> Deselect all</>
+                    : <><Square className="h-4 w-4" /> Select all</>
+                  }
+                </button>
+                <span className="text-xs text-gray-400 dark:text-gray-500">({files.length} items)</span>
               </div>
+            )}
+
+            {/* File list */}
+            {loadingFiles ? (
+              <div className="py-16 text-center"><Loading /></div>
             ) : files.length === 0 ? (
-              <div className="py-12 text-center">
-                <FolderOpen className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-4 text-gray-600 dark:text-gray-400">No files found</p>
+              <div className="py-16 text-center">
+                <FolderOpen className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
+                <p className="text-gray-500 dark:text-gray-400">Empty folder</p>
               </div>
             ) : (
-              <div className="space-y-1 max-h-[600px] overflow-y-auto">
-                {files.map((file, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                      selectedFiles.has(file.path)
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                    }`}
-                  >
-                    <button
-                      onClick={() => toggleFileSelection(file.path)}
-                      className="flex-shrink-0"
-                    >
-                      {selectedFiles.has(file.path) ? (
-                        <CheckSquare className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-                      ) : (
-                        <Square className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
+              <div className="divide-y divide-gray-100 dark:divide-gray-700/50 max-h-[600px] overflow-y-auto rounded-xl border border-gray-100 dark:border-gray-700">
+                {files.map((file, idx) => {
+                  const isSelected = selectedFiles.has(file.path);
+                  const isDownloading = downloadingFolder === file.path;
+                  return (
+                    <div key={idx} className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                      isSelected ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                    }`}>
+                      {/* Checkbox */}
+                      <button onClick={() => toggleSelect(file.path)} className="flex-shrink-0 text-gray-400">
+                        {isSelected
+                          ? <CheckSquare className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                          : <Square className="h-5 w-5" />}
+                      </button>
 
-                    {file.isDir ? (
-                      <FolderOpen className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
-                    ) : (
-                      <File className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-                    )}
+                      {/* Icon */}
+                      {file.isDir
+                        ? <FolderOpen className="h-5 w-5 text-yellow-500 dark:text-yellow-400 flex-shrink-0" />
+                        : <File className="h-5 w-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />}
 
-                    <div className="flex-1 min-w-0">
-                      {file.isDir ? (
-                        <button
-                          onClick={() => navigateToFolder(file.path)}
-                          className="text-left hover:text-primary-600 dark:hover:text-primary-400"
-                        >
-                          <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                      {/* Name + meta */}
+                      <div className="flex-1 min-w-0">
+                        {file.isDir ? (
+                          <button onClick={() => setCurrentPath(file.path)}
+                            className="font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 truncate block text-left w-full">
                             {file.name}
-                          </p>
-                        </button>
-                      ) : (
-                        <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {file.name}
-                        </p>
-                      )}
-                      {file.size !== undefined && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {formatSize(file.size)}
-                          {file.modifiedTime && ` • ${formatDate(file.modifiedTime)}`}
-                        </p>
-                      )}
-                    </div>
+                          </button>
+                        ) : (
+                          <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">{file.name}</span>
+                        )}
+                        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                          {file.size !== undefined && <span>{formatSize(file.size)}</span>}
+                          {file.modifiedTime && <span>{formatDate(file.modifiedTime)}</span>}
+                        </div>
+                      </div>
 
-                    {file.isDir ? (
-                      <button
-                        onClick={() => navigateToFolder(file.path)}
-                        className="btn btn-secondary flex items-center gap-1 text-sm"
-                      >
-                        Open
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => downloadFile(file)}
-                        className="btn btn-primary flex items-center gap-1 text-sm"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download
-                      </button>
-                    )}
-                  </div>
-                ))}
+                      {/* Actions */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {file.isDir ? (
+                          <>
+                            <button onClick={() => setCurrentPath(file.path)}
+                              className="btn btn-secondary text-xs flex items-center gap-1 px-2.5 py-1.5">
+                              Open <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => downloadFolderAsZip(file)} disabled={isDownloading}
+                              className="btn btn-secondary text-xs flex items-center gap-1 px-2.5 py-1.5"
+                              title="Download folder as ZIP">
+                              {isDownloading
+                                ? <RotateCcw className="h-3.5 w-3.5 animate-spin" />
+                                : <Download className="h-3.5 w-3.5" />}
+                              {isDownloading ? 'Zipping…' : '.zip'}
+                            </button>
+                          </>
+                        ) : (
+                          <button onClick={() => downloadFile(file)}
+                            className="btn btn-primary text-xs flex items-center gap-1 px-2.5 py-1.5">
+                            <Download className="h-3.5 w-3.5" /> Download
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

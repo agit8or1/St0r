@@ -16,6 +16,7 @@ interface Settings {
   urbackupServerHost: string;
   urbackupServerPort: string;
   urbackupServerFqdn: string;
+  corsLock: boolean;
 }
 
 /**
@@ -72,7 +73,8 @@ export async function getSettings(req: AuthRequest, res: Response): Promise<void
     const settings: Settings = {
       urbackupServerHost: env.URBACKUP_SERVER_HOST || '',
       urbackupServerPort: env.URBACKUP_SERVER_PORT || '55414',
-      urbackupServerFqdn: env.URBACKUP_SERVER_FQDN || ''
+      urbackupServerFqdn: env.URBACKUP_SERVER_FQDN || '',
+      corsLock: env.CORS_LOCK === 'true',
     };
 
     res.json(settings);
@@ -98,7 +100,7 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const { urbackupServerHost, urbackupServerPort, urbackupServerFqdn } = req.body;
+    const { urbackupServerHost, urbackupServerPort, urbackupServerFqdn, corsLock } = req.body;
 
     if (!urbackupServerPort) {
       res.status(400).json({ error: 'Server port is required' });
@@ -113,7 +115,8 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
     }
 
     const updates: Record<string, string> = {
-      URBACKUP_SERVER_PORT: urbackupServerPort
+      URBACKUP_SERVER_PORT: urbackupServerPort,
+      CORS_LOCK: corsLock === true ? 'true' : 'false',
     };
 
     // Update .env file
@@ -136,6 +139,7 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
     if (urbackupServerFqdn !== undefined) {
       process.env.URBACKUP_SERVER_FQDN = urbackupServerFqdn;
     }
+    process.env.CORS_LOCK = corsLock === true ? 'true' : 'false';
 
     logger.info(`Settings updated by ${user?.username || 'unknown'}: FQDN=${urbackupServerFqdn || 'not set'}, Host=${urbackupServerHost || 'not set'}, Port=${urbackupServerPort}`);
 
@@ -161,12 +165,14 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
           logger.warn(`FQDN contains invalid characters, skipping DB write: ${fqdnForUrBackup}`);
         } else {
           const dbPath = '/var/urbackup/backup_server_settings.db';
-          // Pass SQL via separate args so the value is never embedded in the SQL string
-          const sql = `INSERT OR REPLACE INTO settings (key, value, clientid) VALUES ('internet_server', '${fqdnForUrBackup}', 0);`;
-          execFile('sudo', ['-u', 'urbackup', 'sqlite3', dbPath, sql], (err) => {
+          // Pass SQL via stdin (not as a CLI argument) to prevent any injection risk
+          const sql = `DELETE FROM settings WHERE key='internet_server' AND clientid=0;\nINSERT INTO settings (key, value, clientid) VALUES ('internet_server', '${fqdnForUrBackup}', 0);\n`;
+          const child = execFile('sudo', ['-u', 'urbackup', 'sqlite3', dbPath], (err) => {
             if (err) logger.warn(`Could not write internet_server to UrBackup DB: ${err.message}`);
             else logger.info(`Wrote internet_server=${fqdnForUrBackup} to UrBackup DB directly`);
           });
+          child.stdin?.write(sql);
+          child.stdin?.end();
         }
       }
     }

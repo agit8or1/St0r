@@ -4,6 +4,7 @@ import {
   getBackupsForBrowsing,
   getFilesInBackup,
   downloadFile,
+  downloadFolder,
   restoreFiles,
 } from '../controllers/browse.js';
 
@@ -20,6 +21,9 @@ router.get('/files', getFilesInBackup);
 
 // Download a file from a backup
 router.get('/download', downloadFile);
+
+// Download a folder as a ZIP
+router.get('/download-folder', downloadFolder);
 
 // Restore files to the client
 router.post('/restore', restoreFiles);

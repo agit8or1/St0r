@@ -146,6 +146,16 @@ router.get('/linux', authenticate, async (req: Request, res: Response) => {
     const clientNameStr = clientName ? String(clientName).trim() : '';
     const authkeyStr = authkey ? String(authkey).trim() : '';
 
+    // Explicit length limits as defense-in-depth (regex below also enforces max lengths)
+    if (clientNameStr && clientNameStr.length > 256) {
+      res.status(400).json({ error: 'clientName too long' });
+      return;
+    }
+    if (authkeyStr && authkeyStr.length > 256) {
+      res.status(400).json({ error: 'authkey too long' });
+      return;
+    }
+
     if (clientNameStr && !/^[a-zA-Z0-9_-]{1,64}$/.test(clientNameStr)) {
       res.status(400).json({ error: 'Invalid clientName: only alphanumeric, hyphen, and underscore characters allowed (max 64)' });
       return;

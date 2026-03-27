@@ -587,7 +587,7 @@ export async function convertAndDownloadImageBackup(req: AuthRequest, res: Respo
 
     // Copy to temp dir so decompress-file doesn't touch the original backup
     fs.mkdirSync(tmpDir, { recursive: true });
-    fs.chmodSync(tmpDir, 0o777); // urbackup user needs write access to rename .vhdz.tmp → output
+    fs.chmodSync(tmpDir, 0o750); // urbackup user needs write access to rename .vhdz.tmp → output
     const fileName = path.basename(srcPath);
     tmpFile = path.join(tmpDir, fileName);
 

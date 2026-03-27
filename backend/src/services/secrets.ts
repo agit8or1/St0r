@@ -12,15 +12,12 @@ function getKey(): Buffer {
 
   const envKey = process.env.APP_SECRET_KEY;
   if (!envKey || envKey.length < 64) {
-    const ephemeral = crypto.randomBytes(32).toString('hex');
-    logger.warn(
-      '[Secrets] APP_SECRET_KEY is not set or too short. Using ephemeral key — ' +
-      'encrypted secrets will be lost on restart. Add APP_SECRET_KEY=<32-byte-hex> to .env'
+    throw new Error(
+      '[Secrets] CRITICAL: APP_SECRET_KEY is not set or too short (must be 64+ hex chars). ' +
+      'Set it in backend/.env. Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
     );
-    secretKey = Buffer.from(ephemeral, 'hex');
-  } else {
-    secretKey = Buffer.from(envKey, 'hex');
   }
+  secretKey = Buffer.from(envKey.slice(0, 64), 'hex');
 
   return secretKey;
 }

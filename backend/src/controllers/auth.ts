@@ -55,7 +55,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         secret: users[0].totp_secret,
         encoding: 'base32',
         token: totpToken,
-        window: 2
+        window: 1
       });
 
       if (!verified) {

@@ -5,6 +5,30 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.90] - 2026-03-27
+
+### Security (all fixes tested and deployed)
+- **Fail-fast on missing secrets**: Server now refuses to start if `APP_SECRET_KEY` or `JWT_SECRET` are missing or use insecure defaults — no silent ephemeral key fallback
+- **CORS lockdown setting**: New toggle in Settings → Client Installer → Security to restrict API access to the configured FQDN only. Off by default (safe for multi-origin setups); takes effect instantly without restart
+- **Dynamic CORS**: CORS and CORS_LOCK are re-evaluated on every request so Settings changes apply immediately
+- **Path traversal fix**: File browser now uses `realpathSync()` to resolve symlinks before path boundary checks, preventing symlink escape attacks
+- **Shell injection fix**: UrBackup SQLite write now passes SQL via stdin instead of as a CLI argument
+- **Admin-only authkey**: `GET /clients/:id/authkey` now requires admin role
+- **Rate limiting**: `/api/2fa/*` and `/api/auth/change-password` limited to 10 req/min (tested: 429 after 10 hits)
+- **Default password**: First-install admin password is `admin123` with a prominent change-immediately warning in logs
+- **Folder download**: File browser now shows a `.zip` download button on every folder — streams a ZIP via the server's `zip` binary
+- **File download size limit**: Files over 2 GB are rejected to prevent bandwidth DoS
+- **Helmet CSP**: Explicit Content-Security-Policy headers with `defaultSrc: 'self'`, `frameAncestors: 'none'`
+- **Error handler**: 5xx errors now return generic "Internal server error" message; full details only in server logs
+- **Graceful shutdown**: DB pool is closed before process exit on SIGTERM/SIGINT
+- **Temp dir permissions**: Image backup export dir changed from `0o777` to `0o750`
+- **Session TTL**: UrBackup API session cache reduced from 30 min to 10 min
+- **TOTP window**: Reduced from ±2 to ±1 time steps (30s tighter window)
+
+### Changed
+- **File Browser**: Redesigned calendar — two-panel layout (calendar left, backup selector right), backup count badges on days, incremental/full icons, cleaner day cells, better empty state
+- **File Browser**: Folder rows now have both "Open" and ".zip" download buttons
+
 ## [3.2.89] - 2026-03-27
 
 ### Added
