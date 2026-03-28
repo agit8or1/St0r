@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HardDrive, Search, Settings, Users, ChevronUp, ChevronDown, AlertTriangle, XCircle, Edit2 } from 'lucide-react';
+import { HardDrive, Search, Settings, Users, ChevronUp, ChevronDown, AlertTriangle, XCircle, Edit2, RefreshCw } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { ClientManagementModal } from '../components/ClientManagementModal';
@@ -80,6 +80,7 @@ export function Clients() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [clientCustomers, setClientCustomers] = useState<Map<string, CustomerClient>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline' | 'failed'>('all');
   const [selectedCustomer, setSelectedCustomer] = useState<number | 'all'>('all');
@@ -101,6 +102,7 @@ export function Clients() {
 
   const loadData = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [clientData, customerData] = await Promise.all([
         api.getClients(),
@@ -117,8 +119,10 @@ export function Clients() {
         } catch {}
       }));
       setClientCustomers(mappings);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load clients:', err);
+      const msg = err?.response?.data?.error || err?.message || 'Unknown error';
+      setLoadError(msg);
     } finally {
       setLoading(false);
     }
@@ -339,6 +343,26 @@ export function Clients() {
             </div>
           );
         })()}
+
+        {/* Error banner */}
+        {loadError && (
+          <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+            <div className="flex items-start gap-3">
+              <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-red-700 dark:text-red-300">Failed to load endpoints</p>
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400 font-mono break-all">{loadError}</p>
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  Common cause: St0r cannot read <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">/var/urbackup/backup_server.db</code>.
+                  Run: <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">sudo chmod 644 /var/urbackup/backup_server.db</code> or add the service user to the <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">urbackup</code> group.
+                </p>
+              </div>
+              <button onClick={loadData} className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 flex-shrink-0">
+                <RefreshCw className="h-3.5 w-3.5" /> Retry
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         {loading ? <Loading /> : filtered.length === 0 ? (

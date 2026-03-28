@@ -459,60 +459,102 @@ export class UrBackupService {
   }
 
   async getClients() {
-    try {
-      const clients = await this.dbService.getClients();
-
-      // UrBackup doesn't flush lastseen to SQLite immediately — fetch live online
-      // status from the API and merge it so connected clients show as online
-      try {
-        const session = await this.login();
-        // Use cached status to avoid hammering UrBackup's API on every request
-        const now = Date.now();
-        let apiClients: any[];
-        if (this.statusCache && (now - this.statusCache.ts) < this.STATUS_TTL) {
-          apiClients = this.statusCache.data;
-        } else {
-          const statusResult = await fetch(`${URBACKUP_API_URL}?a=status&ses=${session}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
-            body: `ses=${session}`
-          });
-          const statusData: any = await statusResult.json();
-          apiClients = statusData?.status || [];
-          this.statusCache = { data: apiClients, ts: now };
-        }
-
-        if (apiClients.length > 0) {
-          const apiMap = new Map(apiClients.map((c: any) => [c.id, c]));
-          return clients.map(client => {
-            const api = apiMap.get(client.id);
-            if (!api) return client;
-            const c = client as any;
-            let ip = api.ip || api.lastip || c.ip || null;
-            if (ip === '-' || ip === '' || ip === 'null') ip = null;
-            return {
-              ...client,
-              online: api.online === true,
-              lastseen: api.lastseen ? api.lastseen * 1000 : client.lastseen,
-              status: api.online ? 'online' : 'offline',
-              ip,
-              os_simple: api.os_simple || c.os_simple,
-              os_version_string: api.os_version_string || c.os_version_string,
-              client_version_string: api.client_version_string || c.client_version_string || null,
-              delete_pending: api.delete_pending === '1' || api.delete_pending === 1 || false,
-              no_backup_paths: api.no_backup_paths === true || api.no_backup_paths === 1 || false,
-            };
-          });
-        }
-      } catch (apiErr) {
-        logger.warn('Could not fetch live status from UrBackup API, using DB values:', apiErr);
+    // Fetch live status from UrBackup API (used for merging or as fallback)
+    const fetchApiClients = async (): Promise<any[]> => {
+      const session = await this.login();
+      const now = Date.now();
+      if (this.statusCache && (now - this.statusCache.ts) < this.STATUS_TTL) {
+        return this.statusCache.data;
       }
+      const statusResult = await fetch(`${URBACKUP_API_URL}?a=status&ses=${session}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+        body: `ses=${session}`
+      });
+      const statusData: any = await statusResult.json();
+      const apiClients = statusData?.status || [];
+      this.statusCache = { data: apiClients, ts: now };
+      return apiClients;
+    };
 
-      return clients;
+    let clients: any[] | null = null;
+    let dbError: any = null;
+
+    // Try primary source: SQLite DB
+    try {
+      clients = await this.dbService.getClients();
     } catch (error) {
-      logger.error('Failed to get clients:', error);
-      throw error;
+      dbError = error;
+      logger.warn('Failed to read clients from SQLite DB, will try UrBackup API fallback:', error);
     }
+
+    // If DB unavailable, fall back to UrBackup API status as sole source
+    if (clients === null) {
+      try {
+        const apiClients = await fetchApiClients();
+        logger.info(`DB unavailable — returning ${apiClients.length} clients from UrBackup API status`);
+        return apiClients.map((c: any) => {
+          let ip = c.ip || c.lastip || null;
+          if (ip === '-' || ip === '' || ip === 'null') ip = null;
+          return {
+            id: c.id,
+            name: c.name,
+            online: c.online === true,
+            lastseen: c.lastseen ? c.lastseen * 1000 : null,
+            lastbackup: c.lastbackup ? c.lastbackup * 1000 : null,
+            lastbackup_image: c.lastbackup_image ? c.lastbackup_image * 1000 : null,
+            file_ok: c.file_ok === true || c.file_ok === 1,
+            image_ok: c.image_ok === true || c.image_ok === 1,
+            status: c.online ? 'online' : 'offline',
+            ip,
+            os: c.os_simple || null,
+            os_version_string: c.os_version_string || null,
+            client_version_string: c.client_version_string || null,
+            bytes_used_files: c.bytes_used_files || 0,
+            bytes_used_images: c.bytes_used_images || 0,
+            delete_pending: c.delete_pending === '1' || c.delete_pending === 1 || false,
+            no_backup_paths: c.no_backup_paths === true || c.no_backup_paths === 1 || false,
+            file_backup_running: false,
+            image_backup_running: false,
+          };
+        });
+      } catch (apiErr) {
+        logger.error('Both SQLite DB and UrBackup API failed for getClients:', apiErr);
+        // Re-throw the original DB error with context
+        throw new Error(`Cannot read clients: DB error (${(dbError as any)?.message || dbError}). UrBackup API also unavailable: ${(apiErr as any)?.message || apiErr}`);
+      }
+    }
+
+    // Merge DB clients with live API status (for online/ip/version fields)
+    try {
+      const apiClients = await fetchApiClients();
+      if (apiClients.length > 0) {
+        const apiMap = new Map(apiClients.map((c: any) => [c.id, c]));
+        return clients.map(client => {
+          const api = apiMap.get(client.id);
+          if (!api) return client;
+          const c = client as any;
+          let ip = api.ip || api.lastip || c.ip || null;
+          if (ip === '-' || ip === '' || ip === 'null') ip = null;
+          return {
+            ...client,
+            online: api.online === true,
+            lastseen: api.lastseen ? api.lastseen * 1000 : client.lastseen,
+            status: api.online ? 'online' : 'offline',
+            ip,
+            os_simple: api.os_simple || c.os_simple,
+            os_version_string: api.os_version_string || c.os_version_string,
+            client_version_string: api.client_version_string || c.client_version_string || null,
+            delete_pending: api.delete_pending === '1' || api.delete_pending === 1 || false,
+            no_backup_paths: api.no_backup_paths === true || api.no_backup_paths === 1 || false,
+          };
+        });
+      }
+    } catch (apiErr) {
+      logger.warn('Could not fetch live status from UrBackup API, using DB values:', apiErr);
+    }
+
+    return clients;
   }
 
   async getOnlineClients() {

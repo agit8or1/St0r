@@ -1,14 +1,9 @@
 {
-  "version": "3.2.90",
-  "releaseDate": "2026-03-27",
+  "version": "3.2.91",
+  "releaseDate": "2026-03-28",
   "changelog": [
-    "Add: Servers page — manage this server and remote servers from the UI",
-    "Add: stor-agent — lightweight management daemon for remote Linux servers",
-    "Add: Auto-install agent on remote servers via SSH or manual API key registration",
-    "Add: Get Install Command — generates a one-time curl command using the server FQDN over HTTPS for remote agent install",
-    "Add: Per-server CPU/memory/disk/network metrics with 30s auto-refresh",
-    "Add: OS package updates (apt), reboot, and St0r/UrBackup updates per server",
-    "Fix: Settings page — removed 'Automatic Backup Database Repair' checkbox (autoshutdown key is read-only in UrBackup and was mislabeled)",
-    "Fix: File Browser — replaced backup card grid with calendar date picker"
+    "Fix: Endpoints page — show a clear error banner (with fix instructions) when the UrBackup SQLite DB is unreadable instead of silently showing an empty list",
+    "Fix: Endpoints page — fall back to UrBackup HTTP API as client source when the SQLite DB is unavailable (fixes fresh installs / NFS setups where DB permissions differ)",
+    "Fix: UrBackup DB connection — reset stale cached connection and retry on reconnect"
   ]
 }

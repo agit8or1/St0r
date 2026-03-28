@@ -13,7 +13,14 @@ const URBACKUP_SETTINGS_DB_PATH = URBACKUP_DB_PATH.replace('backup_server.db', '
  */
 export async function openUrBackupDb(): Promise<Database> {
   if (db) {
-    return db;
+    // Verify the cached connection is still alive
+    try {
+      await db.get('SELECT 1');
+      return db;
+    } catch {
+      // Connection stale — reset and reopen
+      db = null;
+    }
   }
 
   try {
@@ -26,8 +33,9 @@ export async function openUrBackupDb(): Promise<Database> {
     logger.info(`Connected to UrBackup database at ${URBACKUP_DB_PATH}`);
     return db;
   } catch (error) {
-    logger.error('Failed to connect to UrBackup database:', error);
-    throw new Error(`Failed to connect to UrBackup database: ${error}`);
+    db = null;
+    logger.error(`Failed to connect to UrBackup database at ${URBACKUP_DB_PATH}:`, error);
+    throw new Error(`Cannot open UrBackup database at ${URBACKUP_DB_PATH}: ${(error as any)?.message || error}. Check file exists and is readable by the service user.`);
   }
 }
 
