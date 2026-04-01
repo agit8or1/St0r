@@ -1,9 +1,9 @@
 {
-  "version": "3.2.91",
-  "releaseDate": "2026-03-28",
+  "version": "3.2.92",
+  "releaseDate": "2026-04-01",
   "changelog": [
-    "Fix: Endpoints page — show a clear error banner (with fix instructions) when the UrBackup SQLite DB is unreadable instead of silently showing an empty list",
-    "Fix: Endpoints page — fall back to UrBackup HTTP API as client source when the SQLite DB is unavailable (fixes fresh installs / NFS setups where DB permissions differ)",
-    "Fix: UrBackup DB connection — reset stale cached connection and retry on reconnect"
+    "Add: Customers — click a customer card to expand and see assigned endpoints inline (with online/offline status dots)",
+    "Add: Customers — bulk-add multiple endpoints to a customer at once using checkboxes with a 'Select all' shortcut",
+    "Fix: Customers — replaced browser alert/confirm dialogs with inline modal confirmations"
   ]
 }
