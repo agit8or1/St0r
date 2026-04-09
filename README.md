@@ -2,8 +2,11 @@
 
 A modern, full-featured web interface for managing and monitoring [UrBackup](https://www.urbackup.org/) servers. Built with React + TypeScript, designed to run directly on your UrBackup Linux server.
 
-[![Version](https://img.shields.io/badge/version-3.2.86-blue.svg)](version.json)
+[![GitHub Stars](https://img.shields.io/github/stars/agit8or1/St0r?style=flat&label=Stars)](https://github.com/agit8or1/St0r/stargazers)
+[![Version](https://img.shields.io/badge/version-3.2.92-blue.svg)](https://github.com/agit8or1/St0r/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+⭐ If St0r saves you time, a star helps others find it!
 
 ---
 
