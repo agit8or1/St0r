@@ -241,45 +241,62 @@ if [ "$INSTALL_URBACKUP" = true ]; then
         OS="unknown"
     fi
 
-    if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
-        echo "  Installing UrBackup Server from PPA..."
+    if [ "$OS" = "ubuntu" ]; then
+        echo "  Installing UrBackup Server from PPA (Ubuntu)..."
 
-        # Install software-properties-common for add-apt-repository
+        # software-properties-common provides add-apt-repository (Ubuntu only)
         apt-get install -y -qq software-properties-common
 
-        # Add UrBackup PPA
+        # Add UrBackup PPA and install
         add-apt-repository -y ppa:uroni/urbackup > /dev/null 2>&1
         apt-get update -qq
-
-        # Install UrBackup Server
         DEBIAN_FRONTEND=noninteractive apt-get install -y -qq urbackup-server
 
-        # Verify installation
-        if dpkg -l 2>/dev/null | grep -q "^ii.*urbackup-server"; then
-            echo "  ✓ UrBackup Server installed successfully"
+    elif [ "$OS" = "debian" ]; then
+        echo "  Installing UrBackup Server (Debian — direct .deb download)..."
+        echo "  Note: PPAs are Ubuntu-only; using UrBackup's official .deb package."
 
-            # Start and enable service
-            systemctl enable urbackupsrv 2>/dev/null || true
-            systemctl start urbackupsrv 2>/dev/null || true
+        # Detect latest UrBackup version from GitHub releases; fall back to known stable
+        URBACKUP_DEB_VER=$(curl -fsSL "https://api.github.com/repos/uroni/urbackup_backend/releases/latest" 2>/dev/null \
+            | grep '"tag_name"' | cut -d'"' -f4 | sed 's/^v//' || echo "")
+        [ -z "$URBACKUP_DEB_VER" ] && URBACKUP_DEB_VER="2.5.34"
 
-            if systemctl is-active --quiet urbackupsrv; then
-                echo "  ✓ UrBackup Server service is running"
-            else
-                echo "  ⚠ Service may need manual start: systemctl start urbackupsrv"
-            fi
+        URBACKUP_ARCH=$(dpkg --print-architecture)
+        URBACKUP_DEB_URL="https://hndl.urbackup.org/Server/${URBACKUP_DEB_VER}/urbackup-server_${URBACKUP_DEB_VER}_${URBACKUP_ARCH}.deb"
+        echo "  Downloading urbackup-server ${URBACKUP_DEB_VER} (${URBACKUP_ARCH})..."
+
+        if curl -fsSL "$URBACKUP_DEB_URL" -o /tmp/urbackup-server.deb; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq /tmp/urbackup-server.deb
+            rm -f /tmp/urbackup-server.deb
         else
-            echo "  ✗ Installation verification failed"
-            echo ""
-            echo "Please install UrBackup Server manually:"
-            echo "  https://www.urbackup.org/download.html"
+            echo "  ✗ Download failed: $URBACKUP_DEB_URL"
+            echo "  Please install UrBackup Server manually: https://www.urbackup.org/download.html"
             exit 1
         fi
+
     else
         echo "  ✗ Unsupported distribution: $OS"
         echo ""
         echo "Please install UrBackup Server manually:"
-        echo "  For Ubuntu/Debian: sudo add-apt-repository ppa:uroni/urbackup"
-        echo "  For other distros: https://www.urbackup.org/download.html"
+        echo "  https://www.urbackup.org/download.html"
+        exit 1
+    fi
+
+    # Verify installation (shared for Ubuntu and Debian paths)
+    if dpkg -l 2>/dev/null | grep -q "^ii.*urbackup-server"; then
+        echo "  ✓ UrBackup Server installed successfully"
+
+        systemctl enable urbackupsrv 2>/dev/null || true
+        systemctl start urbackupsrv 2>/dev/null || true
+
+        if systemctl is-active --quiet urbackupsrv; then
+            echo "  ✓ UrBackup Server service is running"
+        else
+            echo "  ⚠ Service may need manual start: systemctl start urbackupsrv"
+        fi
+    else
+        echo "  ✗ Installation verification failed"
+        echo "  Please install UrBackup Server manually: https://www.urbackup.org/download.html"
         exit 1
     fi
 
@@ -302,7 +319,7 @@ if [ "$INSTALL_STOR" = true ]; then
 
     # Install dependencies
     echo "[2/9] Installing system dependencies..."
-    apt-get install -y -qq curl gnupg2 software-properties-common nginx mariadb-server rsync sqlite3
+    apt-get install -y -qq curl gnupg2 nginx mariadb-server rsync sqlite3
 
     # Install Node.js 20
     echo "[3/9] Installing Node.js 20..."
