@@ -44,19 +44,23 @@ async function parseEnvFile(): Promise<Record<string, string>> {
 }
 
 /**
- * Update .env file with new values
+ * Update .env file with new values.
+ *
+ * Strip \r and \n from values — without this, a value containing a newline lets
+ * the caller inject arbitrary new .env lines (e.g. overwriting JWT_SECRET).
+ * Use a function replacer so $1/$& in the value aren't treated specially.
  */
 async function updateEnvFile(updates: Record<string, string>): Promise<void> {
   const content = await readFile(ENV_FILE, 'utf-8');
   let newContent = content;
 
   for (const [key, value] of Object.entries(updates)) {
+    const safeValue = String(value).replace(/[\r\n]/g, '');
     const regex = new RegExp(`^${key}=.*$`, 'm');
     if (regex.test(newContent)) {
-      newContent = newContent.replace(regex, `${key}=${value}`);
+      newContent = newContent.replace(regex, () => `${key}=${safeValue}`);
     } else {
-      // Add new key if it doesn't exist
-      newContent += `\n${key}=${value}`;
+      newContent += `\n${key}=${safeValue}`;
     }
   }
 

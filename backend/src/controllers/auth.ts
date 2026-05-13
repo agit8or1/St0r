@@ -79,8 +79,10 @@ export async function login(req: Request, res: Response): Promise<void> {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
 
+    // Do NOT return the JWT in the response body — it's already set as an
+    // HttpOnly cookie. Returning it lets the frontend stash it in localStorage,
+    // which defeats the XSS-resistance the cookie was supposed to provide.
     res.json({
-      token,
       user: {
         id: user.id,
         username: user.username,

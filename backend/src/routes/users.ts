@@ -7,8 +7,8 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
-// Get all users
-router.get('/', getUsers);
+// Get all users (admin only — prevents non-admin enumeration of usernames/emails)
+router.get('/', requireAdmin, getUsers);
 
 // Create a new user (admin only)
 router.post('/', requireAdmin, addUser);

@@ -1228,15 +1228,20 @@ export class UrBackupService {
             ];
             // Also force persistent connection so capabilities stay enforced between backups
             saveParams.set('internet_connect_always', serverManaged ? '1' : '0');
-            saveParams.set('internet_connect_always.use', '1');
+            saveParams.set('internet_connect_always.use', '2');
             for (const lt of lockTargets) {
               saveParams.set(lt, lockVal);
-              saveParams.set(`${lt}.use`, '1');
+              saveParams.set(`${lt}.use`, '2');
             }
             continue;
           }
           saveParams.set(key, toUrBackupStr(value));
-          saveParams.set(`${key}.use`, '1'); // 1 = client-specific override
+          // `use` is a bitmask read by the client (urbackupclient/ClientService.cpp:54-56):
+          //   1 = c_use_group (read from .group field), 2 = c_use_value (read from .home / per-client),
+          //   4 = c_use_value_client. For a per-client override to actually push to the client,
+          //   use=2 (home bit). use=1 told the client to read .group, which is empty for per-client
+          //   settings — that's why path saves silently failed before.
+          saveParams.set(`${key}.use`, '2');
         }
       }
 

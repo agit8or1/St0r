@@ -67,8 +67,8 @@ export function Login() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store token and user data
-      localStorage.setItem('token', data.token);
+      // JWT lives in an HttpOnly cookie (auth_token) set by the server —
+      // don't mirror it into localStorage where XSS could steal it.
       localStorage.setItem('user', JSON.stringify(data.user));
 
       // If logged in with default password, show password change modal

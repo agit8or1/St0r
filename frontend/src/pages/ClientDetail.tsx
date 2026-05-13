@@ -517,6 +517,14 @@ export function ClientDetail() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Start Backup
           </h2>
+          {client?.no_backup_paths && (
+            <div className="mb-4 rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">No backup paths on client</p>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                File backups will fail until paths are configured. Open <strong>Backup Schedule → Folders to Back Up</strong> to push paths from the server, or add them on the client machine via the UrBackup tray icon. Image backups are unaffected.
+              </p>
+            </div>
+          )}
           {backupMessage && (
             <div className={`mb-4 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
               backupMessage.type === 'success'
@@ -533,10 +541,10 @@ export function ClientDetail() {
             <div className="space-y-2">
               <h3 className="font-medium text-gray-900 dark:text-gray-100">File Backups</h3>
               <div className="flex gap-2">
-                <Tooltip text="Start a full file backup now — backs up all selected paths" className="flex-1">
+                <Tooltip text={client?.no_backup_paths ? 'Disabled — client has no backup paths configured' : 'Start a full file backup now — backs up all selected paths'} className="flex-1">
                   <button
                     onClick={() => handleStartBackup('file', false)}
-                    disabled={!!startingBackup}
+                    disabled={!!startingBackup || !!client?.no_backup_paths}
                     className="btn btn-primary w-full flex items-center justify-center gap-2"
                   >
                     {startingBackup === 'file-full' ? (
@@ -547,10 +555,10 @@ export function ClientDetail() {
                     Full Backup
                   </button>
                 </Tooltip>
-                <Tooltip text="Start an incremental file backup — only backs up changed files" className="flex-1">
+                <Tooltip text={client?.no_backup_paths ? 'Disabled — client has no backup paths configured' : 'Start an incremental file backup — only backs up changed files'} className="flex-1">
                   <button
                     onClick={() => handleStartBackup('file', true)}
-                    disabled={!!startingBackup}
+                    disabled={!!startingBackup || !!client?.no_backup_paths}
                     className="btn btn-secondary w-full flex items-center justify-center gap-2"
                   >
                     {startingBackup === 'file-incr' ? (

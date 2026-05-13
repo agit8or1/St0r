@@ -6,7 +6,6 @@ export interface User {
 }
 
 export interface AuthResponse {
-  token: string;
   user: User;
 }
 
@@ -47,6 +46,7 @@ export interface Client {
   bytes_used_images?: number;
   client_version_string?: string | null;
   os_simple?: string | null;
+  no_backup_paths?: boolean;
 }
 
 export interface Activity {

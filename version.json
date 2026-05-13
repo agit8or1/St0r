@@ -1,9 +1,14 @@
 {
-  "version": "3.2.92",
-  "releaseDate": "2026-04-01",
+  "version": "3.2.93",
+  "releaseDate": "2026-05-13",
   "changelog": [
-    "Add: Customers — click a customer card to expand and see assigned endpoints inline (with online/offline status dots)",
-    "Add: Customers — bulk-add multiple endpoints to a customer at once using checkboxes with a 'Select all' shortcut",
-    "Fix: Customers — replaced browser alert/confirm dialogs with inline modal confirmations"
+    "Security: upgraded axios → 1.15.x (15 CVEs incl. SSRF, prototype pollution, header injection)",
+    "Security: upgraded bcrypt → 6, sqlite3 → 6, nodemailer → 8 to clear high-severity CVEs",
+    "Security: database-backup endpoints now require admin (closed privilege-escalation via crafted SQL dump upload)",
+    "Security: stop returning JWT in login response body — token lives only in HttpOnly cookie",
+    "Security: sanitize \\r\\n in .env writes to prevent JWT_SECRET overwrite via Settings",
+    "Security: GET /api/users and PUT /api/client-settings/:id now require admin",
+    "Fix: server-pushed backup paths now actually populate client (use=1→use=2 bitmask)",
+    "Add: warning banner + disabled file-backup buttons when client has no backup paths"
   ]
 }
