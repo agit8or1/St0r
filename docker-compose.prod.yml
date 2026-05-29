@@ -1,0 +1,61 @@
+# ═══════════════════════════════════════════════════════
+# St0r Production Docker Compose Configuration
+# ═══════════════════════════════════════════════════════
+# Use: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  st0r:
+    # Production-specific settings
+    restart: always
+    
+    # Resource limits for stability
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    
+    # Security
+    security_opt:
+      - no-new-privileges:true
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=st0r"
+    
+    # Production environment
+    environment:
+      NODE_ENV: production
+      COOKIE_SECURE: "true"  # Set to true if behind HTTPS proxy
+
+  mariadb:
+    restart: always
+    
+    # Production database tuning
+    command: --max_connections=100 --innodb_buffer_pool_size=1G
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=mariadb"

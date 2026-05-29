@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # MariaDB Database Container
+  mariadb:
+    image: mariadb:11.4-alpine
+    container_name: st0r-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass123}
+      MYSQL_DATABASE: ${DB_NAME:-urbackup_gui}
+      MYSQL_USER: ${DB_USER:-urbackup}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-urbackup_gui_password}
+      MYSQL_INITDB_SKIP_TZINFO: "1"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - st0r-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    labels:
+      - "com.example.description=St0r MariaDB Database"
+
+  # St0r GUI Application Container
+  st0r:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: st0r-app
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      # Backend Configuration
+      NODE_ENV: production
+      PORT: 3000
+      
+      # Database Configuration
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-urbackup_gui}
+      DB_USER: ${DB_USER:-urbackup}
+      DB_PASSWORD: ${DB_PASSWORD:-urbackup_gui_password}
+      
+      # JWT & Security (Generate with: openssl rand -hex 32)
+      JWT_SECRET: ${JWT_SECRET:-change_me_to_random_hex_string_32_chars_min}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-change_me_to_random_hex_string_32_chars_min}
+      
+      # UrBackup Server Connection
+      # IMPORTANT: Use 'host.docker.internal' on Linux with --add-host
+      # or 'localhost' if UrBackup runs in another container
+      URBACKUP_DB_PATH: ${URBACKUP_DB_PATH:-/var/urbackup/backup_server.db}
+      URBACKUP_API_URL: ${URBACKUP_API_URL:-http://host.docker.internal:55414/x}
+      URBACKUP_USERNAME: ${URBACKUP_USERNAME:-admin}
+      URBACKUP_PASSWORD: ${URBACKUP_PASSWORD:-}
+      
+      # Security
+      COOKIE_SECURE: "false"
+    volumes:
+      # CRITICAL: Mount UrBackup database files (read-only)
+      # These must exist on the host before starting the container!
+      - ${URBACKUP_DB_PATH:-/var/urbackup/backup_server.db}:${URBACKUP_DB_PATH:-/var/urbackup/backup_server.db}:ro
+      - /var/urbackup/backup_server_settings.db:/var/urbackup/backup_server_settings.db:ro
+      
+      # Persistent storage for app data
+      - st0r_data:/opt/urbackup-gui/backend/data
+    ports:
+      - "${HTTP_PORT:-80}:80"    # HTTP Web UI
+      - "${API_PORT:-3000}:3000" # Backend API (optional, for debugging)
+    networks:
+      - st0r-network
+    restart: unless-stopped
+    extra_hosts:
+      # Allow container to reach host's UrBackup server
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.example.description=St0r UrBackup Web GUI"
+
+volumes:
+  mariadb_data:
+    driver: local
+  st0r_data:
+    driver: local
+
+networks:
+  st0r-network:
+    driver: bridge
