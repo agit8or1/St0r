@@ -72,6 +72,22 @@ const DEFAULT_URBACKUP_SETTINGS: Record<string, any> = {
 };
 
 /**
+ * St0r-specific Email & Alerts settings that UrBackup has no storage for.
+ * Persisted in St0r's .env (issue #13: they were posted to UrBackup, which
+ * silently dropped them, so they vanished on reload). Maps the field name the
+ * frontend uses to the .env key it is stored under.
+ */
+const LOCAL_ALERT_ENV_MAP: Record<string, string> = {
+  send_reports: 'ST0R_SEND_REPORTS',
+  report_mail_freq: 'ST0R_REPORT_MAIL_FREQ',
+  pushover_user_key: 'ST0R_PUSHOVER_USER_KEY',
+  pushover_api_token: 'ST0R_PUSHOVER_API_TOKEN',
+  pushover_enabled: 'ST0R_PUSHOVER_ENABLED',
+  pushover_alert_failures: 'ST0R_PUSHOVER_ALERT_FAILURES',
+};
+const BOOL_ALERT_KEYS = new Set(['pushover_enabled', 'pushover_alert_failures', 'send_reports']);
+
+/**
  * Read settings from UrBackup settings database
  */
 async function getUrBackupSettings(): Promise<Record<string, string>> {
@@ -150,6 +166,21 @@ export async function getServerSettings(req: AuthRequest, res: Response): Promis
       // Continue with database-only settings
     }
 
+    // St0r-local Email & Alerts settings, read back from .env (issue #13)
+    const localAlertSettings: Record<string, any> = {};
+    for (const [field, envKey] of Object.entries(LOCAL_ALERT_ENV_MAP)) {
+      const raw = process.env[envKey];
+      if (raw === undefined) continue;
+      if (BOOL_ALERT_KEYS.has(field)) {
+        localAlertSettings[field] = raw === '1' || raw === 'true';
+      } else if (field === 'report_mail_freq') {
+        const n = parseInt(raw, 10);
+        if (!isNaN(n)) localAlertSettings[field] = n;
+      } else {
+        localAlertSettings[field] = raw;
+      }
+    }
+
     // Return settings in the format the frontend expects
     const fqdn = process.env.URBACKUP_SERVER_FQDN || '';
     const settings = {
@@ -177,6 +208,9 @@ export async function getServerSettings(req: AuthRequest, res: Response): Promis
 
       // Re-pin env-managed fields so they always win over UrBackup's own values
       ...(fqdn ? { serverFqdn: fqdn, internet_server: fqdn } : {}),
+
+      // St0r-local Email & Alerts settings (pushover, report cadence)
+      ...localAlertSettings,
 
       // Note for users
       note: 'Settings shown are defaults or database values. Configure via UrBackup web interface at http://localhost:55414'
@@ -237,6 +271,21 @@ export async function setServerSettings(req: AuthRequest, res: Response): Promis
       envUpdates.URBACKUP_PASSWORD = urbackup_password;
       process.env.URBACKUP_PASSWORD = urbackup_password;
       logger.info(`UrBackup password updated by ${user?.username || 'unknown'}`);
+    }
+
+    // Extract St0r-local Email & Alerts settings and persist them to .env.
+    // UrBackup has no storage for these, so they must not be forwarded to its
+    // API (where they would be silently dropped — issue #13).
+    for (const [field, envKey] of Object.entries(LOCAL_ALERT_ENV_MAP)) {
+      if (field in urbackupSettings) {
+        const v = urbackupSettings[field];
+        delete urbackupSettings[field];
+        const strVal = (v === true || v === 'true') ? '1'
+          : (v === false || v === 'false') ? '0'
+          : String(v ?? '');
+        envUpdates[envKey] = strVal;
+        process.env[envKey] = strVal;
+      }
     }
 
     // Save to .env file

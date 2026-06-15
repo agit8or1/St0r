@@ -94,8 +94,8 @@ export function Dashboard() {
   const offlineClients = clients.filter((c) => !c.online).length;
   // A client needs attention if: file backup failed, OR never backed up (UrBackup defaults file_ok=1 for new clients),
   // OR had image backups that failed
-  const hasFileProblem = (c: Client) => !c.file_ok || !(c as any).lastbackup;
-  const hasImageProblem = (c: Client) => !(c as any).lastbackup_image || !c.image_ok;
+  const hasFileProblem = (c: Client) => !c.file_backups_disabled && (!c.file_ok || !(c as any).lastbackup);
+  const hasImageProblem = (c: Client) => !c.image_backups_disabled && (!(c as any).lastbackup_image || !c.image_ok);
   const failedClients = clients.filter((c) => hasFileProblem(c) || hasImageProblem(c)).length;
 
   const statusData = [

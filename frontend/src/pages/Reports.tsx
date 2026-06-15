@@ -601,24 +601,28 @@ export function Reports() {
                       {client.lastbackup_image ? new Date(client.lastbackup_image * 1000).toLocaleString() : 'Never'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Tooltip text={client.file_ok ? 'Last file backup completed successfully' : 'Last file backup failed or never ran'}>
+                      <Tooltip text={client.file_backups_disabled ? 'File backups are disabled for this endpoint' : client.file_ok ? 'Last file backup completed successfully' : 'Last file backup failed or never ran'}>
                         <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                          client.file_ok
+                          client.file_backups_disabled
+                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                            : client.file_ok
                             ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                             : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                         }`}>
-                          {client.file_ok ? 'OK' : 'Failed'}
+                          {client.file_backups_disabled ? 'Disabled' : client.file_ok ? 'OK' : 'Failed'}
                         </span>
                       </Tooltip>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Tooltip text={client.image_ok ? 'Last image backup completed successfully' : 'Last image backup failed or never ran'}>
+                      <Tooltip text={client.image_backups_disabled ? 'Image backups are disabled for this endpoint' : client.image_ok ? 'Last image backup completed successfully' : 'Last image backup failed or never ran'}>
                         <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                          client.image_ok
+                          client.image_backups_disabled
+                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                            : client.image_ok
                             ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                             : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                         }`}>
-                          {client.image_ok ? 'OK' : 'Failed'}
+                          {client.image_backups_disabled ? 'Disabled' : client.image_ok ? 'OK' : 'Failed'}
                         </span>
                       </Tooltip>
                     </td>

@@ -261,8 +261,8 @@ export function Clients() {
     return result;
   }, [clients, searchQuery, filterStatus, selectedCustomer, sortField, sortOrder, clientCustomers]);
 
-  const hasFileProblem = (c: Client) => !c.file_ok || !(c as any).lastbackup;
-  const hasImageProblem = (c: Client) => !(c as any).lastbackup_image || !c.image_ok;
+  const hasFileProblem = (c: Client) => !c.file_backups_disabled && (!c.file_ok || !(c as any).lastbackup);
+  const hasImageProblem = (c: Client) => !c.image_backups_disabled && (!(c as any).lastbackup_image || !c.image_ok);
   const onlineCount = clients.filter(c => c.online).length;
   const failedCount = clients.filter(c => hasFileProblem(c) || hasImageProblem(c)).length;
 
@@ -431,14 +431,14 @@ export function Clients() {
                         </td>
                         {/* Last file backup */}
                         <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                          <span className={!client.file_ok && client.lastbackup ? 'text-red-500' : ''}>
-                            {client.lastbackup ? formatTimeAgo(client.lastbackup) : '—'}
+                          <span className={!client.file_backups_disabled && !client.file_ok && client.lastbackup ? 'text-red-500' : ''}>
+                            {client.file_backups_disabled ? 'Disabled' : client.lastbackup ? formatTimeAgo(client.lastbackup) : '—'}
                           </span>
                         </td>
                         {/* Last image backup */}
                         <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                          <span className={!client.image_ok && client.lastbackup_image ? 'text-red-500' : ''}>
-                            {client.lastbackup_image ? formatTimeAgo(client.lastbackup_image) : '—'}
+                          <span className={!client.image_backups_disabled && !client.image_ok && client.lastbackup_image ? 'text-red-500' : ''}>
+                            {client.image_backups_disabled ? 'Disabled' : client.lastbackup_image ? formatTimeAgo(client.lastbackup_image) : '—'}
                           </span>
                         </td>
                         {/* Storage / Limit */}
@@ -463,14 +463,14 @@ export function Clients() {
                               {client.online ? 'Online' : 'Offline'}
                             </span>
                             <div className="flex gap-1">
-                              <Tooltip text={hasFileProblem(client) ? 'File backup has a problem' : 'File backup is OK'}>
+                              <Tooltip text={client.file_backups_disabled ? 'File backups are disabled for this endpoint' : hasFileProblem(client) ? 'File backup has a problem' : 'File backup is OK'}>
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                  !hasFileProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                                  client.file_backups_disabled ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : !hasFileProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                                 }`}>F</span>
                               </Tooltip>
-                              <Tooltip text={hasImageProblem(client) ? 'Image backup has a problem' : 'Image backup is OK'}>
+                              <Tooltip text={client.image_backups_disabled ? 'Image backups are disabled for this endpoint' : hasImageProblem(client) ? 'Image backup has a problem' : 'Image backup is OK'}>
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                  !hasImageProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                                  client.image_backups_disabled ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : !hasImageProblem(client) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                                 }`}>I</span>
                               </Tooltip>
                             </div>

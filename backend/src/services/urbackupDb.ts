@@ -634,6 +634,78 @@ export class UrBackupDbService {
   }
 
   /**
+   * Read per-client backup enablement from backup_server_settings.db.
+   *
+   * UrBackup disables scheduled backups for a type when its interval
+   * (update_freq_*) is negative, or when no_file_backups / no_images is set.
+   * A client whose file backups are turned off this way reports file_ok=0
+   * forever, which St0r would otherwise show as "Failed" (see issue #14).
+   *
+   * Per-client rows (clientid > 0) override the global defaults (clientid = 0).
+   * Note: this reads the stored per-client value rather than resolving the
+   * full inheritance bitmask, which is sufficient for the explicit-disable
+   * case (turning a type off writes the negative interval to the client row).
+   *
+   * Returns a map keyed by clientid.
+   */
+  async getBackupEnablement(): Promise<Map<number, { file_backups_disabled: boolean; image_backups_disabled: boolean }>> {
+    const result = new Map<number, { file_backups_disabled: boolean; image_backups_disabled: boolean }>();
+    try {
+      const { open } = await import('sqlite');
+      const sqlite3 = await import('sqlite3');
+      const settingsPath = process.env.URBACKUP_DB_PATH?.replace('backup_server.db', 'backup_server_settings.db')
+        || '/var/urbackup/backup_server_settings.db';
+      const settingsDb = await open({ filename: settingsPath, driver: sqlite3.default.Database, mode: sqlite3.default.OPEN_READONLY });
+
+      const KEYS = ['update_freq_full', 'update_freq_incr', 'update_freq_image_full', 'update_freq_image_incr', 'no_file_backups', 'no_images'];
+      const rows = await settingsDb.all(
+        `SELECT clientid, key, value FROM settings WHERE key IN (${KEYS.map(() => '?').join(',')})`,
+        ...KEYS
+      );
+      await settingsDb.close();
+
+      // Group raw values by clientid
+      const byClient = new Map<number, Record<string, string>>();
+      for (const row of rows as any[]) {
+        const cid = Number(row.clientid) || 0;
+        if (!byClient.has(cid)) byClient.set(cid, {});
+        byClient.get(cid)![row.key] = row.value;
+      }
+      const globals = byClient.get(0) || {};
+
+      const isTrue = (v: any) => v === '1' || v === 'true' || v === 1 || v === true;
+      const num = (v: any): number | null => {
+        if (v === undefined || v === null || v === '') return null;
+        const n = parseInt(String(v), 10);
+        return isNaN(n) ? null : n;
+      };
+
+      for (const [cid, vals] of byClient.entries()) {
+        if (cid === 0) continue; // global defaults row, not a real client
+        const get = (k: string) => (vals[k] !== undefined ? vals[k] : globals[k]);
+
+        const freqFull = num(get('update_freq_full'));
+        const freqIncr = num(get('update_freq_incr'));
+        const freqImgFull = num(get('update_freq_image_full'));
+        const freqImgIncr = num(get('update_freq_image_incr'));
+
+        // A backup type is "disabled" only when neither a full nor an
+        // incremental run is scheduled (both intervals negative), or when it
+        // is explicitly turned off.
+        const fileDisabled = isTrue(get('no_file_backups'))
+          || (freqFull !== null && freqFull < 0 && freqIncr !== null && freqIncr < 0);
+        const imageDisabled = isTrue(get('no_images'))
+          || (freqImgFull !== null && freqImgFull < 0 && freqImgIncr !== null && freqImgIncr < 0);
+
+        result.set(cid, { file_backups_disabled: fileDisabled, image_backups_disabled: imageDisabled });
+      }
+    } catch (error) {
+      logger.warn('Failed to read backup enablement settings:', error);
+    }
+    return result;
+  }
+
+  /**
    * Get the UrBackup backup storage folder path from backup_server_settings.db.
    * Falls back to /var/urbackup if not found (UrBackup default).
    */

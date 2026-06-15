@@ -47,6 +47,8 @@ export interface Client {
   client_version_string?: string | null;
   os_simple?: string | null;
   no_backup_paths?: boolean;
+  file_backups_disabled?: boolean;
+  image_backups_disabled?: boolean;
 }
 
 export interface Activity {

@@ -1,14 +1,8 @@
 {
-  "version": "3.2.93",
-  "releaseDate": "2026-05-13",
+  "version": "3.2.94",
+  "releaseDate": "2026-06-15",
   "changelog": [
-    "Security: upgraded axios → 1.15.x (15 CVEs incl. SSRF, prototype pollution, header injection)",
-    "Security: upgraded bcrypt → 6, sqlite3 → 6, nodemailer → 8 to clear high-severity CVEs",
-    "Security: database-backup endpoints now require admin (closed privilege-escalation via crafted SQL dump upload)",
-    "Security: stop returning JWT in login response body — token lives only in HttpOnly cookie",
-    "Security: sanitize \\r\\n in .env writes to prevent JWT_SECRET overwrite via Settings",
-    "Security: GET /api/users and PUT /api/client-settings/:id now require admin",
-    "Fix: server-pushed backup paths now actually populate client (use=1→use=2 bitmask)",
-    "Add: warning banner + disabled file-backup buttons when client has no backup paths"
+    "Fix: Email & Alerts settings now persist — mail settings are saved via UrBackup's mail endpoint (not the general endpoint that silently dropped them), and Pushover/report settings are stored locally (issue #13)",
+    "Fix: clients with file or image backups disabled now show 'Disabled' instead of 'Failed', and no longer count as needing attention (issue #14)"
   ]
 }

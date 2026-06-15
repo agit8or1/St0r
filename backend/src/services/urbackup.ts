@@ -9,6 +9,23 @@ const URBACKUP_API_URL = process.env.URBACKUP_API_URL || 'http://localhost:55414
 const URBACKUP_USERNAME = process.env.URBACKUP_USERNAME || 'admin';
 const URBACKUP_PASSWORD = process.env.URBACKUP_PASSWORD || '';
 
+// UrBackup stores e-mail settings under its own action (sa=mail / sa=mail_save)
+// with different field names than St0r's UI uses. Saving them via general_save
+// silently drops them (issue #13), so they must be routed to mail_save and
+// translated. Map: St0r UI field name -> UrBackup mail-settings field name.
+const MAIL_FIELD_TO_URBACKUP: Record<string, string> = {
+  mail_server: 'mail_servername',
+  mail_serverport: 'mail_serverport',
+  mail_username: 'mail_username',
+  mail_password: 'mail_password',
+  mail_from: 'mail_from',
+  mail_admin: 'mail_admin_addrs',
+  mail_ssl: 'mail_ssl_only',
+};
+const URBACKUP_TO_MAIL_FIELD: Record<string, string> = Object.fromEntries(
+  Object.entries(MAIL_FIELD_TO_URBACKUP).map(([stor, ub]) => [ub, stor])
+);
+
 export class UrBackupService {
   private dbService: UrBackupDbService;
   private sessionId: string = '';
@@ -488,6 +505,19 @@ export class UrBackupService {
       logger.warn('Failed to read clients from SQLite DB, will try UrBackup API fallback:', error);
     }
 
+    // Per-client backup-enablement flags (issue #14): a client with file/image
+    // backups turned off should not be reported as "Failed". Best-effort —
+    // defaults to "not disabled" if the settings DB can't be read.
+    const enablement = await this.dbService.getBackupEnablement().catch(() => new Map());
+    const withEnablement = (c: any) => {
+      const e = enablement.get(Number(c.id));
+      return {
+        ...c,
+        file_backups_disabled: e?.file_backups_disabled ?? false,
+        image_backups_disabled: e?.image_backups_disabled ?? false,
+      };
+    };
+
     // If DB unavailable, fall back to UrBackup API status as sole source
     if (clients === null) {
       try {
@@ -496,7 +526,7 @@ export class UrBackupService {
         return apiClients.map((c: any) => {
           let ip = c.ip || c.lastip || null;
           if (ip === '-' || ip === '' || ip === 'null') ip = null;
-          return {
+          return withEnablement({
             id: c.id,
             name: c.name,
             online: c.online === true,
@@ -516,7 +546,7 @@ export class UrBackupService {
             no_backup_paths: c.no_backup_paths === true || c.no_backup_paths === 1 || false,
             file_backup_running: false,
             image_backup_running: false,
-          };
+          });
         });
       } catch (apiErr) {
         logger.error('Both SQLite DB and UrBackup API failed for getClients:', apiErr);
@@ -532,11 +562,11 @@ export class UrBackupService {
         const apiMap = new Map(apiClients.map((c: any) => [c.id, c]));
         return clients.map(client => {
           const api = apiMap.get(client.id);
-          if (!api) return client;
+          if (!api) return withEnablement(client);
           const c = client as any;
           let ip = api.ip || api.lastip || c.ip || null;
           if (ip === '-' || ip === '' || ip === 'null') ip = null;
-          return {
+          return withEnablement({
             ...client,
             online: api.online === true,
             lastseen: api.lastseen ? api.lastseen * 1000 : client.lastseen,
@@ -547,14 +577,14 @@ export class UrBackupService {
             client_version_string: api.client_version_string || c.client_version_string || null,
             delete_pending: api.delete_pending === '1' || api.delete_pending === 1 || false,
             no_backup_paths: api.no_backup_paths === true || api.no_backup_paths === 1 || false,
-          };
+          });
         });
       }
     } catch (apiErr) {
       logger.warn('Could not fetch live status from UrBackup API, using DB values:', apiErr);
     }
 
-    return clients;
+    return clients.map(withEnablement);
   }
 
   async getOnlineClients() {
@@ -1042,20 +1072,37 @@ export class UrBackupService {
     }
   }
 
+  // Flatten UrBackup's {key: {value: x}} (or bare {key: x}) settings shape.
+  private flattenSettings(raw: Record<string, any>): Record<string, any> {
+    const flat: Record<string, any> = {};
+    for (const [key, val] of Object.entries(raw || {})) {
+      if (val && typeof val === 'object' && !Array.isArray(val) && 'value' in (val as any)) {
+        flat[key] = (val as any).value;
+      } else if (typeof val !== 'object') {
+        flat[key] = val;
+      }
+    }
+    return flat;
+  }
+
   async getSettings() {
     try {
       const response = await this.apiCall('settings', { sa: 'general' });
       // UrBackup returns {settings: {key: {value: x}, ...}, ...}
-      // Return only the flat settings extracted from the nested structure
-      const raw: Record<string, any> = response?.settings || {};
-      const flat: Record<string, any> = {};
-      for (const [key, val] of Object.entries(raw)) {
-        if (val && typeof val === 'object' && !Array.isArray(val) && 'value' in (val as any)) {
-          flat[key] = (val as any).value;
-        } else if (typeof val !== 'object') {
-          flat[key] = val;
+      const flat = this.flattenSettings(response?.settings || {});
+
+      // E-mail settings live under sa=mail with different field names. Fetch
+      // them too and translate back to St0r's UI field names (issue #13).
+      try {
+        const mailResponse = await this.apiCall('settings', { sa: 'mail' });
+        const mailFlat = this.flattenSettings(mailResponse?.settings || {});
+        for (const [ubKey, storKey] of Object.entries(URBACKUP_TO_MAIL_FIELD)) {
+          if (ubKey in mailFlat) flat[storKey] = mailFlat[ubKey];
         }
+      } catch (mailErr) {
+        logger.warn('Could not fetch mail settings from UrBackup API:', mailErr);
       }
+
       return flat;
     } catch (error) {
       logger.error('Failed to get settings:', error);
@@ -1074,44 +1121,72 @@ export class UrBackupService {
         return String(v);
       };
 
-      // Get current settings (already flattened by getSettings())
-      const currentFlat = await this.getSettings();
+      const postSave = async (params: URLSearchParams, label: string) => {
+        const response = await fetch(`${URBACKUP_API_URL}?a=settings&ses=${session}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+          body: params.toString()
+        });
+        const result: any = await response.json();
+        if (result?.saved_ok !== true) {
+          logger.warn(`UrBackup ${label} save returned:`, JSON.stringify(result));
+          throw new Error(`${label} save failed: ${JSON.stringify(result)}`);
+        }
+      };
 
-      // Apply updates
+      // Split the incoming updates into mail settings (saved via sa=mail_save,
+      // with translated field names) and everything else (general_save). Saving
+      // mail keys via general_save silently drops them — issue #13.
+      const mailUpdates: Record<string, any> = {};
+      const generalUpdates: Record<string, any> = {};
       for (const [key, value] of Object.entries(newSettings)) {
-        if (value !== null && value !== undefined) {
+        if (value === null || value === undefined) continue;
+        if (key in MAIL_FIELD_TO_URBACKUP) mailUpdates[key] = value;
+        else generalUpdates[key] = value;
+      }
+
+      // --- General settings ---
+      if (Object.keys(generalUpdates).length > 0) {
+        // Get current settings (already flattened by getSettings())
+        const currentFlat = await this.getSettings();
+        for (const [key, value] of Object.entries(generalUpdates)) {
           currentFlat[key] = value;
         }
-      }
 
-      // Build POST body for UrBackup general settings save
-      const saveParams = new URLSearchParams();
-      saveParams.set('sa', 'general_save');
-      saveParams.set('ses', session);
-
-      for (const [key, value] of Object.entries(currentFlat)) {
-        if (value !== null && value !== undefined) {
-          saveParams.set(key, toUrBackupStr(value));
+        const saveParams = new URLSearchParams();
+        saveParams.set('sa', 'general_save');
+        saveParams.set('ses', session);
+        for (const [key, value] of Object.entries(currentFlat)) {
+          // Mail fields don't belong in general_save (UrBackup ignores them).
+          if (key in MAIL_FIELD_TO_URBACKUP) continue;
+          if (value !== null && value !== undefined) {
+            saveParams.set(key, toUrBackupStr(value));
+          }
         }
+        await postSave(saveParams, 'general settings');
       }
 
-      const response = await fetch(`${URBACKUP_API_URL}?a=settings&ses=${session}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'st0r',
-        },
-        body: saveParams.toString()
-      });
+      // --- Mail settings (sa=mail_save) ---
+      if (Object.keys(mailUpdates).length > 0) {
+        // mail_save replaces the whole mail config, so start from current values.
+        const mailResponse = await this.apiCall('settings', { sa: 'mail' });
+        const mailRaw = this.flattenSettings(mailResponse?.settings || {});
+        for (const [storKey, value] of Object.entries(mailUpdates)) {
+          mailRaw[MAIL_FIELD_TO_URBACKUP[storKey]] = value;
+        }
 
-      const result: any = await response.json();
-
-      if (result?.saved_ok === true) {
-        return { success: true };
-      } else {
-        logger.warn('UrBackup general settings save returned:', JSON.stringify(result));
-        throw new Error(`Settings save failed: ${JSON.stringify(result)}`);
+        const mailParams = new URLSearchParams();
+        mailParams.set('sa', 'mail_save');
+        mailParams.set('ses', session);
+        for (const [key, value] of Object.entries(mailRaw)) {
+          if (value !== null && value !== undefined) {
+            mailParams.set(key, toUrBackupStr(value));
+          }
+        }
+        await postSave(mailParams, 'mail settings');
       }
+
+      return { success: true };
     } catch (error) {
       logger.error('Failed to set settings:', error);
       throw error;
