@@ -509,12 +509,19 @@ export class UrBackupService {
     // backups turned off should not be reported as "Failed". Best-effort —
     // defaults to "not disabled" if the settings DB can't be read.
     const enablement = await this.dbService.getBackupEnablement().catch(() => new Map());
-    const withEnablement = (c: any) => {
+    const withEnablement = (c: any, api?: any) => {
       const e = enablement.get(Number(c.id));
+      // UrBackup's status API resolves group/global inheritance server-side and
+      // reports file_disabled/image_disabled directly (the same flags its own web
+      // UI shows as "Disabled"). Those are authoritative; the settings-DB heuristic
+      // only sees raw per-client rows and misses inherited disables, so use it just
+      // as a fallback when the live status isn't available (issue #14).
+      const apiFileDisabled = api?.file_disabled === true || api?.file_disabled === 1;
+      const apiImageDisabled = api?.image_disabled === true || api?.image_disabled === 1;
       return {
         ...c,
-        file_backups_disabled: e?.file_backups_disabled ?? false,
-        image_backups_disabled: e?.image_backups_disabled ?? false,
+        file_backups_disabled: apiFileDisabled || (e?.file_backups_disabled ?? false),
+        image_backups_disabled: apiImageDisabled || (e?.image_backups_disabled ?? false),
       };
     };
 
@@ -546,7 +553,7 @@ export class UrBackupService {
             no_backup_paths: c.no_backup_paths === true || c.no_backup_paths === 1 || false,
             file_backup_running: false,
             image_backup_running: false,
-          });
+          }, c);
         });
       } catch (apiErr) {
         logger.error('Both SQLite DB and UrBackup API failed for getClients:', apiErr);
@@ -577,7 +584,7 @@ export class UrBackupService {
             client_version_string: api.client_version_string || c.client_version_string || null,
             delete_pending: api.delete_pending === '1' || api.delete_pending === 1 || false,
             no_backup_paths: api.no_backup_paths === true || api.no_backup_paths === 1 || false,
-          });
+          }, api);
         });
       }
     } catch (apiErr) {
