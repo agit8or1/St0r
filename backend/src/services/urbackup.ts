@@ -103,7 +103,13 @@ export class UrBackupService {
         const loginData: any = JSON.parse(await loginResponse.text());
         logger.info(`[UrBackup API] Simple login response: ${JSON.stringify(loginData)}`);
         if (!loginData.success) {
-          throw new Error(`UrBackup login failed (error ${loginData.error})`);
+          // Salt endpoint reported no-password mode, but login was still rejected.
+          // Most commonly this means the account actually has a password set —
+          // configure URBACKUP_PASSWORD in the backend .env.
+          throw new Error(
+            `UrBackup rejected the no-password login for user '${URBACKUP_USERNAME}' (error ${loginData.error}). ` +
+            'If this account has a password, set URBACKUP_PASSWORD in the backend .env and restart St0r.'
+          );
         }
         this.sessionId = loginData.session || saltData.ses;
         this.sessionExpiry = Date.now() + (10 * 60 * 1000);
@@ -112,6 +118,16 @@ export class UrBackupService {
       }
 
       logger.info(`[UrBackup API] Got salt: ${saltData.salt}, session: ${saltData.ses}`);
+
+      // Password mode was detected (salt present) but St0r has no password configured.
+      // Fail early with an actionable message instead of computing a hash of the empty
+      // string and getting a confusing "wrong password" rejection from UrBackup.
+      if (!URBACKUP_PASSWORD) {
+        throw new Error(
+          'UrBackup requires a password for this account, but URBACKUP_PASSWORD is not set in St0r\'s backend .env. ' +
+          'Set URBACKUP_USERNAME and URBACKUP_PASSWORD to a valid UrBackup admin account, then restart the St0r service.'
+        );
+      }
 
       // Step 2: Hash password using session-based auth (calcPwHash method)
       // This matches the frontend TypeScript code exactly
@@ -172,10 +188,24 @@ export class UrBackupService {
       const loginData: any = JSON.parse(loginText);
       logger.info(`[UrBackup API] Login response parsed:`, JSON.stringify(loginData));
 
-      // In session-based auth, success=true is enough. The session comes from saltData.
-      if (!loginData.success && loginData.error) {
-        logger.error(`[UrBackup API] Login failed with error: ${loginData.error}`);
-        throw new Error('Failed to authenticate with UrBackup server');
+      // A successful session-based login returns either success:true or a fresh
+      // authenticated `session`. UrBackup rejects bad credentials with error 2
+      // (wrong password) / error 1 (unknown user) and, on some versions, an empty
+      // object with neither field set. Treat anything that is not a positive
+      // success as a failure — otherwise we would cache the *unauthenticated* salt
+      // session and every later start_backup call would silently fail with error 1.
+      const loginOk = loginData.success === true || !!loginData.session;
+      if (!loginOk) {
+        const code = loginData.error;
+        const reason = code === 2 ? 'wrong password'
+          : code === 1 ? 'unknown username'
+          : code !== undefined ? `error ${code}`
+          : 'credentials rejected';
+        logger.error(`[UrBackup API] Login failed (${reason}) for user '${URBACKUP_USERNAME}'`);
+        throw new Error(
+          `UrBackup rejected the St0r login for user '${URBACKUP_USERNAME}' (${reason}). ` +
+          'Check URBACKUP_USERNAME / URBACKUP_PASSWORD in the backend .env match a valid UrBackup admin account.'
+        );
       }
 
       // Use the session from salt API response (already stored in saltData.ses)
@@ -184,9 +214,12 @@ export class UrBackupService {
 
       logger.info(`[UrBackup API] ✓ Authenticated successfully! Session: ${this.sessionId}`);
       return this.sessionId;
-    } catch (error) {
+    } catch (error: any) {
       logger.error('[UrBackup API] Failed to login to UrBackup server:', error);
-      throw new Error('Failed to login to UrBackup server');
+      // Preserve the underlying reason (wrong password, missing password, network,
+      // etc.) so the UI shows something actionable instead of a generic message.
+      const detail = error?.message ? `: ${error.message}` : '';
+      throw new Error(`Failed to login to UrBackup server${detail}`);
     }
   }
 

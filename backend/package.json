@@ -1,6 +1,6 @@
 {
   "name": "urbackup-gui-backend",
-  "version": "3.2.95",
+  "version": "3.2.96",
   "description": "Backend API for UrBackup GUI",
   "main": "dist/server.js",
   "type": "module",
@@ -36,7 +36,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.1.1",
     "mysql2": "^3.6.5",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^9.0.3",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",
     "sqlite": "^5.1.1",

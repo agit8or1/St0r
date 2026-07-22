@@ -1,7 +1,9 @@
 {
-  "version": "3.2.95",
-  "releaseDate": "2026-06-17",
+  "version": "3.2.96",
+  "releaseDate": "2026-07-22",
   "changelog": [
-    "Fix: disabled file/image backups now reliably show 'Disabled' instead of 'Failed'. St0r now reads UrBackup's authoritative file_disabled/image_disabled status flags (which resolve group and global inheritance server-side) instead of only the per-client settings rows, which missed disables inherited from a group (issue #14)"
+    "Fix: backup triggers now report the real reason when the UrBackup API login fails instead of a generic 'unable to login' message. If the UrBackup account has a password but URBACKUP_PASSWORD is unset in St0r's .env, the error now says so explicitly (issue #16)",
+    "Fix: login no longer caches an unauthenticated salt session when UrBackup rejects the credentials, which previously caused start_backup to fail silently",
+    "Security: resolved all npm audit findings — critical node-tar, high undici/form-data/nodemailer, and moderate react-router advisories (0 vulnerabilities remaining in backend and frontend)"
   ]
 }
