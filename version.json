@@ -1,10 +1,12 @@
 {
-  "version": "3.2.98",
+  "version": "3.2.99",
   "releaseDate": "2026-08-02",
   "changelog": [
-    "Fix: restore activities were missing from the Activities page entirely. UrBackup records restores in its own `restores` table, which St0r never read — only the backups and backup_images tables were queried, so image and file restores appeared nowhere in the history (issue #17)",
-    "New: Activities now lists file and image restores alongside backups, with an amber 'Image Restore' / 'File Restore' badge, the restored path on hover, failure status from UrBackup's success flag, and a 'Restores' type filter",
-    "Fix: a restore still in progress no longer shows a green success tick in the history — it renders as running until UrBackup records a finish time",
-    "Fix: running restores reported by the progress API were matched against unrelated backup records, which stamped them with the wrong start time"
+    "Consolidated release of the storage protection and restore activity work from 3.2.97 and 3.2.98 — no new changes over 3.2.98",
+    "Storage Protection: a disk guard watches free space on the backup volume every 10 minutes and escalates — warn at 75%, alert at 85%, and at 93% it pauses new file and image backups so the volume cannot fill. UrBackup's nightly cleanup reclaims space and backups resume automatically below 70% (issue #18)",
+    "Fix: retention floors could exceed their ceilings (min_file_incr was 40 against a max of 20), silently stopping UrBackup from pruning old backups. Floors are realigned and the server now rejects any settings save where a min_* is not below its max_* (issue #18)",
+    "Fix: restore activities were missing from the Activities page entirely — UrBackup records restores in its own table, which St0r never read. File and image restores now appear alongside backups with a Restores filter, restore badges, and the restored path on hover (issue #17)",
+    "Settings gains a Storage Protection tab with live usage, guard event history, and admin actions to reclaim space or prune orphaned files the UrBackup database no longer references",
+    "Retention floors (min full/incremental, file and image) are now editable in Backup Defaults, and the 'no_images' toggle is correctly labelled as disabling image backups rather than 'Headless Mode'"
   ]
 }
