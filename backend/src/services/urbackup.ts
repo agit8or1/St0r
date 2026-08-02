@@ -480,6 +480,12 @@ export class UrBackupService {
     return [1, 3, 5, 7].includes(action);
   }
 
+  private isRestoreAction(action: number): boolean {
+    // 9 = restoring image, 13 = restoring file. Restores were previously
+    // indistinguishable from backups in the activity list (issue #17).
+    return [9, 13].includes(action);
+  }
+
   // ========== READ OPERATIONS (Using Direct Database Access) ==========
 
   async testConnection(): Promise<boolean> {
@@ -726,9 +732,12 @@ export class UrBackupService {
             const actionStr = this.getActionString(progress.action);
             const isImageBackup = this.isImageAction(progress.action);
             const progressType = isImageBackup ? 'image' : 'file';
+            const isRestore = this.isRestoreAction(progress.action);
 
-            // Find matching DB activity for metadata enrichment only
-            const dbMatch = dbActivities.find(
+            // Find matching DB activity for metadata enrichment only. Restores are
+            // not in the backups tables, so a match here would be an unrelated
+            // backup and would stamp the restore with the wrong start time.
+            const dbMatch = isRestore ? undefined : dbActivities.find(
               (act: any) => act.clientid === progress.clientid && act.type === progressType
             );
 
@@ -744,6 +753,7 @@ export class UrBackupService {
               backuptime: dbMatch?.backuptime || Date.now(),
               incremental: this.isIncrementalAction(progress.action),
               type: progressType,
+              restore: isRestore,
               path: progress.path || dbMatch?.path || '',
               action: actionStr,
               pcdone,

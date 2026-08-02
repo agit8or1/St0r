@@ -24,7 +24,7 @@ import type { Activity } from '../types';
 import { formatBytes } from '../utils/format';
 
 type StatusFilter = 'all' | 'running' | 'successful' | 'errors';
-type ActivityType = 'file' | 'image' | 'all';
+type ActivityType = 'file' | 'image' | 'restore' | 'all';
 type DateRangeFilter = 'all' | 'today' | 'week' | 'month';
 
 export function Activities() {
@@ -170,9 +170,13 @@ export function Activities() {
     ...lastActivities.map((a: any) => a.clientName || a.name || a.client || ''),
   ].filter(Boolean))).sort();
 
-  // Filter helpers
-  const matchesType = (isImage: boolean) =>
-    activityType === 'all' || (activityType === 'image' ? isImage : !isImage);
+  // Filter helpers. Restores keep their file/image type so the Files and Images
+  // filters still include them; 'restore' narrows to restores of either kind.
+  const matchesType = (isImage: boolean, isRestore = false) => {
+    if (activityType === 'all') return true;
+    if (activityType === 'restore') return isRestore;
+    return activityType === 'image' ? isImage : !isImage;
+  };
 
   const matchesClient = (name: string) =>
     selectedClient === 'all' || name === selectedClient;
@@ -197,7 +201,7 @@ export function Activities() {
     const d = a as any;
     const clientName = d.name || d.client || a.client || '';
     const isImage = getActivityType(d.action || a.action) === 'image';
-    return matchesType(isImage) && matchesClient(clientName);
+    return matchesType(isImage, d.restore === true) && matchesClient(clientName);
   });
 
   // Filtered history (completed) activities
@@ -206,7 +210,7 @@ export function Activities() {
     const clientName = d.clientName || d.name || d.client || a.client || '';
     const isImage = d.type === 'image';
     const errors: number = d.errors || 0;
-    if (!matchesType(isImage)) return false;
+    if (!matchesType(isImage, d.restore === true)) return false;
     if (!matchesClient(clientName)) return false;
     if (!matchesDate(d.backuptime || 0)) return false;
     if (statusFilter === 'successful' && errors > 0) return false;
@@ -340,7 +344,7 @@ export function Activities() {
 
             {/* Type */}
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-              {([['all', 'All Types'], ['file', 'Files'], ['image', 'Images']] as [ActivityType, string][]).map(([val, label]) => (
+              {([['all', 'All Types'], ['file', 'Files'], ['image', 'Images'], ['restore', 'Restores']] as [ActivityType, string][]).map(([val, label]) => (
                 <button key={val} onClick={() => setActivityType(val)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                     activityType === val
@@ -406,13 +410,14 @@ export function Activities() {
                 const etaMs: number | null = d.eta_ms || null;
                 const isPaused = d.paused || false;
                 const isImage = getActivityType(action) === 'image';
+                const isRestore = d.restore === true;
 
                 return (
-                  <div key={d.id || index} className="card border-l-4 border-blue-500 space-y-3">
+                  <div key={d.id || index} className={`card border-l-4 ${isRestore ? 'border-amber-500' : 'border-blue-500'} space-y-3`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${isImage ? 'bg-purple-100 dark:bg-purple-900' : 'bg-blue-100 dark:bg-blue-900'}`}>
-                          <Server className={`h-5 w-5 ${isImage ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`} />
+                        <div className={`p-2 rounded-lg ${isRestore ? 'bg-amber-100 dark:bg-amber-900' : isImage ? 'bg-purple-100 dark:bg-purple-900' : 'bg-blue-100 dark:bg-blue-900'}`}>
+                          <Server className={`h-5 w-5 ${isRestore ? 'text-amber-600 dark:text-amber-400' : isImage ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`} />
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 dark:text-gray-100">{clientName}</p>
@@ -427,7 +432,7 @@ export function Activities() {
                         )}
                         <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{pcdone.toFixed(0)}%</span>
                         {d.process_id && (
-                          <Tooltip text="Stop this backup job">
+                          <Tooltip text={isRestore ? 'Stop this restore' : 'Stop this backup job'}>
                             <button
                               onClick={() => handleCancelActivity(String(d.process_id), clientName, d.clientid)}
                               disabled={cancellingId === String(d.process_id)}
@@ -530,14 +535,24 @@ export function Activities() {
                     const logId: number | null = d.log_id || null;
                     const isExpanded = logId !== null && expandedLogId === logId;
 
-                    const typeLabel = isImage
+                    const isRestore: boolean = d.restore === true;
+                    const isRestoreRunning: boolean = d.restore_running === true;
+                    const restorePath: string | null = d.restore_path || null;
+
+                    const typeLabel = isRestore
+                      ? `${isImage ? 'Image' : 'File'} Restore${letters ? ` (${letters})` : ''}`
+                      : isImage
                       ? `Image${letters ? ` (${letters})` : ''}`
                       : isIncremental ? 'Incr. File' : 'Full File';
 
+                    // A restore with no finish time is still running — don't paint it
+                    // green as though it had succeeded.
                     const statusIcon = hasErrors
                       ? <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
                       : hasWarnings
                       ? <AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                      : isRestoreRunning
+                      ? <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
                       : <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />;
 
                     const rowBg = hasErrors
@@ -546,7 +561,10 @@ export function Activities() {
                       ? 'bg-yellow-50/40 dark:bg-yellow-900/5 hover:bg-yellow-50 dark:hover:bg-yellow-900/10'
                       : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50';
 
-                    const borderLeft = hasErrors ? 'border-l-2 border-red-400' : hasWarnings ? 'border-l-2 border-yellow-400' : 'border-l-2 border-green-400';
+                    const borderLeft = hasErrors ? 'border-l-2 border-red-400'
+                      : hasWarnings ? 'border-l-2 border-yellow-400'
+                      : isRestoreRunning ? 'border-l-2 border-blue-400'
+                      : 'border-l-2 border-green-400';
 
                     return (
                       <div key={`job-${d.id || index}`}>
@@ -589,11 +607,19 @@ export function Activities() {
                             <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                               {backuptime ? formatDate(backuptime) : '—'}
                             </span>
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded inline-block w-fit whitespace-nowrap ${
-                              isImage ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
-                                      : isIncremental ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                            }`}>{typeLabel}</span>
+                            {(() => {
+                              const badge = (
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded inline-block w-fit whitespace-nowrap ${
+                                  isRestore ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                                          : isImage ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+                                          : isIncremental ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                                }`}>{typeLabel}{isRestoreRunning ? '…' : ''}</span>
+                              );
+                              return restorePath
+                                ? <Tooltip text={`Restored to ${restorePath}`}>{badge}</Tooltip>
+                                : badge;
+                            })()}
                             <span className="text-sm text-gray-700 dark:text-gray-300 text-right">
                               {duration ? formatDuration(duration) : '—'}
                             </span>

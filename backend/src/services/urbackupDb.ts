@@ -445,8 +445,48 @@ export class UrBackupDbService {
           AND CAST(strftime('%s', l.created) AS INTEGER) BETWEEN g.synctime - 120 AND g.synctime + 120
       `, limit);
 
+      // Restores are recorded in their own table, not in backups/backup_images, so
+      // they were missing from the activity history entirely (issue #17). UrBackup
+      // stores no transferred size for a restore, so size is reported as unknown.
+      // Guarded: older UrBackup schemas may not have this table, and a failure
+      // here must not take down the whole activity list.
+      let restores: any[] = [];
+      try {
+        restores = await db.all(`
+        SELECT
+          r.id,
+          r.clientid,
+          c.name as client_name,
+          CAST(strftime('%s', r.created) AS INTEGER) as backuptime,
+          0 as incremental,
+          r.done as complete,
+          NULL as size_bytes,
+          NULL as partition_count,
+          NULLIF(r.letter, '') as letters,
+          CAST(strftime('%s', r.finished) AS INTEGER) as synctime,
+          CASE
+            WHEN r.finished IS NULL THEN NULL
+            ELSE CAST(strftime('%s', r.finished) AS INTEGER) - CAST(strftime('%s', r.created) AS INTEGER)
+          END as duration,
+          CASE WHEN r.finished IS NOT NULL AND COALESCE(r.success, 0) = 0 THEN 1 ELSE 0 END as errors,
+          0 as warnings,
+          NULL as log_id,
+          CASE WHEN r.image = 1 THEN 'image' ELSE 'file' END as backup_type,
+          1 as is_restore,
+          r.path as restore_path,
+          r.success as restore_success,
+          r.finished as restore_finished
+        FROM restores r
+        JOIN clients c ON r.clientid = c.id
+        ORDER BY r.created DESC
+        LIMIT ?
+      `, limit);
+      } catch (err) {
+        logger.warn('Could not read restore history (UrBackup restores table unavailable):', err);
+      }
+
       // Combine and sort by time
-      const activities = [...fileBackups, ...imageBackups]
+      const activities = [...fileBackups, ...imageBackups, ...restores]
         .sort((a, b) => b.backuptime - a.backuptime)
         .slice(0, limit);
 
@@ -473,7 +513,7 @@ export class UrBackupDbService {
       }
 
       return activities.map(activity => ({
-        id: `${activity.backup_type}-${activity.id}`,
+        id: activity.is_restore ? `restore-${activity.id}` : `${activity.backup_type}-${activity.id}`,
         clientid: activity.clientid,
         clientName: activity.client_name,
         customerName: customerMap.get(activity.client_name) || null,
@@ -481,6 +521,12 @@ export class UrBackupDbService {
         incremental: activity.incremental !== 0,
         complete: activity.complete === 1,
         type: activity.backup_type,
+        // Restores share the file/image type so existing type filters still apply,
+        // and carry this flag so the UI can label and filter them distinctly.
+        restore: activity.is_restore === 1,
+        restore_path: activity.restore_path || null,
+        // A restore with no finished timestamp is still running.
+        restore_running: activity.is_restore === 1 && !activity.restore_finished,
         size_bytes: activity.size_bytes,
         partition_count: activity.partition_count || null,
         letters: activity.letters || null,
