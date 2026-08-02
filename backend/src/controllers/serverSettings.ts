@@ -23,7 +23,11 @@ const DEFAULT_URBACKUP_SETTINGS: Record<string, any> = {
   // Server settings
   port: '55414',
   max_active_clients: 20,
-  global_soft_fs_quota: 0,
+  // Keep UrBackup's own cleanup ahead of a full disk. At the stock 95% there is
+  // too little headroom for cleanup to finish before the volume fills.
+  global_soft_fs_quota: '85%',
+  // Weekdays 1-7 / hours 1-7 — cleanup gets seven hours every night, not one.
+  cleanup_window: '1-7/1-7',
 
   // Network / internet settings
   internet_server_port: '55415',
@@ -37,17 +41,24 @@ const DEFAULT_URBACKUP_SETTINGS: Record<string, any> = {
   no_images: false,
   no_file_backups: false,
 
-  // File backup defaults
-  max_file_full: 4,
-  max_file_incr: 30,
+  // File backup retention. max_* is the normal ceiling; min_* is the floor that
+  // even an out-of-space emergency cleanup will not delete below, so every min_*
+  // must stay strictly under its max_* or retention silently stops pruning.
+  max_file_full: 3,
+  max_file_incr: 20,
+  min_file_full: 2,
+  min_file_incr: 10,
   interval_full: 30, // days
   interval_incr: 5,  // hours
   min_file_full_age: 7,
   min_file_incr_age: 1,
 
-  // Image backup defaults
-  max_image_full: 4,
+  // Image backup retention — images (VHDs) are by far the largest consumer of
+  // backup storage, so these ceilings are deliberately tighter than the file ones.
+  max_image_full: 2,
   max_image_incr: 10,
+  min_image_full: 1,
+  min_image_incr: 4,
   interval_full_image: 60,  // days
   interval_incr_image: 7,   // days
   min_image_full_age: 30,
@@ -86,6 +97,50 @@ const LOCAL_ALERT_ENV_MAP: Record<string, string> = {
   pushover_alert_failures: 'ST0R_PUSHOVER_ALERT_FAILURES',
 };
 const BOOL_ALERT_KEYS = new Set(['pushover_enabled', 'pushover_alert_failures', 'send_reports']);
+
+/**
+ * Retention floor/ceiling pairs. UrBackup treats min_* as a hard floor that even
+ * an out-of-space cleanup will not delete below. If a floor is raised above its
+ * ceiling, retention silently stops pruning and the volume fills — this is what
+ * caused the 2026-08-01 disk-full incident (min_file_incr was 40 vs max of 20).
+ */
+const RETENTION_PAIRS: { min: string; max: string; label: string }[] = [
+  { min: 'min_file_full', max: 'max_file_full', label: 'full file backups' },
+  { min: 'min_file_incr', max: 'max_file_incr', label: 'incremental file backups' },
+  { min: 'min_image_full', max: 'max_image_full', label: 'full image backups' },
+  { min: 'min_image_incr', max: 'max_image_incr', label: 'incremental image backups' },
+];
+
+/**
+ * Reject a settings save that would leave any retention floor at or above its
+ * ceiling. Incoming values are merged over the current ones first, so changing
+ * just one side of a pair is still validated against the other.
+ */
+function validateRetention(
+  incoming: Record<string, any>,
+  current: Record<string, any>
+): string | null {
+  const num = (v: any): number | null => {
+    if (v === undefined || v === null || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  for (const { min, max, label } of RETENTION_PAIRS) {
+    const minVal = num(min in incoming ? incoming[min] : current[min]);
+    const maxVal = num(max in incoming ? incoming[max] : current[max]);
+    if (minVal === null || maxVal === null) continue;
+    if (minVal < 0 || maxVal < 0) {
+      return `Retention counts for ${label} cannot be negative`;
+    }
+    if (minVal >= maxVal) {
+      return `Minimum ${label} (${min}=${minVal}) must be less than the maximum ` +
+        `(${max}=${maxVal}), otherwise old backups are never pruned and the ` +
+        `storage volume will fill up.`;
+    }
+  }
+  return null;
+}
 
 /**
  * Read settings from UrBackup settings database
@@ -243,6 +298,15 @@ export async function setServerSettings(req: AuthRequest, res: Response): Promis
     logger.info(`setServerSettings request body: ${JSON.stringify(req.body)}`);
 
     const { serverFqdn, serverPort, internetServerName, internet_server, urbackup_password, ...urbackupSettings } = req.body;
+
+    // Guard retention floors/ceilings before anything is persisted, so a bad
+    // combination is rejected whole rather than half-applied.
+    const retentionError = validateRetention(urbackupSettings, await getUrBackupSettings());
+    if (retentionError) {
+      logger.warn(`Rejected settings save from ${user?.username || 'unknown'}: ${retentionError}`);
+      res.status(400).json({ error: retentionError });
+      return;
+    }
 
     const envUpdates: Record<string, string> = {};
 

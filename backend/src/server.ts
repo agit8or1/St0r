@@ -31,6 +31,7 @@ import storageRoutes from './routes/storage.js';
 import browseRoutes from './routes/browse.js';
 import replicationRoutes from './routes/replication.js';
 import storageLimitsRoutes from './routes/storageLimits.js';
+import diskGuardRoutes from './routes/diskGuard.js';
 import serversRoutes from './routes/servers.js';
 import { serveInstallScript, serveAgentPackage, agentRegister } from './controllers/servers.js';
 
@@ -139,6 +140,7 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/browse', browseRoutes);
 app.use('/api/replication', replicationRoutes);
 app.use('/api/storage-limits', storageLimitsRoutes);
+app.use('/api/disk-guard', diskGuardRoutes);
 // Public agent install endpoints (no auth — token-protected)
 app.get('/api/agent-install/:token', serveInstallScript);
 app.get('/api/agent-package/:token', serveAgentPackage);
@@ -194,6 +196,26 @@ async function ensureTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_client_name (client_name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS disk_guard_events (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      level VARCHAR(16) NOT NULL,
+      used_pct DECIMAL(5,2) NOT NULL,
+      free_bytes BIGINT NOT NULL,
+      total_bytes BIGINT NOT NULL,
+      action VARCHAR(64) NOT NULL,
+      detail TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS disk_guard_state (
+      k VARCHAR(64) NOT NULL PRIMARY KEY,
+      v TEXT,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 }
@@ -258,6 +280,10 @@ async function startServer() {
 
     // Start automatic stale job cleanup (runs every hour)
     startAutomaticStaleJobCleanup();
+
+    // Start disk space guard — stops backups before the storage volume fills
+    const { diskGuard } = await import('./services/diskGuard.js');
+    diskGuard.start();
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);

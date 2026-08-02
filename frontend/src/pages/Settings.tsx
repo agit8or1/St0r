@@ -3,6 +3,7 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
 import { Save, Settings as SettingsIcon, Server as ServerIcon, Smartphone, Key, Check, X, Copy } from 'lucide-react';
 import { useTooltips } from '../contexts/TooltipContext';
+import { DiskGuardPanel } from '../components/DiskGuardPanel';
 
 interface ServerSettings {
   [key: string]: any;
@@ -15,7 +16,7 @@ export function Settings() {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<ServerSettings>({});
   const [clientSettings, setClientSettings] = useState({ urbackupServerHost: '', urbackupServerPort: '55414', corsLock: false });
-  const [tab, setTab] = useState<'general' | 'backup' | 'email' | 'client' | 'user'>('general');
+  const [tab, setTab] = useState<'general' | 'backup' | 'storage' | 'email' | 'client' | 'user'>('general');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // 2FA state
@@ -305,7 +306,7 @@ export function Settings() {
               Manage your account and server settings
             </p>
           </div>
-          {tab !== 'user' && (
+          {tab !== 'user' && tab !== 'storage' && (
             <button
               onClick={tab === 'client' ? handleSaveClientSettings : handleSave}
               disabled={saving || loading}
@@ -350,6 +351,16 @@ export function Settings() {
               }`}
             >
               Backup Defaults
+            </button>
+            <button
+              onClick={() => setTab('storage')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                tab === 'storage'
+                  ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              Storage Protection
             </button>
             <button
               onClick={() => setTab('email')}
@@ -410,7 +421,9 @@ export function Settings() {
               <div className="space-y-3">
                 {renderSettingField('Enable Download from Client', 'allow_restore', 'checkbox', 'Allow clients to download files from backups')}
                 {renderSettingField('Enable Internet Clients', 'internet_mode_enabled', 'checkbox', 'Allow backups from internet clients')}
-                {renderSettingField('Headless Mode (API Only)', 'no_images', 'checkbox', 'Run UrBackup server without web interface, API only')}
+                {renderSettingField('Disable Image Backups', 'no_images', 'checkbox', 'Stop taking whole-disk image backups server-wide. Images are the largest consumer of backup storage.')}
+                {renderSettingField('Disable File Backups', 'no_file_backups', 'checkbox', 'Stop taking file backups server-wide')}
+                {renderSettingField('Storage Soft Quota', 'global_soft_fs_quota', 'text', 'UrBackup starts deleting old backups above this usage, e.g. 85%. Leave headroom so cleanup finishes before the volume fills.')}
               </div>
 
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-4">
@@ -445,6 +458,8 @@ export function Settings() {
               <div className="grid gap-6 md:grid-cols-2">
                 {renderSettingField('Default Max Full Backups', 'max_file_full', 'number', 'Default max full file backups to keep')}
                 {renderSettingField('Default Max Incremental Backups', 'max_file_incr', 'number', 'Default max incremental file backups')}
+                {renderSettingField('Min Full Backups Kept', 'min_file_full', 'number', 'Floor that even an out-of-space cleanup will not delete below. Must be lower than the max above.')}
+                {renderSettingField('Min Incremental Backups Kept', 'min_file_incr', 'number', 'Floor that even an out-of-space cleanup will not delete below. Must be lower than the max above.')}
                 {renderSettingField('Default Full Backup Interval (days)', 'interval_full', 'number', 'How often to run full file backups')}
                 {renderSettingField('Default Incremental Interval (hours)', 'interval_incr', 'number', 'How often to run incremental backups')}
                 {renderSettingField('Min Full Backup Age (days)', 'min_file_full_age', 'number', 'Minimum age before deleting full backups')}
@@ -455,14 +470,20 @@ export function Settings() {
                 Default Image Backup Settings
               </h2>
               <div className="grid gap-6 md:grid-cols-2">
-                {renderSettingField('Default Max Full Images', 'max_image_full', 'number', 'Default max full image backups to keep')}
+                {renderSettingField('Default Max Full Images', 'max_image_full', 'number', 'Default max full image backups to keep. Images are the largest consumer of storage — keep this tight.')}
                 {renderSettingField('Default Max Incremental Images', 'max_image_incr', 'number', 'Default max incremental image backups')}
+                {renderSettingField('Min Full Images Kept', 'min_image_full', 'number', 'Floor that even an out-of-space cleanup will not delete below. Must be lower than the max above.')}
+                {renderSettingField('Min Incremental Images Kept', 'min_image_incr', 'number', 'Floor that even an out-of-space cleanup will not delete below. Must be lower than the max above.')}
                 {renderSettingField('Default Full Image Interval (days)', 'interval_full_image', 'number', 'How often to run full image backups')}
                 {renderSettingField('Default Incremental Interval (days)', 'interval_incr_image', 'number', 'How often to run incremental image backups')}
                 {renderSettingField('Min Full Image Age (days)', 'min_image_full_age', 'number', 'Minimum age before deleting full images')}
                 {renderSettingField('Min Incremental Age (days)', 'min_image_incr_age', 'number', 'Minimum age before deleting incremental images')}
               </div>
             </div>
+          )}
+
+          {tab === 'storage' && (
+            <DiskGuardPanel isAdmin={!!user?.isAdmin} />
           )}
 
           {tab === 'email' && !loading && (
