@@ -23,6 +23,13 @@ import type {
   ReplicationTargetStatus,
 } from '../types';
 
+// Must match the filename the Linux installer route builds, so the instructions we
+// show the user name the file they actually downloaded
+export function linuxInstallerFilename(clientId?: string, clientName?: string): string {
+  const safeName = (clientName || '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 64);
+  return `urbackup-client-${safeName || clientId || 'linux'}.sh`;
+}
+
 class ApiService {
   private api: AxiosInstance;
 
@@ -355,40 +362,51 @@ class ApiService {
     return response.data;
   }
 
-  async downloadWindowsInstaller(authKey?: string, clientId?: string): Promise<void> {
-    const url = new URL('/api/client-installer/windows', window.location.origin);
-    if (authKey) {
-      url.searchParams.set('authkey', authKey);
+  // Downloads an installer, surfacing the backend's JSON error instead of saving it as a file
+  private async downloadInstaller(path: string, filename: string, params: Record<string, string>): Promise<void> {
+    const url = new URL(path, window.location.origin);
+    for (const [key, value] of Object.entries(params)) {
+      if (value) {
+        url.searchParams.set(key, value);
+      }
     }
-    if (clientId) {
-      url.searchParams.set('clientid', clientId);
-    }
+
     const response = await fetch(url.toString(), { credentials: 'include' });
+
+    if (!response.ok) {
+      let message = `Installer download failed (HTTP ${response.status})`;
+      try {
+        const body = await response.json();
+        message = [body.error, body.detail, body.hint].filter(Boolean).join(' — ') || message;
+      } catch {
+        // non-JSON error body, keep the status-based message
+      }
+      throw new Error(message);
+    }
+
     const blob = await response.blob();
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = objectUrl;
-    a.download = `UrBackupClient-${clientId || 'windows'}.exe`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(objectUrl);
   }
 
-  async downloadLinuxInstaller(authKey?: string, clientId?: string): Promise<void> {
-    const url = new URL('/api/client-installer/linux', window.location.origin);
-    if (authKey) {
-      url.searchParams.set('authkey', authKey);
-    }
-    if (clientId) {
-      url.searchParams.set('clientid', clientId);
-    }
-    const response = await fetch(url.toString(), { credentials: 'include' });
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = objectUrl;
-    a.download = `urbackup-client-installer.sh`;
-    a.click();
-    URL.revokeObjectURL(objectUrl);
+  async downloadWindowsInstaller(authKey?: string, clientId?: string): Promise<void> {
+    await this.downloadInstaller(
+      '/api/client-installer/windows',
+      `UrBackupClient-${clientId || 'windows'}.exe`,
+      { authkey: authKey || '', clientid: clientId || '' }
+    );
+  }
+
+  async downloadLinuxInstaller(authKey?: string, clientId?: string, clientName?: string): Promise<void> {
+    await this.downloadInstaller(
+      '/api/client-installer/linux',
+      linuxInstallerFilename(clientId, clientName),
+      { authkey: authKey || '', clientid: clientId || '' }
+    );
   }
 
   // Replication
