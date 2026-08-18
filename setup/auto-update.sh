@@ -210,11 +210,26 @@ echo "$(timestamp) Frontend build successful"
 
 # ── 7. Run DB migrations ───────────────────────────────────────────────────
 echo "$(timestamp) Running database migrations..."
+
+# Check connectivity up front so a credentials or socket problem reports itself
+# once and clearly, instead of surfacing as every migration failing in turn.
+if ! mysql -u root urbackup_gui -e "SELECT 1" >/dev/null 2>&1; then
+  echo "$(timestamp) ERROR: cannot connect to the urbackup_gui database as root."
+  echo "$(timestamp)        Migrations cannot be applied, so the update is being rolled"
+  echo "$(timestamp)        back rather than left running new code against an old schema."
+  false  # must fail a command to fire the ERR trap — a bare `exit` skips rollback
+fi
+
+# Migrations are idempotent (IF NOT EXISTS guards), so re-applying them is a clean
+# no-op. Any error here is therefore a real failure, not the usual "already
+# applied" noise — let it trip the ERR trap and roll back rather than leave the
+# new code running against a half-migrated schema.
 for mig in "$INSTALL_DIR/database/migrations"/*.sql; do
   [ -f "$mig" ] || continue
   echo "$(timestamp) Migration: $(basename "$mig")"
-  mysql -u root urbackup_gui < "$mig" || echo "WARN: migration may have already been applied"
+  mysql -u root urbackup_gui < "$mig"
 done
+echo "$(timestamp) Migrations applied successfully"
 
 # ── 8. Restart service ────────────────────────────────────────────────────
 echo "$(timestamp) Starting urbackup-gui service..."

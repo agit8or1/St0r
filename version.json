@@ -1,11 +1,9 @@
 {
-  "version": "3.2.100",
+  "version": "3.2.101",
   "releaseDate": "2026-08-18",
   "changelog": [
-    "Fix: the Linux client installer never worked on Debian 12/13 (issue #19). St0r generated its own bash script that called `apt-key` (removed in Debian 12) and `lsb_release` (not installed by default), pointed at an apt repository that has no packages for those releases, and then wrote the client config to /etc/default/urbackupclient in a format the UrBackup client does not read \u2014 using the web port 55414 instead of the internet port 55415, and never enabling internet mode. Even where it installed, the client could not connect.",
-    "The Linux download now serves the same pre-configured, self-extracting installer that the UrBackup web UI hands out \u2014 the one confirmed working on Debian 13 \u2014 with this client's name, server address, internet port and auth key already baked in. It ships prebuilt binaries and needs no apt repository, so it works across distributions. Run it with `sudo sh urbackup-client-<name>.sh`.",
-    "Windows and Linux installers now share one code path, so both get the same validation and error handling.",
-    "Requesting an installer for a client id that does not exist in UrBackup now returns a clear error instead of a generic installer carrying the global auth key and no client name \u2014 which would install but never register as the intended client.",
-    "Installer download failures are shown in the page instead of being silently saved as a broken file, and the Linux download tells you the exact command to run."
+    "Fix: the 005 replication migration used a bare ADD COLUMN, so every update after the first logged `ERROR 1060: Duplicate column name 'btrfs_mode'`. It now uses ADD COLUMN IF NOT EXISTS and re-runs cleanly. All migrations are now idempotent.",
+    "Updates no longer continue past a failed database migration. Because re-running migrations is now a clean no-op, any migration error is a real failure, so the updater rolls back instead of leaving new code running against a half-migrated schema \u2014 previously every error was written off as 'may have already been applied'.",
+    "The updater checks database connectivity once before applying migrations and reports a clear error if it cannot connect, rather than failing on each migration in turn."
   ]
 }
