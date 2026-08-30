@@ -45,7 +45,10 @@ function App() {
   return (
     <ThemeProvider>
       <TooltipsProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      {/* v7_startTransition and v7_relativeSplatPath were opt-in flags under
+          react-router 6; both are the default in 7, and the prop no longer
+          accepts them. Behaviour is unchanged — this app already ran with them on. */}
+      <BrowserRouter>
         <AuthenticatedUpdateNotification />
         <Routes>
           <Route path="/login" element={<Login />} />
