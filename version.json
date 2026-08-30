@@ -1,11 +1,9 @@
 {
-  "version": "3.2.102",
+  "version": "3.2.103",
   "releaseDate": "2026-08-30",
   "changelog": [
-    "Fix: the file browser could show a client's backups but list no files inside them, failing with a bare 404 (issue #20). UrBackup's per-client backup folders are mode 0750 owned by urbackup:urbackup, so St0r can only read them if its service user is in the 'urbackup' group. Its database is world-readable, so the backup list kept working while every file listing was denied \u2014 and the permission error was being reported as 'not found', which made it look like the backup was missing.",
-    "Permission failures are no longer disguised as 404s. Browsing, downloading a file, and downloading a folder now return 503 with the exact command to fix it (usermod -a -G urbackup <service user> && systemctl restart urbackup-gui) instead of a bare 'not found'.",
-    "Updates now re-assert that the service user is in the 'urbackup' group, so installs that were set up before UrBackup Server \u2014 where the installer skipped that step \u2014 repair themselves on update.",
-    "The backup storage folder is no longer silently guessed as /media/BACKUP/urbackup when /var/urbackup/backupfolder cannot be read; St0r now reports that the storage folder is not configured rather than reporting every backup as missing.",
-    "'Backup not found' now says which id was requested and that it may have been pruned, so it can be told apart from a storage access failure in the browser console."
+    "Security: resolved every outstanding npm advisory across backend and frontend \u2014 9 in total, now 0. Backend cleared brace-expansion and js-yaml (high) and undici (moderate); frontend cleared brace-expansion, js-yaml, nanoid and postcss (high).",
+    "Security: upgraded react-router to 7, closing an open-redirect via backslashes in <Link>/useNavigate and an arbitrary constructor injection in deserializeErrors(). These were the last two advisories and were fixable only by a major version bump.",
+    "The react-router upgrade is behaviour-neutral: St0r already opted into v7 semantics through the v7_startTransition and v7_relativeSplatPath future flags, which are the default in 7. The now-rejected future prop was removed."
   ]
 }
