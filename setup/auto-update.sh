@@ -231,6 +231,26 @@ for mig in "$INSTALL_DIR/database/migrations"/*.sql; do
 done
 echo "$(timestamp) Migrations applied successfully"
 
+# ── 7b. Re-assert backup storage access ───────────────────────────────────
+# UrBackup's per-client backup folders are mode 0750 owned by urbackup:urbackup,
+# so St0r can only browse backups if its service user is in the "urbackup" group.
+# install.sh sets this up, but it is skipped when St0r is installed before
+# UrBackup Server, which leaves the file browser unable to read anything. Re-assert
+# it here so existing installs are repaired on update (issue #20).
+if id urbackup &>/dev/null; then
+  SERVICE_USER=$(systemctl show urbackup-gui -p User --value 2>/dev/null)
+  [ -z "$SERVICE_USER" ] && SERVICE_USER="administrator"
+  if id "$SERVICE_USER" &>/dev/null; then
+    if id -nG "$SERVICE_USER" 2>/dev/null | tr ' ' '\n' | grep -qx urbackup; then
+      echo "$(timestamp) Storage access OK ($SERVICE_USER is in the urbackup group)"
+    else
+      echo "$(timestamp) Adding $SERVICE_USER to the urbackup group (needed to browse backups)"
+      usermod -a -G urbackup "$SERVICE_USER" || \
+        echo "$(timestamp) WARN: could not add $SERVICE_USER to the urbackup group — the file browser may not be able to read backups"
+    fi
+  fi
+fi
+
 # ── 8. Restart service ────────────────────────────────────────────────────
 echo "$(timestamp) Starting urbackup-gui service..."
 systemctl start urbackup-gui 2>/dev/null || true

@@ -2,8 +2,105 @@ import { Request, Response } from 'express';
 import { logger } from '../utils/logger.js';
 import { UrBackupDbService } from '../services/urbackupDb.js';
 import { realpathSync } from 'fs';
+import { userInfo } from 'os';
 
 const dbService = new UrBackupDbService();
+
+// UrBackup records its storage root here.
+const BACKUP_FOLDER_FILE = '/var/urbackup/backupfolder';
+
+/**
+ * A storage problem that already knows how it should be reported over HTTP.
+ * Lets the helpers below distinguish "this genuinely is not there" (404) from
+ * "we are not allowed to look" (503) instead of collapsing both into 404.
+ */
+class StorageAccessError extends Error {
+  constructor(
+    readonly status: number,
+    readonly body: { error: string; detail?: string; hint?: string }
+  ) {
+    super(body.error);
+    this.name = 'StorageAccessError';
+  }
+}
+
+/**
+ * The backup data is owned by the `urbackup` user and its per-client folders are
+ * mode 0750, so St0r can only read them if its service user is in the `urbackup`
+ * group. When that is missing every path lookup fails with EACCES — which used to
+ * surface as a bare 404 that looked exactly like a missing backup. Say what is
+ * actually wrong and how to fix it.
+ */
+function permissionError(target: string): StorageAccessError {
+  let serviceUser = 'the St0r service user';
+  try {
+    serviceUser = userInfo().username;
+  } catch {
+    // userInfo can throw if the uid has no passwd entry; the generic wording is fine
+  }
+  return new StorageAccessError(503, {
+    error: 'Cannot read the backup storage folder',
+    detail: `Permission denied reading ${target}`,
+    hint: `St0r runs as "${serviceUser}", which needs to be in the "urbackup" group to read backups. ` +
+          `Run: sudo usermod -a -G urbackup ${serviceUser} && sudo systemctl restart urbackup-gui`,
+  });
+}
+
+function isPermissionDenied(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException | null)?.code;
+  return code === 'EACCES' || code === 'EPERM';
+}
+
+/**
+ * Read UrBackup's configured storage root. There is no sane default — guessing
+ * sends every lookup to a path that does not exist and reports it as a missing
+ * backup — so a failure here is raised rather than papered over.
+ */
+async function resolveBackupFolder(): Promise<string> {
+  const fs = await import('fs/promises');
+  try {
+    const folder = (await fs.readFile(BACKUP_FOLDER_FILE, 'utf-8')).trim();
+    if (!folder) {
+      throw new StorageAccessError(503, {
+        error: 'Backup storage folder is not configured',
+        detail: `${BACKUP_FOLDER_FILE} is empty`,
+        hint: 'Set the backup storage path in UrBackup, then restart urbackupsrv.',
+      });
+    }
+    return folder;
+  } catch (err) {
+    if (err instanceof StorageAccessError) throw err;
+    if (isPermissionDenied(err)) throw permissionError(BACKUP_FOLDER_FILE);
+    throw new StorageAccessError(503, {
+      error: 'Backup storage folder is not configured',
+      detail: `Could not read ${BACKUP_FOLDER_FILE}`,
+      hint: 'This file is created by UrBackup Server. Check that UrBackup Server is installed and has run at least once.',
+    });
+  }
+}
+
+/**
+ * realpath a backup path, distinguishing "missing" from "not allowed to look".
+ */
+function resolveStoragePath(target: string, notFoundMessage: string): string {
+  try {
+    return realpathSync(target);
+  } catch (err) {
+    if (isPermissionDenied(err)) throw permissionError(target);
+    throw new StorageAccessError(404, { error: notFoundMessage });
+  }
+}
+
+/**
+ * Translate a StorageAccessError into its response. Returns false if the error
+ * was something else and the caller should handle it.
+ */
+function sendStorageError(error: unknown, res: Response): boolean {
+  if (!(error instanceof StorageAccessError)) return false;
+  logger.error(`Backup storage access failed: ${error.body.detail ?? error.body.error}`);
+  if (!res.headersSent) res.status(error.status).json(error.body);
+  return true;
+}
 
 /**
  * Get available backups for browsing
@@ -73,7 +170,13 @@ export async function getFilesInBackup(req: Request, res: Response): Promise<voi
     const backup = fileBackups.find(b => b.id === Number(backupId));
 
     if (!backup) {
-      res.status(404).json({ error: 'Backup not found' });
+      // Distinguishable from the storage errors above: the id is genuinely not in
+      // this client's completed backups (commonly pruned since the list loaded).
+      res.status(404).json({
+        error: 'Backup not found',
+        detail: `No completed backup with id ${backupId} for client ${clientId}`,
+        hint: 'It may have been deleted or pruned — reload the backup list.',
+      });
       return;
     }
 
@@ -81,14 +184,7 @@ export async function getFilesInBackup(req: Request, res: Response): Promise<voi
     const fs = await import('fs/promises');
     const pathModule = await import('path');
 
-    // Read backup folder location from /var/urbackup/backupfolder
-    let backupFolder = '/media/BACKUP/urbackup'; // default
-    try {
-      const backupFolderContent = await fs.readFile('/var/urbackup/backupfolder', 'utf-8');
-      backupFolder = backupFolderContent.trim();
-    } catch (err) {
-      logger.warn('Could not read /var/urbackup/backupfolder, using default');
-    }
+    const backupFolder = await resolveBackupFolder();
 
     // Get client info to get client name
     const clients = await dbService.getClients();
@@ -109,20 +205,8 @@ export async function getFilesInBackup(req: Request, res: Response): Promise<voi
     }
 
     // Security check: use realpathSync to resolve symlinks before comparing
-    let resolvedBase: string;
-    let resolvedFull: string;
-    try {
-      resolvedBase = realpathSync(backupBasePath);
-    } catch {
-      res.status(404).json({ error: 'Backup path not found' });
-      return;
-    }
-    try {
-      resolvedFull = realpathSync(fullPath);
-    } catch {
-      res.status(404).json({ error: 'Path not found in backup' });
-      return;
-    }
+    const resolvedBase = resolveStoragePath(backupBasePath, 'Backup path not found');
+    const resolvedFull = resolveStoragePath(fullPath, 'Path not found in backup');
     if (!resolvedFull.startsWith(resolvedBase + '/') && resolvedFull !== resolvedBase) {
       res.status(403).json({ error: 'Access denied' });
       return;
@@ -169,6 +253,10 @@ export async function getFilesInBackup(req: Request, res: Response): Promise<voi
 
       res.json({ files });
     } catch (error: any) {
+      if (isPermissionDenied(error)) {
+        sendStorageError(permissionError(fullPath), res);
+        return;
+      }
       if (error.code === 'ENOENT') {
         res.status(404).json({ error: 'Path not found in backup' });
         return;
@@ -180,6 +268,7 @@ export async function getFilesInBackup(req: Request, res: Response): Promise<voi
       throw error;
     }
   } catch (error) {
+    if (sendStorageError(error, res)) return;
     logger.error('Failed to get files in backup:', error);
     res.status(500).json({ error: 'Failed to get files' });
   }
@@ -211,13 +300,7 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
     const fs = await import('fs');
 
     // Read backup folder location
-    let backupFolder = '/media/BACKUP/urbackup';
-    try {
-      const backupFolderContent = await fs.promises.readFile('/var/urbackup/backupfolder', 'utf-8');
-      backupFolder = backupFolderContent.trim();
-    } catch (err) {
-      logger.warn('Could not read /var/urbackup/backupfolder, using default');
-    }
+    const backupFolder = await resolveBackupFolder();
 
     // Get client info
     const clients = await dbService.getClients();
@@ -234,18 +317,8 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
     const backupBasePath = pathModule.join(backupFolder, client.name, backup.path);
     let resolvedDlBase: string;
     let resolvedDlFull: string;
-    try {
-      resolvedDlBase = realpathSync(backupBasePath);
-    } catch {
-      res.status(404).json({ error: 'Backup path not found' });
-      return;
-    }
-    try {
-      resolvedDlFull = realpathSync(fullPath);
-    } catch {
-      res.status(404).json({ error: 'File not found' });
-      return;
-    }
+    resolvedDlBase = resolveStoragePath(backupBasePath, 'Backup path not found');
+    resolvedDlFull = resolveStoragePath(fullPath, 'File not found');
     if (!resolvedDlFull.startsWith(resolvedDlBase + '/') && resolvedDlFull !== resolvedDlBase) {
       logger.error(`Security check failed: ${resolvedDlFull} does not start with ${resolvedDlBase}`);
       res.status(403).json({ error: 'Invalid file path' });
@@ -290,6 +363,7 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
       }
     });
   } catch (error) {
+    if (sendStorageError(error, res)) return;
     logger.error('Failed to download file:', error);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Failed to download file' });
@@ -316,11 +390,7 @@ export async function downloadFolder(req: Request, res: Response): Promise<void>
     const pathModule = await import('path');
     const fs = await import('fs');
 
-    let backupFolder = '/media/BACKUP/urbackup';
-    try {
-      const bf = await fs.promises.readFile('/var/urbackup/backupfolder', 'utf-8');
-      backupFolder = bf.trim();
-    } catch { /* use default */ }
+    const backupFolder = await resolveBackupFolder();
 
     const clients = await dbService.getClients();
     const client = clients.find(c => c.id === Number(clientId));
@@ -332,8 +402,8 @@ export async function downloadFolder(req: Request, res: Response): Promise<void>
     // Resolve symlinks for security check
     let resolvedBase: string;
     let resolvedFull: string;
-    try { resolvedBase = realpathSync(backupBasePath); } catch { res.status(404).json({ error: 'Backup path not found' }); return; }
-    try { resolvedFull = realpathSync(fullPath); } catch { res.status(404).json({ error: 'Folder not found' }); return; }
+    resolvedBase = resolveStoragePath(backupBasePath, 'Backup path not found');
+    resolvedFull = resolveStoragePath(fullPath, 'Folder not found');
     if (!resolvedFull.startsWith(resolvedBase + '/') && resolvedFull !== resolvedBase) {
       res.status(403).json({ error: 'Invalid path' }); return;
     }
@@ -358,6 +428,7 @@ export async function downloadFolder(req: Request, res: Response): Promise<void>
       else res.destroy();
     });
   } catch (error) {
+    if (sendStorageError(error, res)) return;
     logger.error('Failed to download folder:', error);
     if (!res.headersSent) res.status(500).json({ error: 'Failed to download folder' });
   }
