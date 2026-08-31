@@ -75,6 +75,22 @@ export async function testUrBackupDbConnection(): Promise<boolean> {
 }
 
 /**
+ * Open a READ-ONLY connection to the UrBackup SETTINGS database.
+ * Used for reading authoritative server settings such as the backup storage
+ * folder, which UrBackup keeps here rather than in /var/urbackup/backupfolder.
+ * Always close the returned connection after use.
+ */
+export async function openUrBackupSettingsDbReadOnly(): Promise<Database> {
+  const roDb = await open({
+    filename: URBACKUP_SETTINGS_DB_PATH,
+    driver: sqlite3.Database,
+    mode: sqlite3.OPEN_READONLY,
+  });
+  await roDb.run('PRAGMA busy_timeout = 8000');
+  return roDb;
+}
+
+/**
  * Open a read-write connection to the UrBackup SETTINGS database (backup_server_settings.db).
  * UrBackup picks up writes to per-client settings immediately without restart.
  * Always close the returned connection after use.

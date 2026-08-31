@@ -1,9 +1,9 @@
 {
-  "version": "3.2.103",
-  "releaseDate": "2026-08-30",
+  "version": "3.2.104",
+  "releaseDate": "2026-08-31",
   "changelog": [
-    "Security: resolved every outstanding npm advisory across backend and frontend \u2014 9 in total, now 0. Backend cleared brace-expansion and js-yaml (high) and undici (moderate); frontend cleared brace-expansion, js-yaml, nanoid and postcss (high).",
-    "Security: upgraded react-router to 7, closing an open-redirect via backslashes in <Link>/useNavigate and an arbitrary constructor injection in deserializeErrors(). These were the last two advisories and were fixable only by a major version bump.",
-    "The react-router upgrade is behaviour-neutral: St0r already opted into v7 semantics through the v7_startTransition and v7_relativeSplatPath future flags, which are the default in 7. The now-rejected future prop was removed."
+    "Fix: the file browser still listed nothing on servers whose backup storage path had been changed after installation (issue #20). St0r read the path from /var/urbackup/backupfolder, which UrBackup only writes at install time \u2014 changing the storage path in UrBackup's own UI updates its settings database and leaves that file naming the original directory. Backups kept working while St0r looked in a folder that no longer existed and reported every backup as missing.",
+    "St0r now reads the backup storage folder from UrBackup's settings database, which is the authoritative source, and falls back to /var/urbackup/backupfolder (then /etc/urbackup/backupfolder) only when that database cannot be read.",
+    "'Backup path not found' now names the path that was actually checked and points at UrBackup's storage setting, so a misconfigured path is obvious from the error instead of looking like a missing backup."
   ]
 }

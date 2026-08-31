@@ -3,11 +3,15 @@ import { logger } from '../utils/logger.js';
 import { UrBackupDbService } from '../services/urbackupDb.js';
 import { realpathSync } from 'fs';
 import { userInfo } from 'os';
+import { openUrBackupSettingsDbReadOnly } from '../config/urbackupDb.js';
 
 const dbService = new UrBackupDbService();
 
-// UrBackup records its storage root here.
+// UrBackup writes this file at install time. It is NOT authoritative: changing the
+// storage path in UrBackup's own UI updates the settings database and leaves this
+// file pointing at the original location (issue #20).
 const BACKUP_FOLDER_FILE = '/var/urbackup/backupfolder';
+const BACKUP_FOLDER_FILE_ALT = '/etc/urbackup/backupfolder';
 
 /**
  * A storage problem that already knows how it should be reported over HTTP.
@@ -52,31 +56,57 @@ function isPermissionDenied(err: unknown): boolean {
 }
 
 /**
- * Read UrBackup's configured storage root. There is no sane default — guessing
- * sends every lookup to a path that does not exist and reports it as a missing
- * backup — so a failure here is raised rather than papered over.
+ * Read UrBackup's configured storage root.
+ *
+ * The settings database is the authoritative source: it is what UrBackup's own UI
+ * writes and what the server uses to place backups. The /var/urbackup/backupfolder
+ * file is only written at install time, so on any server whose storage path was
+ * changed later it still names the original directory — backups keep working while
+ * St0r looks in a folder that may not even exist, and reports every backup as
+ * missing (issue #20). The file is kept only as a fallback for installs whose
+ * settings database cannot be read.
  */
 async function resolveBackupFolder(): Promise<string> {
-  const fs = await import('fs/promises');
+  const tried: string[] = [];
+
+  // 1. UrBackup's settings database — authoritative.
   try {
-    const folder = (await fs.readFile(BACKUP_FOLDER_FILE, 'utf-8')).trim();
-    if (!folder) {
-      throw new StorageAccessError(503, {
-        error: 'Backup storage folder is not configured',
-        detail: `${BACKUP_FOLDER_FILE} is empty`,
-        hint: 'Set the backup storage path in UrBackup, then restart urbackupsrv.',
-      });
+    const settingsDb = await openUrBackupSettingsDbReadOnly();
+    try {
+      const row = await settingsDb.get<{ value?: string }>(
+        "SELECT value FROM settings WHERE key = 'backupfolder' AND clientid = 0 LIMIT 1"
+      );
+      const folder = row?.value?.trim();
+      if (folder) return folder;
+      tried.push(`${BACKUP_FOLDER_FILE.replace('backupfolder', 'backup_server_settings.db')} (no backupfolder row)`);
+    } finally {
+      await settingsDb.close().catch(() => undefined);
     }
-    return folder;
   } catch (err) {
-    if (err instanceof StorageAccessError) throw err;
-    if (isPermissionDenied(err)) throw permissionError(BACKUP_FOLDER_FILE);
-    throw new StorageAccessError(503, {
-      error: 'Backup storage folder is not configured',
-      detail: `Could not read ${BACKUP_FOLDER_FILE}`,
-      hint: 'This file is created by UrBackup Server. Check that UrBackup Server is installed and has run at least once.',
-    });
+    tried.push(`settings database (${(err as Error).message})`);
   }
+
+  // 2. The install-time files, in case the settings database is unreadable.
+  const fs = await import('fs/promises');
+  for (const file of [BACKUP_FOLDER_FILE, BACKUP_FOLDER_FILE_ALT]) {
+    try {
+      const folder = (await fs.readFile(file, 'utf-8')).trim();
+      if (folder) {
+        logger.warn(`Falling back to ${file} for the backup storage folder; UrBackup's settings database could not be read`);
+        return folder;
+      }
+      tried.push(`${file} (empty)`);
+    } catch (err) {
+      if (isPermissionDenied(err)) throw permissionError(file);
+      tried.push(`${file} (${(err as NodeJS.ErrnoException).code ?? 'unreadable'})`);
+    }
+  }
+
+  throw new StorageAccessError(503, {
+    error: 'Backup storage folder is not configured',
+    detail: `Could not determine the backup storage folder. Tried: ${tried.join('; ')}`,
+    hint: 'Check that UrBackup Server is installed and that its storage path is set in UrBackup > Settings.',
+  });
 }
 
 /**
@@ -87,7 +117,13 @@ function resolveStoragePath(target: string, notFoundMessage: string): string {
     return realpathSync(target);
   } catch (err) {
     if (isPermissionDenied(err)) throw permissionError(target);
-    throw new StorageAccessError(404, { error: notFoundMessage });
+    // Name the path that was actually checked. When the configured storage folder
+    // is wrong this is the difference between a bare 404 and an obvious answer.
+    throw new StorageAccessError(404, {
+      error: notFoundMessage,
+      detail: `No such path on disk: ${target}`,
+      hint: 'If this path looks wrong, check the backup storage folder in UrBackup > Settings.',
+    });
   }
 }
 
