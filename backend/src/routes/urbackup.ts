@@ -40,19 +40,19 @@ router.get('/clients/offline', getOfflineClients);
 router.get('/clients/failed', getFailedClients);
 router.get('/clients/:clientId/backups', getBackups);
 router.get('/clients/:clientId/authkey', requireAdmin, getClientAuthkey);
-router.post('/clients', addClient);
-router.delete('/clients/:clientId', removeClient);
-router.patch('/clients/:clientId/name', updateClientName);
-router.post('/clients/:clientId/regenerate-key', regenerateClientKey);
+router.post('/clients', requireAdmin, addClient);
+router.delete('/clients/:clientId', requireAdmin, removeClient);
+router.patch('/clients/:clientId/name', requireAdmin, updateClientName);
+router.post('/clients/:clientId/regenerate-key', requireAdmin, regenerateClientKey);
 router.get('/activities', getActivities);
 router.get('/activities/current', getCurrentActivities);
-router.post('/backups/start', startBackup);
-router.post('/activities/:activityId/stop', stopActivity);
-router.post('/activities/clear-stale', clearStaleJobs);
+router.post('/backups/start', requireAdmin, startBackup);
+router.post('/activities/:activityId/stop', requireAdmin, stopActivity);
+router.post('/activities/clear-stale', requireAdmin, clearStaleJobs);
 router.get('/usage', getUsage);
 router.get('/clients/:clientId/browse', browseClientFilesystem);
 router.get('/clients/:clientId/failed-paths', getFailedPaths);
-router.delete('/clients/:clientId/backups/:backupId', deleteBackup);
+router.delete('/clients/:clientId/backups/:backupId', requireAdmin, deleteBackup);
 router.get('/clients/:clientId/image-backups/:backupId/convert-download', convertAndDownloadImageBackup);
 router.get('/job-logs', getJobLogs);
 router.get('/job-logs/:logId', getJobLog);
@@ -60,7 +60,7 @@ router.get('/backup-stats', getBackupStats);
 router.get('/storage-by-customer', getStorageByCustomer);
 
 // Proxy endpoint to UrBackup progress API (bypasses our auth issues)
-router.get('/proxy/progress', async (req, res) => {
+router.get('/proxy/progress', requireAdmin, async (req, res) => {
   try {
     const response = await fetch('http://localhost:55414/x?a=progress', {
       method: 'POST',

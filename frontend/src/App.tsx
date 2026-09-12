@@ -36,6 +36,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 }
 
+/** Admin-only page: read-only, customer-scoped accounts are sent to the dashboard. */
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) {
+    return <Loading />;
+  }
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  return user?.isAdmin ? <>{children}</> : <Navigate to="/" replace />;
+}
+
 function AuthenticatedUpdateNotification() {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? <UpdateNotification /> : null;
@@ -87,17 +100,17 @@ function App() {
           <Route
             path="/clients/:clientName/settings"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <ClientSettings />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/bare-metal-restore"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <BareMetalRestore />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
@@ -111,9 +124,9 @@ function App() {
           <Route
             path="/logs"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <Logs />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
@@ -143,25 +156,25 @@ function App() {
           <Route
             path="/server-settings"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <ServerSettings />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/settings"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <Settings />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/users"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <Users />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
@@ -191,25 +204,25 @@ function App() {
           <Route
             path="/replication"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <Replication />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/replication/targets/:id"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <ReplicationTargetDetail />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/servers"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <Servers />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
         </Routes>

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import {
   getBackupsForBrowsing,
   getFilesInBackup,
@@ -26,6 +26,6 @@ router.get('/download', downloadFile);
 router.get('/download-folder', downloadFolder);
 
 // Restore files to the client
-router.post('/restore', restoreFiles);
+router.post('/restore', requireAdmin, restoreFiles);
 
 export default router;

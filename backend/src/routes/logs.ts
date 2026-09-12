@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { getLogs, getLiveLog } from '../controllers/logs.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
 // All log routes require authentication
 router.use(authenticate);
 
-router.get('/', getLogs);
-router.get('/live', getLiveLog);
+router.get('/', requireAdmin, getLogs);
+router.get('/live', requireAdmin, getLiveLog);
 
 export default router;

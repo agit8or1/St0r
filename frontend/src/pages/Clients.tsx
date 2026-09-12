@@ -6,16 +6,18 @@ import { Loading } from '../components/Loading';
 import { ClientManagementModal } from '../components/ClientManagementModal';
 import { Tooltip } from '../components/Tooltip';
 import { api } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import type { Client, Customer, CustomerClient, StorageLimitStatus } from '../types';
 import { formatTimeAgo, formatBytes } from '../utils/format';
 
 type SortField = 'name' | 'lastBackup' | 'status' | 'customer';
 type SortOrder = 'asc' | 'desc';
 
-function StorageLimitCell({ storage, limitStatus, onEdit }: {
+function StorageLimitCell({ storage, limitStatus, onEdit, editable }: {
   storage: number;
   limitStatus?: StorageLimitStatus;
   onEdit: (e: React.MouseEvent) => void;
+  editable: boolean;
 }) {
   const usedStr = storage > 0 ? formatBytes(storage) : '—';
 
@@ -23,11 +25,13 @@ function StorageLimitCell({ storage, limitStatus, onEdit }: {
     return (
       <div className="flex items-center gap-1 group">
         <span className="text-gray-600 dark:text-gray-400 text-sm">{usedStr}</span>
-        <Tooltip text="Set a storage limit for this endpoint">
-          <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-            <Edit2 className="h-3 w-3 text-gray-400" />
-          </button>
-        </Tooltip>
+        {editable && (
+          <Tooltip text="Set a storage limit for this endpoint">
+            <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+              <Edit2 className="h-3 w-3 text-gray-400" />
+            </button>
+          </Tooltip>
+        )}
       </div>
     );
   }
@@ -65,17 +69,21 @@ function StorageLimitCell({ storage, limitStatus, onEdit }: {
           <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
         </Tooltip>
       )}
-      <Tooltip text="Edit storage limit">
-        <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-          <Edit2 className="h-3 w-3 text-gray-400" />
-        </button>
-      </Tooltip>
+      {editable && (
+        <Tooltip text="Edit storage limit">
+          <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+            <Edit2 className="h-3 w-3 text-gray-400" />
+          </button>
+        </Tooltip>
+      )}
     </div>
   );
 }
 
 export function Clients() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = !!user?.isAdmin;
   const [clients, setClients] = useState<Client[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [clientCustomers, setClientCustomers] = useState<Map<string, CustomerClient>>(new Map());
@@ -283,12 +291,14 @@ export function Clients() {
               {clients.length} total · {onlineCount} online · {failedCount} failed
             </p>
           </div>
-          <Tooltip text="Add or remove endpoints from UrBackup">
-            <button onClick={() => setIsManageModalOpen(true)} className="btn bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-sm">
-              <Settings className="h-4 w-4" />
-              Manage
-            </button>
-          </Tooltip>
+          {isAdmin && (
+            <Tooltip text="Add or remove endpoints from UrBackup">
+              <button onClick={() => setIsManageModalOpen(true)} className="btn bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-sm">
+                <Settings className="h-4 w-4" />
+                Manage
+              </button>
+            </Tooltip>
+          )}
         </div>
 
         {/* Filter bar */}
@@ -447,6 +457,7 @@ export function Clients() {
                             storage={storage}
                             limitStatus={storageLimitStatuses.get(client.name)}
                             onEdit={e => openLimitModal(client, e)}
+                            editable={isAdmin}
                           />
                         </td>
                         {/* IP Address */}

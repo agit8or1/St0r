@@ -545,19 +545,32 @@ export class UrBackupDbService {
    * Get backup job counts (successful / failed) for the last N days.
    * Queries the UrBackup logs table which has one row per completed backup job.
    */
-  async getBackupStats(days: number = 7) {
+  async getBackupStats(days: number = 7, clientNames?: string[]) {
     try {
       const db = await getUrBackupDb();
       const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
+
+      // Scoped callers only count jobs of the endpoints they can see.
+      let clientFilter = '';
+      const params: any[] = [cutoff];
+      if (clientNames) {
+        if (clientNames.length === 0) {
+          return { successful: 0, failed: 0, total: 0, days };
+        }
+        // Scope names are lower-cased; SQLite string comparison is case-sensitive.
+        clientFilter = ` AND clientid IN (SELECT id FROM clients WHERE LOWER(name) IN (${clientNames.map(() => '?').join(',')}))`;
+        params.push(...clientNames.map((n) => n.toLowerCase()));
+      }
+
       const rows = await db.all(`
         SELECT
           CASE WHEN errors = 0 THEN 'successful' ELSE 'failed' END AS status,
           COUNT(*) AS count
         FROM logs
         WHERE restore = 0
-          AND CAST(strftime('%s', created) AS INTEGER) >= ?
+          AND CAST(strftime('%s', created) AS INTEGER) >= ?${clientFilter}
         GROUP BY status
-      `, cutoff) as { status: string; count: number }[];
+      `, params) as { status: string; count: number }[];
 
       const successful = rows.find(r => r.status === 'successful')?.count ?? 0;
       const failed = rows.find(r => r.status === 'failed')?.count ?? 0;

@@ -7,6 +7,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import { getUrBackupDb } from '../config/urbackupDb.js';
+import { scopeOf, filterByClientName, assertClientAccess } from '../middleware/scope.js';
 
 // Since st0r runs on the same server as UrBackup, we always use a single local service instance
 const urbackupService = new UrBackupService();
@@ -25,6 +26,27 @@ export async function getStatus(req: AuthRequest, res: Response): Promise<void> 
     }
 
     const status = await service.getStatus();
+    const scope = await scopeOf(req);
+    if (scope.clientNames !== null) {
+      // Server-wide totals would leak other customers, so recompute every
+      // counter from the endpoints this account can actually see.
+      const clients = filterByClientName(scope, (await service.getClients()) as any[], 'name');
+      const activities = filterByClientName(scope, (status as any)?.activities, 'client_name', 'clientname', 'name');
+      const sum = (key: string) => clients.reduce((acc, c: any) => acc + (c[key] || 0), 0);
+
+      res.json({
+        total_clients: clients.length,
+        online_clients: clients.filter((c: any) => c.online).length,
+        failed_clients: clients.filter((c: any) => !c.file_ok || !c.image_ok).length,
+        running_file_backups: clients.filter((c: any) => c.file_backup_running).length,
+        running_image_backups: clients.filter((c: any) => c.image_backup_running).length,
+        total_file_bytes: sum('bytes_used_files'),
+        total_image_bytes: sum('bytes_used_images'),
+        current_activities: activities.length,
+        activities,
+      });
+      return;
+    }
     res.json(status);
   } catch (error) {
     logger.error('Failed to get status:', error);
@@ -56,10 +78,13 @@ export async function getClients(req: AuthRequest, res: Response): Promise<void>
     // Filter out clients pending deletion
     const activeClients = (allClients as any[]).filter((c: any) => !c.delete_pending);
 
-    const onlineCount = activeClients.filter((c: any) => c.online).length;
-    logger.info(`[${username}] Returning ${activeClients.length} clients (${onlineCount} online, ${activeClients.length - onlineCount} offline)`);
+    const scope = await scopeOf(req);
+    const visibleClients = filterByClientName(scope, activeClients, 'name', 'client_name');
 
-    res.json(activeClients);
+    const onlineCount = visibleClients.filter((c: any) => c.online).length;
+    logger.info(`[${username}] Returning ${visibleClients.length} clients (${onlineCount} online, ${visibleClients.length - onlineCount} offline)`);
+
+    res.json(visibleClients);
   } catch (error) {
     logger.error('Failed to get clients:', error);
     res.status(500).json({ error: 'Failed to get clients' });
@@ -76,7 +101,7 @@ export async function getOnlineClients(req: AuthRequest, res: Response): Promise
     }
 
     const clients = await service.getOnlineClients();
-    res.json(clients);
+    res.json(filterByClientName(await scopeOf(req), clients as any[], 'name', 'client_name'));
   } catch (error) {
     logger.error('Failed to get online clients:', error);
     res.status(500).json({ error: 'Failed to get online clients' });
@@ -93,7 +118,7 @@ export async function getOfflineClients(req: AuthRequest, res: Response): Promis
     }
 
     const clients = await service.getOfflineClients();
-    res.json(clients);
+    res.json(filterByClientName(await scopeOf(req), clients as any[], 'name', 'client_name'));
   } catch (error) {
     logger.error('Failed to get offline clients:', error);
     res.status(500).json({ error: 'Failed to get offline clients' });
@@ -110,7 +135,7 @@ export async function getFailedClients(req: AuthRequest, res: Response): Promise
     }
 
     const clients = await service.getFailedClients();
-    res.json(clients);
+    res.json(filterByClientName(await scopeOf(req), clients as any[], 'name', 'client_name'));
   } catch (error) {
     logger.error('Failed to get failed clients:', error);
     res.status(500).json({ error: 'Failed to get failed clients' });
@@ -127,6 +152,14 @@ export async function getActivities(req: AuthRequest, res: Response): Promise<vo
     }
 
     const activities = await service.getActivities();
+    const scope = await scopeOf(req);
+    if (scope.clientNames !== null) {
+      res.json({
+        current: filterByClientName(scope, (activities as any)?.current, 'client_name', 'clientname', 'name'),
+        last: filterByClientName(scope, (activities as any)?.last, 'client_name', 'clientname', 'name'),
+      });
+      return;
+    }
     res.json(activities);
   } catch (error) {
     logger.error('Failed to get activities:', error);
@@ -144,7 +177,7 @@ export async function getCurrentActivities(req: AuthRequest, res: Response): Pro
     }
 
     const activities = await service.getCurrentActivities();
-    res.json(activities);
+    res.json(filterByClientName(await scopeOf(req), activities as any[], 'client_name', 'clientname', 'name'));
   } catch (error) {
     logger.error('Failed to get current activities:', error);
     res.status(500).json({ error: 'Failed to get current activities' });
@@ -166,6 +199,8 @@ export async function getBackups(req: AuthRequest, res: Response): Promise<void>
       res.status(404).json({ error: 'Server not found' });
       return;
     }
+
+    if (!(await assertClientAccess(req, res, { id: clientId }))) return;
 
     const backups = await service.getBackups(clientId);
     res.json(backups);
@@ -280,7 +315,7 @@ export async function getUsage(req: AuthRequest, res: Response): Promise<void> {
     }
 
     const usage = await service.getUsage();
-    res.json(usage);
+    res.json(filterByClientName(await scopeOf(req), usage as any[], 'name', 'client_name'));
   } catch (error) {
     logger.error('Failed to get usage:', error);
     res.status(500).json({ error: 'Failed to get usage' });
@@ -432,7 +467,19 @@ export async function getJobLogs(req: AuthRequest, res: Response): Promise<void>
     if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
     const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
     const num = req.query.num ? parseInt(req.query.num as string) : 50;
+    if (clientId && !(await assertClientAccess(req, res, { id: clientId }))) return;
+
     const result = await service.getJobLogs(clientId, num);
+    const scope = await scopeOf(req);
+    if (scope.clientNames !== null) {
+      const clients = ((result as any)?.clients || []).filter((c: any) =>
+        scope.clientNames!.has(String(c?.name || '').toLowerCase())
+      );
+      const visibleIds = new Set(clients.map((c: any) => String(c.id)));
+      const logs = ((result as any)?.logs || []).filter((l: any) => visibleIds.has(String(l?.clientid ?? l?.id)));
+      res.json({ logs, clients });
+      return;
+    }
     res.json(result);
   } catch (error) {
     logger.error('Failed to get job logs:', error);
@@ -447,6 +494,11 @@ export async function getJobLog(req: AuthRequest, res: Response): Promise<void> 
     const service = await getService();
     if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
     const result = await service.getJobLog(parseInt(logId));
+    const scope = await scopeOf(req);
+    if (scope.clientNames !== null) {
+      const name = (result as any)?.log?.clientname ?? (result as any)?.clientname ?? null;
+      if (!(await assertClientAccess(req, res, { name }))) return;
+    }
     res.json(result);
   } catch (error) {
     logger.error('Failed to get job log:', error);
@@ -459,7 +511,11 @@ export async function getBackupStats(req: AuthRequest, res: Response): Promise<v
     const days = parseInt(String(req.query.days)) || 7;
     const service = await getService();
     if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
-    const stats = await service.getBackupStats(days);
+    const scope = await scopeOf(req);
+    const stats = await service.getBackupStats(
+      days,
+      scope.clientNames === null ? undefined : [...scope.clientNames]
+    );
     res.json(stats);
   } catch (error) {
     logger.error('Failed to get backup stats:', error);
@@ -472,6 +528,12 @@ export async function getStorageByCustomer(req: AuthRequest, res: Response): Pro
     const service = await getService();
     if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
     const data = await service.getStorageByCustomer();
+    const scope = await scopeOf(req);
+    if (scope.clientNames !== null) {
+      const allowed = new Set(scope.customerIds);
+      res.json((data as any[]).filter((row) => allowed.has(Number(row?.id ?? row?.customer_id))));
+      return;
+    }
     res.json(data);
   } catch (error) {
     logger.error('Failed to get storage by customer:', error);
@@ -485,6 +547,8 @@ export async function getFailedPaths(req: AuthRequest, res: Response): Promise<v
     if (!clientId) { res.status(400).json({ error: 'Client ID is required' }); return; }
     const service = await getService();
     if (!service) { res.status(404).json({ error: 'Server not found' }); return; }
+    if (!(await assertClientAccess(req, res, { id: clientId }))) return;
+
     const result = await service.getFailedPaths(parseInt(clientId));
     res.json(result);
   } catch (error) {
@@ -499,6 +563,7 @@ export async function browseClientFilesystem(req: AuthRequest, res: Response): P
     const path = (req.query.path as string) || '/';
     const service = await getService();
     if (!service) { res.status(503).json({ error: 'UrBackup service unavailable' }); return; }
+    if (!(await assertClientAccess(req, res, { id: clientId }))) return;
 
     let backupId = req.query.backupId as string | undefined;
 
@@ -535,6 +600,8 @@ export async function convertAndDownloadImageBackup(req: AuthRequest, res: Respo
   let tmpFile: string | null = null;
 
   try {
+    if (!(await assertClientAccess(req, res, { id: clientId }))) return;
+
     const db = await getUrBackupDb();
     const backup = await db.get(
       'SELECT id, path, size_bytes, letter FROM backup_images WHERE id = ? AND clientid = ? AND complete = 1',

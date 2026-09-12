@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getSettings, updateSettings } from '../controllers/settings.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -11,6 +11,6 @@ router.use(authenticate);
 router.get('/', getSettings);
 
 // Update settings (admin only)
-router.put('/', updateSettings);
+router.put('/', requireAdmin, updateSettings);
 
 export default router;

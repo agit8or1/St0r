@@ -11,8 +11,8 @@ import {
 const router = Router();
 router.use(authenticate);
 
-router.get('/', getDiskGuardStatus);
-router.get('/events', getDiskGuardEvents);
+router.get('/', requireAdmin, getDiskGuardStatus);
+router.get('/events', requireAdmin, getDiskGuardEvents);
 
 // Destructive or state-changing maintenance is admin-only.
 router.post('/reclaim', requireAdmin, reclaimSpace);

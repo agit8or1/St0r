@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
+import { useAuth } from '../hooks/useAuth';
 import { Tooltip } from '../components/Tooltip';
 import { api } from '../services/api';
 import type { Activity } from '../types';
@@ -28,6 +29,8 @@ type ActivityType = 'file' | 'image' | 'restore' | 'all';
 type DateRangeFilter = 'all' | 'today' | 'week' | 'month';
 
 export function Activities() {
+  const { user } = useAuth();
+  const isAdmin = !!user?.isAdmin;
   const [currentActivities, setCurrentActivities] = useState<Activity[]>([]);
   const [lastActivities, setLastActivities] = useState<Activity[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -252,7 +255,7 @@ export function Activities() {
               <span className="text-sm text-green-700 dark:text-green-300 px-3 py-2">
                 {clearStaleResult.found === 0 ? 'No stuck jobs found' : `Cleared ${clearStaleResult.stopped}/${clearStaleResult.found} stuck jobs`}
               </span>
-            ) : (
+            ) : isAdmin ? (
               <Tooltip text="Stop and remove backup jobs that are stuck or not responding">
                 <button
                   onClick={() => setShowClearConfirm(true)}
@@ -263,7 +266,7 @@ export function Activities() {
                   {clearingStaleJobs ? 'Clearing...' : 'Clear Stale'}
                 </button>
               </Tooltip>
-            )}
+            ) : null}
             <Tooltip text={autoRefresh ? 'Auto-refresh on — click to pause' : 'Click to enable auto-refresh'}>
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
@@ -431,7 +434,7 @@ export function Activities() {
                           </span>
                         )}
                         <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{pcdone.toFixed(0)}%</span>
-                        {d.process_id && (
+                        {d.process_id && isAdmin && (
                           <Tooltip text={isRestore ? 'Stop this restore' : 'Stop this backup job'}>
                             <button
                               onClick={() => handleCancelActivity(String(d.process_id), clientName, d.clientid)}

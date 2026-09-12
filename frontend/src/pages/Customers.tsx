@@ -8,8 +8,11 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Customer, Client, CustomerClient } from '../types';
+import { useAuth } from '../hooks/useAuth';
 
 export function Customers() {
+  const { user } = useAuth();
+  const isAdmin = !!user?.isAdmin;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -214,10 +217,12 @@ export function Customers() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Customers</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Manage customers and their endpoint assignments</p>
           </div>
-          <button onClick={openCreate} className="btn bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-sm">
-            <Plus className="h-4 w-4" />
-            Add Customer
-          </button>
+          {isAdmin && (
+            <button onClick={openCreate} className="btn bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-sm">
+              <Plus className="h-4 w-4" />
+              Add Customer
+            </button>
+          )}
         </div>
 
         {/* List */}
@@ -225,9 +230,11 @@ export function Customers() {
           <div className="card text-center py-12">
             <Users className="mx-auto h-12 w-12 text-gray-400" />
             <p className="mt-4 text-gray-600 dark:text-gray-400">No customers yet</p>
-            <button onClick={openCreate} className="btn btn-primary mt-4 inline-flex items-center gap-2 text-sm">
-              <Plus className="h-4 w-4" /> Add Customer
-            </button>
+            {isAdmin && (
+              <button onClick={openCreate} className="btn btn-primary mt-4 inline-flex items-center gap-2 text-sm">
+                <Plus className="h-4 w-4" /> Add Customer
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -300,6 +307,7 @@ export function Customers() {
                         </ul>
                       )}
                       {/* Action row */}
+                      {isAdmin && (
                       <div className="flex gap-2 px-4 py-2 border-t border-gray-200 dark:border-gray-700" onClick={e => e.stopPropagation()}>
                         <button onClick={() => openEdit(customer)} className="flex-1 btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs flex items-center justify-center gap-1">
                           <Edit className="h-3.5 w-3.5" /> Edit / Manage Clients
@@ -308,11 +316,12 @@ export function Customers() {
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
+                      )}
                     </div>
                   )}
 
                   {/* Collapsed action row */}
-                  {!isExpanded && (
+                  {!isExpanded && isAdmin && (
                     <div className="flex gap-2 px-4 pb-3 pt-0" onClick={e => e.stopPropagation()}>
                       <button onClick={() => openEdit(customer)} className="flex-1 btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs flex items-center justify-center gap-1">
                         <Edit className="h-3.5 w-3.5" /> Edit / Manage Clients
@@ -398,7 +407,7 @@ export function Customers() {
                               <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${info?.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
                               <span className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1 truncate">{cc.client_name}</span>
                               {info?.ip && <span className="text-xs text-gray-400 font-mono">{info.ip}</span>}
-                              <button onClick={() => setConfirmRemoveClient({ cc })} className="p-1 text-red-400 hover:text-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20">
+                              <button onClick={() => setConfirmRemoveClient({ cc })} disabled={!isAdmin} className="p-1 text-red-400 hover:text-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 disabled:cursor-not-allowed">
                                 <X className="h-3.5 w-3.5" />
                               </button>
                             </li>

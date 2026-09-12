@@ -5,7 +5,7 @@ import { getStorageLimits, upsertStorageLimit, deleteStorageLimit, getStorageLim
 const router = Router();
 router.use(authenticate);
 
-router.get('/', getStorageLimits);
+router.get('/', requireAdmin, getStorageLimits);
 router.put('/:clientName', requireAdmin, upsertStorageLimit);
 router.delete('/:clientName', requireAdmin, deleteStorageLimit);
 router.post('/status', getStorageLimitStatuses);
