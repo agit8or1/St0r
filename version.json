@@ -1,10 +1,10 @@
 {
-  "version": "3.2.111",
+  "version": "3.2.112",
   "releaseDate": "2026-09-12",
   "changelog": [
-    "Client installers are scoped per endpoint rather than restricted to administrators. 3.2.105 gated them on role because the installer embeds an endpoint's internet auth key; they are now gated on the endpoint itself, so a read-only account can install an agent on its own customer's endpoints and is refused for anyone else's.",
-    "Downloading an installer no longer fetches the endpoint's auth key in the browser. The backend already resolved the key itself and ignored the one the page sent, so that call was redundant — and it raced its own state update. Revealing the raw key in the UI stays administrator-only.",
-    "Includes 3.2.110: removing or demoting a user takes effect immediately.",
-    "Includes 3.2.105-3.2.109: user roles scoped to customers (issue #21), migrations shipped through the update channel, Bare Metal Restore scoped per endpoint, VHD export fixed, and unrestorable images kept out of the restore picker."
+    "The client installer card now reports what the installer is actually configured with. It read the FQDN from an environment variable and paired it with the web UI port (55414), while installers are built for UrBackup's internet_server on internet_server_port (55415) — so the address shown to the user was never the one the client connects on.",
+    "The address and port are now read from UrBackup's own settings, the same source the installer is built from. They cannot drift apart, and an install that never set URBACKUP_SERVER_FQDN gets the correct address automatically instead of an auto-detected LAN IP. The environment variable is still honoured as a fallback.",
+    "Includes 3.2.111: client installers scoped per endpoint, so read-only users can install agents on their own endpoints.",
+    "Includes 3.2.105-3.2.110: user roles scoped to customers (issue #21), immediate effect for user removal and role changes, migrations shipped through the update channel, Bare Metal Restore scoped per endpoint, VHD export fixed, and unrestorable images kept out of the restore picker."
   ]
 }

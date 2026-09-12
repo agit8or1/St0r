@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { assertClientAccess } from '../middleware/scope.js';
 import { logger } from '../utils/logger.js';
+import { openUrBackupSettingsDbReadOnly } from '../config/urbackupDb.js';
 import { UrBackupService } from '../services/urbackup.js';
 import os from 'os';
 import { existsSync } from 'fs';
@@ -11,7 +12,42 @@ import path from 'path';
 
 const router = Router();
 
-// Helper function to get server address (FQDN or IP)
+/**
+ * What a client is actually told to connect to.
+ *
+ * UrBackup's own `internet_server` / `internet_server_port` settings are the
+ * authoritative answer: they are what gets baked into every installer, they are
+ * configured per install, and they cannot drift from the installer the way a
+ * separate environment variable can. Read those first, and fall back to the
+ * environment only when UrBackup has nothing configured.
+ *
+ * Note the port differs from the web UI port (55414) — internet clients connect
+ * on internet_server_port (55415 by default), so reporting the web port here
+ * told the user something that was never true of the installer.
+ */
+async function getClientFacingServer(): Promise<{ address: string; port: string }> {
+  try {
+    const db = await openUrBackupSettingsDbReadOnly();
+    const rows = await db.all<{ key: string; value: string }[]>(
+      "SELECT key, value FROM settings WHERE clientid = 0 AND key IN ('internet_server', 'internet_server_port')"
+    );
+    const settings = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+    const address = settings.internet_server?.trim();
+    const port = settings.internet_server_port?.trim();
+    if (address) {
+      return { address, port: port || '55415' };
+    }
+  } catch (error) {
+    logger.warn(`Could not read internet_server from UrBackup settings, falling back to configuration: ${error}`);
+  }
+
+  return {
+    address: getServerAddress(),
+    port: process.env.URBACKUP_INTERNET_PORT || '55415',
+  };
+}
+
+// Fallback only: FQDN from configuration, else an auto-detected address.
 function getServerAddress(): string {
   // Check for FQDN in environment variable first (either key)
   const fqdn = process.env.URBACKUP_SERVER_FQDN || process.env.URBACKUP_SERVER_HOST;
@@ -110,13 +146,14 @@ async function streamResponse(response: Response, res: ExpressResponse): Promise
 // installing an agent needs it, so this is not restricted beyond being logged in.
 router.get('/server-info', authenticate, async (req: Request, res: ExpressResponse) => {
   try {
-    const serverAddress = getServerAddress();
-    const serverPort = process.env.URBACKUP_SERVER_PORT || '55414';
+    const { address, port } = await getClientFacingServer();
 
     res.json({
-      serverIP: serverAddress,
-      serverPort: serverPort,
-      serverUrl: `http://${serverAddress}:${serverPort}`
+      serverIP: address,
+      serverPort: port,
+      // Not a browsable URL — this is the host:port a client connects to, and it
+      // is what the installer is configured with.
+      serverUrl: `${address}:${port}`
     });
   } catch (error) {
     logger.error('Failed to get server info:', error);
