@@ -171,37 +171,21 @@ export function ClientDetail() {
     }
   };
 
-  const handleDownloadWithKey = async (platform: 'windows' | 'linux') => {
+  const handleDownloadInstaller = async (platform: 'windows' | 'linux') => {
     setInstallerMessage(null);
     try {
-      // Load auth key if not already loaded
-      let keyToUse = authKey;
-      if (!keyToUse) {
-        await loadAuthKey();
-        // Wait a moment for state to update, then get the key directly from API
-        if (!authKey && client?.id) {
-          const result = await api.getClientAuthkey(client.id);
-          keyToUse = result.authkey;
-        } else {
-          keyToUse = authKey;
-        }
-      }
-
-      if (!keyToUse) {
-        setInstallerMessage({ type: 'error', text: 'Failed to load authentication key. Try clicking "Show Key" first.' });
-        return;
-      }
-
       if (!client?.id) {
         setInstallerMessage({ type: 'error', text: 'Client ID not available.' });
         return;
       }
 
-      // Download with the loaded key and client ID
+      // The backend resolves this endpoint's authkey itself and bakes it into the
+      // installer, so nothing here needs to read the key — which is what lets a
+      // read-only account install an agent on its own endpoint.
       if (platform === 'windows') {
-        await api.downloadWindowsInstaller(keyToUse, client.id.toString());
+        await api.downloadWindowsInstaller(undefined, client.id.toString());
       } else {
-        await api.downloadLinuxInstaller(keyToUse, client.id.toString(), clientName);
+        await api.downloadLinuxInstaller(undefined, client.id.toString(), clientName);
         setInstallerMessage({
           type: 'success',
           text: `Installer downloaded. Copy it to the Linux machine and run:  sudo sh ${linuxInstallerFilename(client.id.toString(), clientName)}`,
@@ -315,9 +299,9 @@ export function ClientDetail() {
           </div>
         </div>
 
-        {/* Download Client Software for THIS Client — installers embed the
-            endpoint's internet auth key, so they are administrator-only. */}
-        {isAdmin && (
+        {/* Download Client Software for THIS Client. Scoped per endpoint by the
+            API, so anyone who can see this endpoint can install an agent on it —
+            the installer carries only this endpoint's key. */}
         <div className="card bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
           <div className="flex items-center gap-3 mb-4">
             <Download className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -329,8 +313,9 @@ export function ClientDetail() {
             Install the UrBackup client on this computer with pre-configured authentication
           </p>
 
-          {/* Auth Key Display */}
-          {client.id && (
+          {/* Auth Key Display — reading the raw key stays administrator-only;
+              downloading a pre-configured installer does not need it. */}
+          {client.id && isAdmin && (
             <div className="mb-4 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Authentication Key:</span>
@@ -397,7 +382,7 @@ export function ClientDetail() {
 
           <div className="grid gap-3 md:grid-cols-3">
             <button
-              onClick={() => handleDownloadWithKey('windows')}
+              onClick={() => handleDownloadInstaller('windows')}
               className="flex items-center gap-3 p-4 rounded-lg bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group"
             >
               <Monitor className="h-8 w-8 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />
@@ -407,7 +392,7 @@ export function ClientDetail() {
               </div>
             </button>
             <button
-              onClick={() => handleDownloadWithKey('linux')}
+              onClick={() => handleDownloadInstaller('linux')}
               className="flex items-center gap-3 p-4 rounded-lg bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group"
             >
               <ServerIcon className="h-8 w-8 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />
@@ -430,7 +415,6 @@ export function ClientDetail() {
             </a>
           </div>
         </div>
-        )}
 
         {/* View Toggle */}
         <div className="flex gap-2">

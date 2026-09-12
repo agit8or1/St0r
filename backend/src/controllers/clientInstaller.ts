@@ -1,6 +1,8 @@
 // `Response` is aliased so it does not shadow the global fetch Response used below
 import { Router, Request, Response as ExpressResponse } from 'express';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import type { AuthRequest } from '../middleware/auth.js';
+import { assertClientAccess } from '../middleware/scope.js';
 import { logger } from '../utils/logger.js';
 import { UrBackupService } from '../services/urbackup.js';
 import os from 'os';
@@ -104,7 +106,9 @@ async function streamResponse(response: Response, res: ExpressResponse): Promise
 }
 
 // Get server information for client configuration
-router.get('/server-info', authenticate, requireAdmin, async (req: Request, res: ExpressResponse) => {
+// The address and port a client connects to. Not endpoint-specific, and anyone
+// installing an agent needs it, so this is not restricted beyond being logged in.
+router.get('/server-info', authenticate, async (req: Request, res: ExpressResponse) => {
   try {
     const serverAddress = getServerAddress();
     const serverPort = process.env.URBACKUP_SERVER_PORT || '55414';
@@ -121,7 +125,10 @@ router.get('/server-info', authenticate, requireAdmin, async (req: Request, res:
 });
 
 // Download Windows client installer (.exe) - serves generic installer
-router.get('/windows', authenticate, requireAdmin, async (req: Request, res: ExpressResponse): Promise<void> => {
+// Installers embed the endpoint's internet_authkey, so they are scoped to the
+// endpoint rather than restricted to administrators: a read-only account may
+// install an agent on its own customer's endpoints and no others.
+router.get('/windows', authenticate, async (req: AuthRequest, res: ExpressResponse): Promise<void> => {
   try {
     // Accept both clientId and clientid for compatibility
     const clientId = req.query.clientId || req.query.clientid;
@@ -130,6 +137,13 @@ router.get('/windows', authenticate, requireAdmin, async (req: Request, res: Exp
       res.status(400).json({ error: 'clientId parameter is required' });
       return;
     }
+
+    if (!/^[0-9]{1,10}$/.test(String(clientId))) {
+      res.status(400).json({ error: 'Invalid clientId: must be numeric' });
+      return;
+    }
+
+    if (!(await assertClientAccess(req, res, { id: String(clientId) }))) return;
 
     logger.info(`Windows client installer download for client ID: ${clientId}`);
 
@@ -166,7 +180,7 @@ router.get('/windows', authenticate, requireAdmin, async (req: Request, res: Exp
 
 // Download Linux client installer — the pre-configured self-extracting installer
 // that UrBackup builds for this client (same one the UrBackup web UI serves).
-router.get('/linux', authenticate, requireAdmin, async (req: Request, res: ExpressResponse): Promise<void> => {
+router.get('/linux', authenticate, async (req: AuthRequest, res: ExpressResponse): Promise<void> => {
   // Accept both clientId and clientid for compatibility
   const clientId = req.query.clientId || req.query.clientid;
 
@@ -179,6 +193,8 @@ router.get('/linux', authenticate, requireAdmin, async (req: Request, res: Expre
     res.status(400).json({ error: 'Invalid clientId: must be numeric' });
     return;
   }
+
+  if (!(await assertClientAccess(req, res, { id: String(clientId) }))) return;
 
   logger.info(`Linux client installer download for client ID: ${clientId}`);
 

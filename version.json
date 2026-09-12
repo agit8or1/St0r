@@ -1,10 +1,10 @@
 {
-  "version": "3.2.110",
+  "version": "3.2.111",
   "releaseDate": "2026-09-12",
   "changelog": [
-    "Security: removing or demoting a user now takes effect immediately. The session token is stateless and lives for 24 hours, so a deleted, deactivated or demoted account kept its access — including administrator rights — until the token expired. Every request now re-checks the account against the database.",
-    "Role changes apply in both directions without logging out: a demoted administrator loses admin endpoints at once, and a promoted user gains them without needing a new session.",
-    "Account state is cached for 10 seconds so this costs roughly one query per user per few seconds rather than one per request, and user edits clear that cache immediately. If the database cannot be reached the request is refused rather than falling back to trusting the token.",
+    "Client installers are scoped per endpoint rather than restricted to administrators. 3.2.105 gated them on role because the installer embeds an endpoint's internet auth key; they are now gated on the endpoint itself, so a read-only account can install an agent on its own customer's endpoints and is refused for anyone else's.",
+    "Downloading an installer no longer fetches the endpoint's auth key in the browser. The backend already resolved the key itself and ignored the one the page sent, so that call was redundant — and it raced its own state update. Revealing the raw key in the UI stays administrator-only.",
+    "Includes 3.2.110: removing or demoting a user takes effect immediately.",
     "Includes 3.2.105-3.2.109: user roles scoped to customers (issue #21), migrations shipped through the update channel, Bare Metal Restore scoped per endpoint, VHD export fixed, and unrestorable images kept out of the restore picker."
   ]
 }
