@@ -4,6 +4,7 @@ import { hashPassword } from '../utils/auth.js';
 import { logger } from '../utils/logger.js';
 import { query } from '../config/database.js';
 import { invalidateScopeCache } from '../middleware/scope.js';
+import { invalidateUserCache } from '../middleware/auth.js';
 
 /**
  * Replace a user's customer assignments. Administrators are unrestricted, so any
@@ -142,6 +143,9 @@ export async function modifyUser(req: Request, res: Response) {
       await setUserCustomers(targetId, customerIds ?? [], effectiveIsAdmin);
     }
     invalidateScopeCache(targetId);
+    // Role and activation changes take effect on the next request, not on the
+    // target's next login.
+    invalidateUserCache(targetId);
 
     res.json({
       success: true,
@@ -190,6 +194,7 @@ export async function removeUser(req: Request, res: Response) {
 
     await deleteUserById(targetId);
     invalidateScopeCache(targetId);
+    invalidateUserCache(targetId);
 
     res.json({
       success: true,

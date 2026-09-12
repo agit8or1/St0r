@@ -1,10 +1,10 @@
 {
-  "version": "3.2.109",
+  "version": "3.2.110",
   "releaseDate": "2026-09-12",
   "changelog": [
-    "Bare Metal Restore no longer offers image backups that hold no data. UrBackup can mark an image complete after the transfer failed, leaving a zero-byte record that lists like any other backup but restores nothing — the worst possible thing to pick during an outage. Such backups are now withheld from the restore picker, with a warning saying how many were hidden and why, rather than a silently shortened list.",
-    "The API marks each image backup with a `restorable` flag (non-zero size and the image file actually present on disk). Backup history still shows the failed attempts, so a broken backup chain stays visible instead of disappearing.",
-    "Includes 3.2.108: fixed VHD export failing with 'decompress-file exited 3'.",
-    "Includes 3.2.105-3.2.107: user roles scoped to customers (issue #21), migrations shipped through the update channel, Bare Metal Restore scoped per endpoint."
+    "Security: removing or demoting a user now takes effect immediately. The session token is stateless and lives for 24 hours, so a deleted, deactivated or demoted account kept its access — including administrator rights — until the token expired. Every request now re-checks the account against the database.",
+    "Role changes apply in both directions without logging out: a demoted administrator loses admin endpoints at once, and a promoted user gains them without needing a new session.",
+    "Account state is cached for 10 seconds so this costs roughly one query per user per few seconds rather than one per request, and user edits clear that cache immediately. If the database cannot be reached the request is refused rather than falling back to trusting the token.",
+    "Includes 3.2.105-3.2.109: user roles scoped to customers (issue #21), migrations shipped through the update channel, Bare Metal Restore scoped per endpoint, VHD export fixed, and unrestorable images kept out of the restore picker."
   ]
 }
