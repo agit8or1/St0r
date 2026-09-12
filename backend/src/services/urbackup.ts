@@ -669,8 +669,8 @@ export class UrBackupService {
     }
   }
 
-  async getBackupStats(days: number = 7) {
-    return this.dbService.getBackupStats(days);
+  async getBackupStats(days: number = 7, clientNames?: string[]) {
+    return this.dbService.getBackupStats(days, clientNames);
   }
 
   async getStorageByCustomer() {

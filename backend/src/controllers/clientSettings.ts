@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth.js';
 import { UrBackupService } from '../services/urbackup.js';
 import { logger } from '../utils/logger.js';
 import { query } from '../config/database.js';
+import { assertClientAccess } from '../middleware/scope.js';
 
 const urbackupService = new UrBackupService();
 
@@ -14,6 +15,8 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
       res.status(400).json({ error: 'Client ID is required' });
       return;
     }
+
+    if (!(await assertClientAccess(req, res, { id: clientId }))) return;
 
     const result = await urbackupService.getClientSettings(clientId);
     // UrBackup returns settings as {key: {use, value, value_client, value_group}}

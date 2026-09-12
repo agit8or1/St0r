@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { logger } from '../utils/logger.js';
+import { AuthRequest } from '../middleware/auth.js';
+import { assertClientAccess } from '../middleware/scope.js';
 import { UrBackupDbService } from '../services/urbackupDb.js';
 import { realpathSync } from 'fs';
 import { userInfo } from 'os';
@@ -141,7 +143,7 @@ function sendStorageError(error: unknown, res: Response): boolean {
 /**
  * Get available backups for browsing
  */
-export async function getBackupsForBrowsing(req: Request, res: Response): Promise<void> {
+export async function getBackupsForBrowsing(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientName } = req.query;
 
@@ -149,6 +151,8 @@ export async function getBackupsForBrowsing(req: Request, res: Response): Promis
       res.status(400).json({ error: 'Client name is required' });
       return;
     }
+
+    if (!(await assertClientAccess(req, res, { name: clientName }))) return;
 
     // Get all clients to find the client ID
     const clients = await dbService.getClients();
@@ -190,7 +194,7 @@ export async function getBackupsForBrowsing(req: Request, res: Response): Promis
 /**
  * Get files in a backup at a specific path
  */
-export async function getFilesInBackup(req: Request, res: Response): Promise<void> {
+export async function getFilesInBackup(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId, backupId, path } = req.query;
 
@@ -198,6 +202,8 @@ export async function getFilesInBackup(req: Request, res: Response): Promise<voi
       res.status(400).json({ error: 'Client ID and backup ID are required' });
       return;
     }
+
+    if (!(await assertClientAccess(req, res, { id: String(clientId) }))) return;
 
     const backupPath = path && typeof path === 'string' ? path : '/';
 
@@ -313,7 +319,7 @@ export async function getFilesInBackup(req: Request, res: Response): Promise<voi
 /**
  * Download a file from a backup
  */
-export async function downloadFile(req: Request, res: Response): Promise<void> {
+export async function downloadFile(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId, backupId, path } = req.query;
 
@@ -321,6 +327,8 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
       res.status(400).json({ error: 'Client ID, backup ID, and file path are required' });
       return;
     }
+
+    if (!(await assertClientAccess(req, res, { id: String(clientId) }))) return;
 
     // Get the backup details
     const fileBackups = await dbService.getFileBackups(Number(clientId));
@@ -410,7 +418,7 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
 /**
  * Download a folder from a backup as a ZIP archive
  */
-export async function downloadFolder(req: Request, res: Response): Promise<void> {
+export async function downloadFolder(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId, backupId, path } = req.query;
 
@@ -418,6 +426,8 @@ export async function downloadFolder(req: Request, res: Response): Promise<void>
       res.status(400).json({ error: 'clientId, backupId, and path are required' });
       return;
     }
+
+    if (!(await assertClientAccess(req, res, { id: String(clientId) }))) return;
 
     const fileBackups = await dbService.getFileBackups(Number(clientId));
     const backup = fileBackups.find(b => b.id === Number(backupId));
@@ -473,7 +483,7 @@ export async function downloadFolder(req: Request, res: Response): Promise<void>
 /**
  * Restore files to the client
  */
-export async function restoreFiles(req: Request, res: Response): Promise<void> {
+export async function restoreFiles(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId, backupId, paths, restorePath } = req.body;
 

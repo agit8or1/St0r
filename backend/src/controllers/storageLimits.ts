@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import { query } from '../config/database.js';
 import { logger } from '../utils/logger.js';
+import { scopeOf, filterByClientName } from '../middleware/scope.js';
 
 export interface StorageLimitRow {
   client_name: string;
@@ -89,7 +90,9 @@ export async function getStorageLimitStatuses(req: AuthRequest, res: Response): 
       'SELECT client_name, limit_bytes, warn_threshold_pct, critical_threshold_pct FROM client_storage_limits'
     );
     const limitMap = new Map(rows.map(r => [r.client_name, r]));
-    const result = clients.map(c => {
+    const scope = await scopeOf(req);
+    const visible = filterByClientName(scope, clients, 'name');
+    const result = visible.map(c => {
       const limit = limitMap.get(c.name);
       if (!limit) return { name: c.name, has_limit: false };
       const { pct, status } = computeStatus(c.bytes_used, limit.limit_bytes, limit.warn_threshold_pct, limit.critical_threshold_pct);

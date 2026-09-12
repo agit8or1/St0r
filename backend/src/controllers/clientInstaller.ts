@@ -1,6 +1,6 @@
 // `Response` is aliased so it does not shadow the global fetch Response used below
 import { Router, Request, Response as ExpressResponse } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 import { UrBackupService } from '../services/urbackup.js';
 import os from 'os';
@@ -104,7 +104,7 @@ async function streamResponse(response: Response, res: ExpressResponse): Promise
 }
 
 // Get server information for client configuration
-router.get('/server-info', authenticate, async (req: Request, res: ExpressResponse) => {
+router.get('/server-info', authenticate, requireAdmin, async (req: Request, res: ExpressResponse) => {
   try {
     const serverAddress = getServerAddress();
     const serverPort = process.env.URBACKUP_SERVER_PORT || '55414';
@@ -121,7 +121,7 @@ router.get('/server-info', authenticate, async (req: Request, res: ExpressRespon
 });
 
 // Download Windows client installer (.exe) - serves generic installer
-router.get('/windows', authenticate, async (req: Request, res: ExpressResponse): Promise<void> => {
+router.get('/windows', authenticate, requireAdmin, async (req: Request, res: ExpressResponse): Promise<void> => {
   try {
     // Accept both clientId and clientid for compatibility
     const clientId = req.query.clientId || req.query.clientid;
@@ -166,7 +166,7 @@ router.get('/windows', authenticate, async (req: Request, res: ExpressResponse):
 
 // Download Linux client installer — the pre-configured self-extracting installer
 // that UrBackup builds for this client (same one the UrBackup web UI serves).
-router.get('/linux', authenticate, async (req: Request, res: ExpressResponse): Promise<void> => {
+router.get('/linux', authenticate, requireAdmin, async (req: Request, res: ExpressResponse): Promise<void> => {
   // Accept both clientId and clientid for compatibility
   const clientId = req.query.clientId || req.query.clientid;
 

@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import { testConnection } from './config/database.js';
 import { logger } from './utils/logger.js';
+import { requireWriteAccess } from './middleware/auth.js';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 
@@ -117,6 +118,10 @@ app.use((req, res, next) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Read-only enforcement for non-admin accounts (defence in depth — individual
+// routes carry `requireAdmin` as well).
+app.use('/api/', requireWriteAccess);
 
 // API routes
 app.use('/api/auth', authRoutes);

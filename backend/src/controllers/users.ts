@@ -2,6 +2,45 @@ import { Request, Response } from 'express';
 import { getAllUsers, getUserByUsername, createUser, updateUser, deleteUserById } from '../models/user.js';
 import { hashPassword } from '../utils/auth.js';
 import { logger } from '../utils/logger.js';
+import { query } from '../config/database.js';
+import { invalidateScopeCache } from '../middleware/scope.js';
+
+/**
+ * Replace a user's customer assignments. Administrators are unrestricted, so any
+ * assignment on an admin account is dropped to avoid implying a scope that is
+ * not enforced.
+ */
+async function setUserCustomers(userId: number, customerIds: unknown, isAdmin: boolean): Promise<void> {
+  if (!Array.isArray(customerIds)) return;
+
+  const ids = isAdmin
+    ? []
+    : [...new Set(customerIds.map((id) => parseInt(String(id), 10)).filter((id) => Number.isFinite(id)))];
+
+  await query('DELETE FROM customer_users WHERE user_id = ?', [userId]);
+  for (const customerId of ids) {
+    await query(
+      'INSERT IGNORE INTO customer_users (customer_id, user_id) VALUES (?, ?)',
+      [customerId, userId]
+    );
+  }
+  invalidateScopeCache(userId);
+}
+
+async function customerIdsByUser(): Promise<Map<number, number[]>> {
+  const rows = await query<any[]>(
+    `SELECT cu.user_id, cu.customer_id, c.name AS customer_name
+       FROM customer_users cu
+       JOIN customers c ON c.id = cu.customer_id AND c.is_active = 1`
+  );
+  const map = new Map<number, number[]>();
+  for (const row of rows) {
+    const list = map.get(row.user_id) || [];
+    list.push(Number(row.customer_id));
+    map.set(row.user_id, list);
+  }
+  return map;
+}
 
 /**
  * Get all users
@@ -9,8 +48,15 @@ import { logger } from '../utils/logger.js';
 export async function getUsers(req: Request, res: Response) {
   try {
     const users = await getAllUsers();
-    // Remove password hashes from response
-    const safeUsers = users.map(({ password_hash, ...user }) => user);
+    const assignments = await customerIdsByUser();
+    // Never expose the password hash or the TOTP seed
+    const safeUsers = users.map(({ password_hash, ...user }) => {
+      const { totp_secret, ...rest } = user as typeof user & { totp_secret?: string };
+      return {
+        ...rest,
+        customer_ids: user.is_admin ? [] : assignments.get(user.id) || [],
+      };
+    });
     res.json(safeUsers);
   } catch (error: any) {
     logger.error('Failed to get users:', error);
@@ -26,7 +72,7 @@ export async function getUsers(req: Request, res: Response) {
  */
 export async function addUser(req: Request, res: Response) {
   try {
-    const { username, email, password, isAdmin } = req.body;
+    const { username, email, password, isAdmin, customerIds } = req.body;
 
     if (!username || !password) {
       res.status(400).json({ error: 'Username and password are required' });
@@ -48,6 +94,8 @@ export async function addUser(req: Request, res: Response) {
       isAdmin || false
     );
 
+    await setUserCustomers(userId, customerIds, !!isAdmin);
+
     res.status(201).json({
       success: true,
       userId,
@@ -68,7 +116,7 @@ export async function addUser(req: Request, res: Response) {
 export async function modifyUser(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { username, email, password, isAdmin } = req.body;
+    const { username, email, password, isAdmin, customerIds } = req.body;
 
     if (!id) {
       res.status(400).json({ error: 'User ID is required' });
@@ -83,7 +131,17 @@ export async function modifyUser(req: Request, res: Response) {
       updates.password_hash = await hashPassword(password);
     }
 
-    await updateUser(parseInt(id), updates);
+    const targetId = parseInt(id);
+    await updateUser(targetId, updates);
+
+    if (isAdmin !== undefined || Array.isArray(customerIds)) {
+      const effectiveIsAdmin =
+        isAdmin !== undefined
+          ? !!isAdmin
+          : !!(await getAllUsers()).find((u) => u.id === targetId)?.is_admin;
+      await setUserCustomers(targetId, customerIds ?? [], effectiveIsAdmin);
+    }
+    invalidateScopeCache(targetId);
 
     res.json({
       success: true,
@@ -131,6 +189,7 @@ export async function removeUser(req: Request, res: Response) {
     }
 
     await deleteUserById(targetId);
+    invalidateScopeCache(targetId);
 
     res.json({
       success: true,

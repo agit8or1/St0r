@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { triggerUpdate, getUpdateLog, getSystemMetrics, getUrBackupServerVersion, triggerUrBackupServerUpdate, getUrBackupUpdateLog, getUrBackupClientVersions } from '../controllers/system.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -13,15 +13,15 @@ router.use(authenticate);
 router.get('/metrics', getSystemMetrics);
 
 // Trigger system update
-router.post('/update', triggerUpdate);
+router.post('/update', requireAdmin, triggerUpdate);
 
 // Get update progress log
-router.get('/update-log', getUpdateLog);
+router.get('/update-log', requireAdmin, getUpdateLog);
 
 // UrBackup server version check and update
 router.get('/urbackup-version', getUrBackupServerVersion);
-router.post('/urbackup-update', triggerUrBackupServerUpdate);
-router.get('/urbackup-update-log', getUrBackupUpdateLog);
+router.post('/urbackup-update', requireAdmin, triggerUrBackupServerUpdate);
+router.get('/urbackup-update-log', requireAdmin, getUrBackupUpdateLog);
 
 // UrBackup client versions
 router.get('/client-versions', getUrBackupClientVersions);

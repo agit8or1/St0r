@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../config/database.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { scopeOf, isClientVisible, invalidateScopeCache } from '../middleware/scope.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
@@ -20,6 +21,13 @@ router.get('/', authenticate, async (req, res) => {
       GROUP BY c.id
       ORDER BY c.name
     `);
+
+    const scope = await scopeOf(req);
+    if (!scope.isAdmin) {
+      const allowed = new Set(scope.customerIds);
+      res.json((rows as any[]).filter((r) => allowed.has(Number(r.id))));
+      return;
+    }
     res.json(rows);
   } catch (error) {
     logger.error('Failed to get customers:', error);
@@ -37,6 +45,12 @@ router.get('/:id', authenticate, async (req, res) => {
 
     if (!Array.isArray(rows) || rows.length === 0) {
       res.status(404).json({ error: 'Customer not found' });
+      return;
+    }
+
+    const scope = await scopeOf(req);
+    if (!scope.isAdmin && !scope.customerIds.includes(Number((rows[0] as any).id))) {
+      res.status(403).json({ error: 'Customer not assigned to your account' });
       return;
     }
 
@@ -97,6 +111,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
       return;
     }
 
+    invalidateScopeCache();
     res.json({ message: 'Customer updated successfully' });
   } catch (error) {
     logger.error('Failed to update customer:', error);
@@ -118,6 +133,7 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
       return;
     }
 
+    invalidateScopeCache();
     res.json({ message: 'Customer deleted successfully' });
   } catch (error) {
     logger.error('Failed to delete customer:', error);
@@ -128,6 +144,12 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
 // Get customers clients
 router.get('/:id/clients', authenticate, async (req, res) => {
   try {
+    const scope = await scopeOf(req);
+    if (!scope.isAdmin && !scope.customerIds.includes(Number(req.params.id))) {
+      res.status(403).json({ error: 'Customer not assigned to your account' });
+      return;
+    }
+
     const [rows] = await pool.query(
       `SELECT cc.*, s.name as server_name, s.host as server_host
        FROM customer_clients cc
@@ -160,6 +182,7 @@ router.post('/:id/clients', authenticate, requireAdmin, async (req, res) => {
     );
 
     const insertResult = result as any;
+    invalidateScopeCache();
     res.status(201).json({
       id: insertResult.insertId,
       customer_id: req.params.id,
@@ -188,6 +211,7 @@ router.delete('/:customerId/clients/:clientId', authenticate, requireAdmin, asyn
       return;
     }
 
+    invalidateScopeCache();
     res.json({ message: 'Client removed from customer successfully' });
   } catch (error) {
     logger.error('Failed to remove client from customer:', error);
@@ -198,6 +222,12 @@ router.delete('/:customerId/clients/:clientId', authenticate, requireAdmin, asyn
 // Get client's customer assignment
 router.get('/by-client/:serverId/:clientName', authenticate, async (req, res) => {
   try {
+    const scope = await scopeOf(req);
+    if (!isClientVisible(scope, req.params.clientName)) {
+      res.status(403).json({ error: 'This endpoint is not assigned to your customer' });
+      return;
+    }
+
     const [rows] = await pool.query(
       `SELECT cc.*, c.name as customer_name, c.company as customer_company
        FROM customer_clients cc
@@ -215,6 +245,67 @@ router.get('/by-client/:serverId/:clientName', authenticate, async (req, res) =>
   } catch (error) {
     logger.error('Failed to get client customer:', error);
     res.status(500).json({ error: 'Failed to get client customer' });
+  }
+});
+
+// Get the app users assigned to a customer (admin only)
+router.get('/:id/users', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT cu.id, cu.user_id, u.username, u.email, u.is_admin
+         FROM customer_users cu
+         JOIN app_users u ON u.id = cu.user_id
+        WHERE cu.customer_id = ? AND u.is_active = 1
+        ORDER BY u.username`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (error) {
+    logger.error('Failed to get customer users:', error);
+    res.status(500).json({ error: 'Failed to get customer users' });
+  }
+});
+
+// Assign an app user to a customer (admin only)
+router.post('/:id/users', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    if (!user_id) {
+      res.status(400).json({ error: 'user_id is required' });
+      return;
+    }
+
+    await pool.query(
+      'INSERT IGNORE INTO customer_users (customer_id, user_id) VALUES (?, ?)',
+      [req.params.id, user_id]
+    );
+    invalidateScopeCache(Number(user_id));
+    res.status(201).json({ message: 'User assigned to customer' });
+  } catch (error) {
+    logger.error('Failed to assign user to customer:', error);
+    res.status(500).json({ error: 'Failed to assign user to customer' });
+  }
+});
+
+// Remove an app user from a customer (admin only)
+router.delete('/:customerId/users/:userId', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const [result] = await pool.query(
+      'DELETE FROM customer_users WHERE customer_id = ? AND user_id = ?',
+      [req.params.customerId, req.params.userId]
+    );
+
+    const deleteResult = result as any;
+    if (deleteResult.affectedRows === 0) {
+      res.status(404).json({ error: 'User assignment not found' });
+      return;
+    }
+
+    invalidateScopeCache(Number(req.params.userId));
+    res.json({ message: 'User removed from customer' });
+  } catch (error) {
+    logger.error('Failed to remove user from customer:', error);
+    res.status(500).json({ error: 'Failed to remove user from customer' });
   }
 });
 

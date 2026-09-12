@@ -12,6 +12,13 @@ interface User {
   is_active: boolean;
   last_login: string | null;
   created_at: string;
+  customer_ids?: number[];
+}
+
+interface Customer {
+  id: number;
+  name: string;
+  company: string | null;
 }
 
 interface UserFormData {
@@ -19,24 +26,38 @@ interface UserFormData {
   email: string;
   password: string;
   isAdmin: boolean;
+  customerIds: number[];
 }
 
 export function Users() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<UserFormData>({
     username: '',
     email: '',
     password: '',
-    isAdmin: false
+    isAdmin: false,
+    customerIds: []
   });
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     loadUsers();
+    loadCustomers();
   }, []);
+
+  const loadCustomers = async () => {
+    try {
+      const response = await fetch('/api/customers', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to load customers');
+      setCustomers(await response.json());
+    } catch (err) {
+      console.error('Failed to load customers:', err);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -65,7 +86,8 @@ export function Users() {
       username: '',
       email: '',
       password: '',
-      isAdmin: false
+      isAdmin: false,
+      customerIds: []
     });
     setShowModal(true);
   };
@@ -76,7 +98,8 @@ export function Users() {
       username: user.username,
       email: user.email,
       password: '',
-      isAdmin: user.is_admin
+      isAdmin: user.is_admin,
+      customerIds: user.customer_ids || []
     });
     setShowModal(true);
   };
@@ -204,7 +227,7 @@ export function Users() {
                   <tr key={user.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <Tooltip text={user.is_admin ? 'Administrator — full access to all settings' : 'Standard user — limited access'} position="right">
+                        <Tooltip text={user.is_admin ? 'Administrator — full access to all settings' : 'Read-only user — limited to the endpoints of its assigned customers'} position="right">
                           {user.is_admin ? (
                             <Shield className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                           ) : (
@@ -216,15 +239,25 @@ export function Users() {
                     </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{user.email}</td>
                     <td className="py-3 px-4">
-                      <Tooltip text={user.is_admin ? 'Administrator — has full access to all settings and data' : 'Standard user — limited access based on permissions'}>
+                      <Tooltip text={user.is_admin ? 'Administrator — has full access to all settings and data' : 'Read-only user — can view only the endpoints of its assigned customers and cannot change anything'}>
                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium cursor-default ${
                           user.is_admin
                             ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200'
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                         }`}>
-                          {user.is_admin ? 'Administrator' : 'User'}
+                          {user.is_admin ? 'Administrator' : 'Read-only'}
                         </span>
                       </Tooltip>
+                      {!user.is_admin && (
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          {(user.customer_ids || []).length === 0
+                            ? 'No customer assigned — sees nothing'
+                            : customers
+                                .filter((c) => (user.customer_ids || []).includes(c.id))
+                                .map((c) => c.name)
+                                .join(', ')}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       <Tooltip text={user.last_login ? `Last logged in on ${new Date(user.last_login).toLocaleString()}` : 'This user has never logged in'}>
@@ -326,6 +359,45 @@ export function Users() {
                   Administrator
                 </label>
               </div>
+
+              {!formData.isAdmin && (
+                <div>
+                  <label className="label">Customers</label>
+                  <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                    Read-only accounts see only the endpoints assigned to the customers ticked
+                    here. With none ticked the account sees nothing.
+                  </p>
+                  {customers.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      No customers defined yet — create one on the Customers page first.
+                    </p>
+                  ) : (
+                    <div className="max-h-40 space-y-1 overflow-y-auto rounded border border-gray-200 dark:border-gray-700 p-2">
+                      {customers.map((customer) => (
+                        <label key={customer.id} className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
+                          <input
+                            type="checkbox"
+                            checked={formData.customerIds.includes(customer.id)}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                customerIds: e.target.checked
+                                  ? [...formData.customerIds, customer.id]
+                                  : formData.customerIds.filter((id) => id !== customer.id)
+                              })
+                            }
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          {customer.name}
+                          {customer.company && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">({customer.company})</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 mt-6">

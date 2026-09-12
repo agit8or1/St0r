@@ -29,8 +29,11 @@ import { Tooltip } from '../components/Tooltip';
 import { api, linuxInstallerFilename } from '../services/api';
 import type { Client, Backup } from '../types';
 import { formatBytes, formatTimeAgo, formatTimestamp, formatDuration } from '../utils/format';
+import { useAuth } from '../hooks/useAuth';
 
 export function ClientDetail() {
+  const { user } = useAuth();
+  const isAdmin = !!user?.isAdmin;
   const { clientName } = useParams<{ clientName: string }>();
   const navigate = useNavigate();
   const [client, setClient] = useState<Client | null>(null);
@@ -289,15 +292,17 @@ export function ClientDetail() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Tooltip text="Configure backup settings for this endpoint">
-              <button
-                onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}/settings`)}
-                className="btn btn-secondary flex items-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </button>
-            </Tooltip>
+            {isAdmin && (
+              <Tooltip text="Configure backup settings for this endpoint">
+                <button
+                  onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}/settings`)}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </button>
+              </Tooltip>
+            )}
             <Tooltip text="Browse files from backed-up snapshots">
               <button
                 onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}/browse`)}
@@ -310,7 +315,9 @@ export function ClientDetail() {
           </div>
         </div>
 
-        {/* Download Client Software for THIS Client */}
+        {/* Download Client Software for THIS Client — installers embed the
+            endpoint's internet auth key, so they are administrator-only. */}
+        {isAdmin && (
         <div className="card bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
           <div className="flex items-center gap-3 mb-4">
             <Download className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -423,6 +430,7 @@ export function ClientDetail() {
             </a>
           </div>
         </div>
+        )}
 
         {/* View Toggle */}
         <div className="flex gap-2">
@@ -436,6 +444,7 @@ export function ClientDetail() {
           >
             Overview
           </button>
+          {isAdmin && (
           <button
             onClick={() => setView('schedule')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -447,6 +456,7 @@ export function ClientDetail() {
             <Calendar className="h-4 w-4 inline mr-2" />
             Backup Schedule
           </button>
+          )}
         </div>
 
         {/* Schedule View */}
@@ -537,6 +547,7 @@ export function ClientDetail() {
         </div>
 
         {/* Backup Controls */}
+        {isAdmin && (
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Start Backup
@@ -631,6 +642,7 @@ export function ClientDetail() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Backup History */}
         <div className="card">
@@ -679,6 +691,7 @@ export function ClientDetail() {
           ) : (
             <div className="space-y-2">
               {/* Select all row */}
+              {isAdmin && (
               <div className="flex items-center gap-3 px-4 py-1 text-xs text-gray-500 dark:text-gray-400">
                 <input
                   type="checkbox"
@@ -694,6 +707,7 @@ export function ClientDetail() {
                 />
                 <span>Select all</span>
               </div>
+              )}
               {displayBackups.map((backup) => {
                 const backupId = Number(backup.id);
                 const isConfirming = confirmDeleteId === backupId;
@@ -709,6 +723,7 @@ export function ClientDetail() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
+                      {isAdmin && (
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-gray-300 accent-primary-600"
@@ -721,6 +736,7 @@ export function ClientDetail() {
                           });
                         }}
                       />
+                      )}
                       <div className={`rounded-full p-2 ${
                         backup.incremental
                           ? 'bg-blue-100 dark:bg-blue-900'
@@ -751,7 +767,7 @@ export function ClientDetail() {
                           {backup.duration && !isNaN(backup.duration) ? formatDuration(backup.duration) : 'N/A'}
                         </p>
                       </div>
-                      {isConfirming ? (
+                      {isAdmin && (isConfirming ? (
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-red-600 dark:text-red-400 font-medium">Delete?</span>
                           <button
@@ -773,7 +789,7 @@ export function ClientDetail() {
                           {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                           Delete
                         </button>
-                      )}
+                      ))}
                     </div>
                   </div>
                 );

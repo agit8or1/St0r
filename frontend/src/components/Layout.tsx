@@ -42,22 +42,26 @@ export function Layout({ children }: LayoutProps) {
     navigate('/login');
   };
 
-  const navItems = [
+  // `adminOnly` pages expose server-wide data or configuration. Read-only,
+  // customer-scoped accounts never see them (the API rejects them too).
+  const allNavItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard, tip: 'Overview of backup status and system health' },
     { path: '/clients', label: 'Endpoints', icon: HardDrive, tip: 'Manage and monitor backup endpoints' },
-    { path: '/bare-metal-restore', label: 'Bare Metal Restore', icon: Usb, tip: 'Restore a full system image to bare metal' },
+    { path: '/bare-metal-restore', label: 'Bare Metal Restore', icon: Usb, tip: 'Restore a full system image to bare metal', adminOnly: true },
     { path: '/activities', label: 'Activities', icon: Activity, tip: 'View running and recent backup jobs' },
-    { path: '/logs', label: 'Logs', icon: FileText, tip: 'Browse backup and system log entries' },
+    { path: '/logs', label: 'Logs', icon: FileText, tip: 'Browse backup and system log entries', adminOnly: true },
     { path: '/customers', label: 'Customers', icon: Users, tip: 'Manage customer accounts and endpoint assignments' },
     { path: '/alerts', label: 'Alerts', icon: Bell, tip: 'View and manage backup alerts' },
     { path: '/reports', label: 'Reports', icon: FileText, tip: 'Generate and view backup reports' },
-    { path: '/replication', label: 'Replication', icon: GitBranch, tip: 'Configure offsite backup replication targets' },
-    { path: '/servers', label: 'Servers', icon: Server, tip: 'Manage this server and remote servers' },
-    { path: '/users', label: 'Users', icon: Users, tip: 'Manage St0r user accounts and permissions' },
+    { path: '/replication', label: 'Replication', icon: GitBranch, tip: 'Configure offsite backup replication targets', adminOnly: true },
+    { path: '/servers', label: 'Servers', icon: Server, tip: 'Manage this server and remote servers', adminOnly: true },
+    { path: '/users', label: 'Users', icon: Users, tip: 'Manage St0r user accounts and permissions', adminOnly: true },
     { path: '/docs', label: 'Documentation', icon: FileText, tip: 'View and generate endpoint documentation' },
-    { path: '/settings', label: 'Settings', icon: Settings, tip: 'Configure server, backup, and notification settings' },
+    { path: '/settings', label: 'Settings', icon: Settings, tip: 'Configure server, backup, and notification settings', adminOnly: true },
     { path: '/about', label: 'About', icon: Info, tip: 'About St0r and version information' },
   ];
+
+  const navItems = user?.isAdmin ? allNavItems : allNavItems.filter((item) => !item.adminOnly);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

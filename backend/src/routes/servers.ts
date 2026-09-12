@@ -9,7 +9,9 @@ import {
 } from '../controllers/servers.js';
 
 const router = Router();
-router.use(authenticate);
+// Managed-server infrastructure (hosts, SSH, agents, OS updates) is server-wide,
+// so the whole router is administrator-only.
+router.use(authenticate, requireAdmin);
 
 // CRUD
 router.get('/', listServers);
