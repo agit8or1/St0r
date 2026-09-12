@@ -1,9 +1,9 @@
 {
-  "version": "3.2.106",
+  "version": "3.2.107",
   "releaseDate": "2026-09-12",
   "changelog": [
-    "Update channel: the release package now ships database/migrations and auto-update.sh applies them, so schema changes reach remote installs instead of being silently skipped. Previously the tarball carried only the built code and version.json.",
-    "Hardening: if the customer tables are missing (an install that never ran migration 002), customer scope resolution now denies all access and logs why, instead of returning a 500 on every request. It fails closed — a broken schema can never widen a read-only account's visibility.",
-    "Includes 3.2.105: user roles are scoped to customers (issue #21). Non-admin accounts are read-only and see only the endpoints of the customers they are assigned to."
+    "Bare Metal Restore is available to read-only users again, scoped to their own endpoints. 3.2.105 made the page administrator-only; it is now gated per endpoint instead of per role, so a read-only account sees only its own customers' endpoints in the picker and can export only their images.",
+    "Includes 3.2.106: the release package ships database/migrations and auto-update.sh applies them; customer scope resolution fails closed when the customer tables are missing.",
+    "Includes 3.2.105: user roles are scoped to customers (issue #21)."
   ]
 }

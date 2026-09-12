@@ -47,7 +47,10 @@ export function Layout({ children }: LayoutProps) {
   const allNavItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard, tip: 'Overview of backup status and system health' },
     { path: '/clients', label: 'Endpoints', icon: HardDrive, tip: 'Manage and monitor backup endpoints' },
-    { path: '/bare-metal-restore', label: 'Bare Metal Restore', icon: Usb, tip: 'Restore a full system image to bare metal', adminOnly: true },
+    // Scoped per endpoint, not per role: the client picker and the image export
+    // are both filtered to the caller's customers, so read-only accounts can
+    // restore their own endpoints.
+    { path: '/bare-metal-restore', label: 'Bare Metal Restore', icon: Usb, tip: 'Restore a full system image to bare metal' },
     { path: '/activities', label: 'Activities', icon: Activity, tip: 'View running and recent backup jobs' },
     { path: '/logs', label: 'Logs', icon: FileText, tip: 'Browse backup and system log entries', adminOnly: true },
     { path: '/customers', label: 'Customers', icon: Users, tip: 'Manage customer accounts and endpoint assignments' },

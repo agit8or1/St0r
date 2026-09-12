@@ -108,9 +108,9 @@ function App() {
           <Route
             path="/bare-metal-restore"
             element={
-              <AdminRoute>
+              <ProtectedRoute>
                 <BareMetalRestore />
-              </AdminRoute>
+              </ProtectedRoute>
             }
           />
           <Route
