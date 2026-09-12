@@ -1,9 +1,9 @@
 {
-  "version": "3.2.113",
+  "version": "3.2.114",
   "releaseDate": "2026-09-12",
   "changelog": [
-    "The Server Hostname field's example and placeholder used a real deployment's domain. They now use backup.example.com, which is reserved for documentation, so the hint reads as an example rather than a value someone might copy.",
-    "Includes 3.2.112: the client installer card reports the address and port the installer is actually built with, read from UrBackup's own settings.",
-    "Includes 3.2.105-3.2.111: user roles scoped to customers (issue #21), immediate effect for user removal and role changes, migrations shipped through the update channel, Bare Metal Restore and client installers scoped per endpoint, VHD export fixed, and unrestorable images kept out of the restore picker."
+    "Removed the unreachable in-app bug report path. The Report Bug button has always linked straight to GitHub issues, the modal behind this feature was never rendered anywhere, and nothing called its API — so it was an authenticated endpoint that emailed a hardcoded address and could not be triggered from the UI. Reporting bugs is unchanged: the button still opens GitHub.",
+    "Includes 3.2.113: the Server Hostname placeholder uses a reserved documentation domain.",
+    "Includes 3.2.105-3.2.112: user roles scoped to customers (issue #21), immediate effect for user removal and role changes, migrations shipped through the update channel, Bare Metal Restore and client installers scoped per endpoint, VHD export fixed, unrestorable images kept out of the restore picker, and the installer card reporting the address it is actually built with."
   ]
 }

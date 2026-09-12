@@ -130,7 +130,6 @@ const NON_ADMIN_WRITE_ALLOWLIST: RegExp[] = [
   /^\/api\/auth\/(logout|me|refresh)$/,
   /^\/api\/profile\/change-password$/,
   /^\/api\/2fa\//,
-  /^\/api\/bug-report$/,
   /^\/api\/storage-limits\/status$/,
 ];
 
