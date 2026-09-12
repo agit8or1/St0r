@@ -538,7 +538,7 @@ export function Settings() {
                   <label className="label">
                     Server Hostname / FQDN
                     <span className="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
-                      Public hostname for this St0r server (e.g., stor.agit8or.net). Used for client installer scripts and remote agent install commands.
+                      Public hostname for this St0r server (e.g., backup.example.com). Used for client installer scripts and remote agent install commands.
                     </span>
                   </label>
                   <input
@@ -546,7 +546,7 @@ export function Settings() {
                     value={clientSettings.urbackupServerHost}
                     onChange={(e) => setClientSettings(prev => ({ ...prev, urbackupServerHost: e.target.value }))}
                     className="input"
-                    placeholder="stor.agit8or.net"
+                    placeholder="backup.example.com"
                   />
                 </div>
 
