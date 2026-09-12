@@ -32,7 +32,7 @@ export function invalidateScopeCache(userId?: number): void {
 }
 
 export async function getUserScope(
-  user?: { userId: number; isAdmin: boolean }
+  user?: { userId: number; username?: string; isAdmin: boolean }
 ): Promise<UserScope> {
   if (!user) return { isAdmin: false, customerIds: [], clientNames: new Set<string>() };
   if (user.isAdmin) return ADMIN_SCOPE;
@@ -40,14 +40,25 @@ export async function getUserScope(
   const cached = scopeCache.get(user.userId);
   if (cached && Date.now() - cached.ts < SCOPE_TTL_MS) return cached.scope;
 
-  const rows = await query<any[]>(
-    `SELECT cu.customer_id, cc.client_name
-       FROM customer_users cu
-       JOIN customers c ON c.id = cu.customer_id AND c.is_active = 1
-       LEFT JOIN customer_clients cc ON cc.customer_id = cu.customer_id
-      WHERE cu.user_id = ?`,
-    [user.userId]
-  );
+  let rows: any[];
+  try {
+    rows = await query<any[]>(
+      `SELECT cu.customer_id, cc.client_name
+         FROM customer_users cu
+         JOIN customers c ON c.id = cu.customer_id AND c.is_active = 1
+         LEFT JOIN customer_clients cc ON cc.customer_id = cu.customer_id
+        WHERE cu.user_id = ?`,
+      [user.userId]
+    );
+  } catch (error) {
+    // An install whose customer tables are missing (migration 002 never ran)
+    // must not fall back to server-wide visibility. Fail closed and say why.
+    logger.error(
+      `Cannot resolve customer scope for ${user.username ?? `user ${user.userId}`} — denying all access. Run the database migrations:`,
+      error
+    );
+    return { isAdmin: false, customerIds: [], clientNames: new Set<string>() };
+  }
 
   const customerIds = new Set<number>();
   const clientNames = new Set<string>();

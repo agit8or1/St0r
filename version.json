@@ -1,11 +1,9 @@
 {
-  "version": "3.2.105",
+  "version": "3.2.106",
   "releaseDate": "2026-09-12",
   "changelog": [
-    "Security: user roles are now scoped to customers (issue #21). Non-admin accounts are read-only and see only the endpoints belonging to the customers they are assigned to. Previously every account had full read/write access to every endpoint on the server, which made St0r unsafe to expose to individual clients in MSP deployments.",
-    "Users page: a read-only account can now be assigned to one or more customers. An account with no customer assigned sees nothing — scoping fails closed, so a newly created account never starts out with server-wide visibility.",
-    "Every mutating API endpoint now requires an administrator, enforced both per route and by a global write guard. Endpoint lists, status counters, activities, job logs, backup statistics, file browsing, downloads and storage usage are filtered to the caller's customers; server-wide pages (Logs, Settings, Servers, Replication, Disk Guard, client installers) are administrator-only.",
-    "The UI follows the same rules: read-only accounts no longer see admin-only navigation entries, write buttons, or client installers (which embed an endpoint's internet auth key), and admin-only pages redirect to the dashboard.",
-    "Fix: the admin-only user list no longer returns each account's TOTP seed."
+    "Update channel: the release package now ships database/migrations and auto-update.sh applies them, so schema changes reach remote installs instead of being silently skipped. Previously the tarball carried only the built code and version.json.",
+    "Hardening: if the customer tables are missing (an install that never ran migration 002), customer scope resolution now denies all access and logs why, instead of returning a 500 on every request. It fails closed — a broken schema can never widen a read-only account's visibility.",
+    "Includes 3.2.105: user roles are scoped to customers (issue #21). Non-admin accounts are read-only and see only the endpoints of the customers they are assigned to."
   ]
 }

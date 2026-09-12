@@ -124,6 +124,34 @@ if [ -f /tmp/urbackup-gui-env-backup ]; then
     log "Restored .env configuration"
 fi
 
+# Apply database migrations (idempotent — every file uses IF NOT EXISTS guards)
+if [ -d /tmp/urbackup-gui-new/database/migrations ]; then
+    log "Applying database migrations..."
+    mkdir -p "$INSTALL_DIR/database"
+    cp -r /tmp/urbackup-gui-new/database/migrations "$INSTALL_DIR/database/"
+
+    # Credentials live in the .env restored above
+    DB_NAME=$(grep -E '^DB_NAME=' "$INSTALL_DIR/backend/.env" 2>/dev/null | cut -d= -f2-)
+    DB_USER=$(grep -E '^DB_USER=' "$INSTALL_DIR/backend/.env" 2>/dev/null | cut -d= -f2-)
+    DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$INSTALL_DIR/backend/.env" 2>/dev/null | cut -d= -f2-)
+
+    if [ -n "$DB_NAME" ] && [ -n "$DB_USER" ]; then
+        for mig in "$INSTALL_DIR"/database/migrations/*.sql; do
+            [ -f "$mig" ] || continue
+            if mysql -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < "$mig" >> "$LOG_FILE" 2>&1; then
+                log "  Applied: $(basename "$mig")"
+            else
+                # Migrations are re-run on every update, so "already exists" is
+                # expected and must not abort the update.
+                log "  Skipped (already applied or not applicable): $(basename "$mig")"
+            fi
+        done
+        log "Database migrations complete"
+    else
+        log "WARNING: could not read DB credentials from .env — skipping migrations"
+    fi
+fi
+
 # Install/update dependencies
 log "Installing backend dependencies (this may take 30-60 seconds)..."
 cd "$INSTALL_DIR/backend"

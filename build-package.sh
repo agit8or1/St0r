@@ -32,9 +32,16 @@ cp "$SCRIPT_DIR/frontend/package.json" "$BUILD_DIR/urbackup-gui/frontend/"
 echo "Copying version file..."
 cp "$SCRIPT_DIR/version.json" "$BUILD_DIR/urbackup-gui/"
 
-# Copy auto-update script
+# Copy database migrations so updates can apply schema changes
+echo "Copying database migrations..."
+mkdir -p "$BUILD_DIR/urbackup-gui/database"
+cp -r "$SCRIPT_DIR/database/migrations" "$BUILD_DIR/urbackup-gui/database/"
+
+# Copy auto-update script — the repo copy is authoritative
 echo "Copying auto-update script..."
-if [ -f "/opt/urbackup-gui/auto-update.sh" ]; then
+if [ -f "$SCRIPT_DIR/auto-update.sh" ]; then
+    cp "$SCRIPT_DIR/auto-update.sh" "$BUILD_DIR/urbackup-gui/"
+elif [ -f "/opt/urbackup-gui/auto-update.sh" ]; then
     cp "/opt/urbackup-gui/auto-update.sh" "$BUILD_DIR/urbackup-gui/"
 fi
 
