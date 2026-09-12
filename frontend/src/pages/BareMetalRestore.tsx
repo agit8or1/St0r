@@ -23,6 +23,7 @@ interface ImageBackup {
   incremental: boolean;
   path?: string;
   letter?: string;
+  restorable?: boolean;
 }
 
 export function BareMetalRestore() {
@@ -33,6 +34,7 @@ export function BareMetalRestore() {
   const [loading, setLoading] = useState(true);
   const [loadingBackups, setLoadingBackups] = useState(false);
   const [confirmDownload, setConfirmDownload] = useState<{ backup: ImageBackup; gb: number } | null>(null);
+  const [hiddenCount, setHiddenCount] = useState(0);
 
   useEffect(() => {
     loadClients();
@@ -69,12 +71,22 @@ export function BareMetalRestore() {
         incremental: b.incremental,
         path: b.path,
         letter: b.letter,
+        restorable: b.restorable,
       }));
 
-      setImageBackups(imageBackupsList);
+      // A failed image transfer can still be recorded as complete, leaving a
+      // zero-byte backup that lists normally but restores nothing. Keep those
+      // out of the picker so they cannot be chosen during an outage — and say
+      // how many were withheld, rather than silently showing a short list.
+      const restorable = imageBackupsList.filter(
+        (b) => b.restorable !== false && b.size_bytes > 0
+      );
+      setHiddenCount(imageBackupsList.length - restorable.length);
+      setImageBackups(restorable);
     } catch (err) {
       console.error('Failed to load image backups:', err);
       setImageBackups([]);
+      setHiddenCount(0);
     } finally {
       setLoadingBackups(false);
     }
@@ -309,11 +321,28 @@ export function BareMetalRestore() {
               Available Image Backups for {selectedClient.name}
             </h2>
 
+            {hiddenCount > 0 && (
+              <div className="mb-4 flex gap-2 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 p-3">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  <strong>
+                    {hiddenCount} image backup{hiddenCount === 1 ? '' : 's'} hidden.
+                  </strong>{' '}
+                  {hiddenCount === 1 ? 'It is' : 'They are'} recorded as complete but
+                  hold no data, so {hiddenCount === 1 ? 'it cannot' : 'they cannot'} be
+                  restored. This usually means the image transfer failed — check the
+                  backup logs for this endpoint.
+                </p>
+              </div>
+            )}
+
             {loadingBackups ? (
               <Loading />
             ) : imageBackups.length === 0 ? (
               <p className="text-center text-gray-600 dark:text-gray-400 py-8">
-                No image backups available
+                {hiddenCount > 0
+                  ? 'No restorable image backups available'
+                  : 'No image backups available'}
               </p>
             ) : (
               <div className="space-y-2">

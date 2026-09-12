@@ -1,6 +1,7 @@
 import { execFile as execFileCb } from 'child_process';
 import { promisify } from 'util';
 import { resolve, dirname } from 'path';
+import { existsSync } from 'fs';
 import { getUrBackupDb, openUrBackupDbReadWrite } from '../config/urbackupDb.js';
 const execFile = promisify(execFileCb);
 import { logger } from '../utils/logger.js';
@@ -239,6 +240,11 @@ export class UrBackupDbService {
         complete: backup.complete === 1,
         archived: backup.archived === 1,
         image: true, // Mark as image backup
+        // UrBackup can mark an image "complete" after the transfer failed,
+        // leaving a zero-byte row and a directory holding only the .mbr. Such a
+        // backup lists like any other but cannot be restored or exported, so
+        // flag it rather than letting a restore pick it in an emergency.
+        restorable: backup.size_bytes > 0 && !!backup.path && existsSync(backup.path),
       }));
     } catch (error) {
       logger.error(`Failed to get image backups for client ${clientId}:`, error);

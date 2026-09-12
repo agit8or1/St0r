@@ -1,10 +1,10 @@
 {
-  "version": "3.2.108",
+  "version": "3.2.109",
   "releaseDate": "2026-09-12",
   "changelog": [
-    "Fix: downloading an image backup as a VHD failed with 'decompress-file exited 3' for every user. urbackupsrv decompress-file drops privileges to the urbackup user and writes its output in place, so it needs write access to the export directory — which St0r created as the service user with no access for urbackup. The directory is now group-owned by urbackup and group-writable.",
-    "The exported image is handed back to the service group at mode 0640 instead of being made world-readable, so a customer's disk image is not exposed to other local accounts while the download runs.",
-    "Includes 3.2.107: Bare Metal Restore is scoped per endpoint, so read-only users can restore their own machines.",
-    "Includes 3.2.105-3.2.106: user roles scoped to customers (issue #21), and migrations shipped through the update channel."
+    "Bare Metal Restore no longer offers image backups that hold no data. UrBackup can mark an image complete after the transfer failed, leaving a zero-byte record that lists like any other backup but restores nothing — the worst possible thing to pick during an outage. Such backups are now withheld from the restore picker, with a warning saying how many were hidden and why, rather than a silently shortened list.",
+    "The API marks each image backup with a `restorable` flag (non-zero size and the image file actually present on disk). Backup history still shows the failed attempts, so a broken backup chain stays visible instead of disappearing.",
+    "Includes 3.2.108: fixed VHD export failing with 'decompress-file exited 3'.",
+    "Includes 3.2.105-3.2.107: user roles scoped to customers (issue #21), migrations shipped through the update channel, Bare Metal Restore scoped per endpoint."
   ]
 }
