@@ -126,7 +126,7 @@ instance: the one on the same host.
 
 ## Requirements
 
-| | |
+| Requirement | Detail |
 |---|---|
 | **UrBackup Server** | 2.5.x — developed and verified against **2.5.38** |
 | **Operating system** | Ubuntu or Debian (the installer is `apt`-based) |
