@@ -9,7 +9,7 @@
 [![UrBackup](https://img.shields.io/badge/UrBackup-2.5.x-4c6ef5)](https://www.urbackup.org/)
 [![Platform](https://img.shields.io/badge/platform-Ubuntu%20%7C%20Debian-informational)](#requirements)
 
-[Quick start](#quick-start) · [Screenshots](docs/screenshots.md) · [Documentation](#documentation) · [Releases](https://github.com/agit8or1/St0r/releases) · [MSP Reboot](https://mspreboot.com)
+[Quick start](#quick-start) · [Walkthrough](#watch-the-walkthrough) · [Screenshots](docs/screenshots.md) · [Documentation](#documentation) · [Releases](https://github.com/agit8or1/St0r/releases) · [MSP Reboot](https://mspreboot.com)
 
 </div>
 
