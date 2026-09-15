@@ -1,371 +1,183 @@
-# st0r — UrBackup Web GUI
+<div align="center">
 
-A modern, full-featured web interface for managing and monitoring [UrBackup](https://www.urbackup.org/) servers. Built with React + TypeScript, designed to run directly on your UrBackup Linux server.
+# St0r
 
-[![GitHub Stars](https://img.shields.io/github/stars/agit8or1/St0r?style=flat&label=Stars)](https://github.com/agit8or1/St0r/stargazers)
-[![Version](https://img.shields.io/badge/version-3.2.92-blue.svg)](https://github.com/agit8or1/St0r/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+**A modern management interface for UrBackup.**
 
-⭐ If St0r saves you time, a star helps others find it!
+[![Latest release](https://img.shields.io/github/v/release/agit8or1/St0r?label=release)](https://github.com/agit8or1/St0r/releases)
+[![UrBackup](https://img.shields.io/badge/UrBackup-2.5.x-4c6ef5)](https://www.urbackup.org/)
+[![Platform](https://img.shields.io/badge/platform-Ubuntu%20%7C%20Debian-informational)](#requirements)
 
----
+[Screenshots](docs/screenshots.md) · [Quick start](#quick-start) · [Compatibility](#requirements) · [Documentation](#documentation) · [Releases](https://github.com/agit8or1/St0r/releases)
 
-## Features
-
-### Core
-- **Dashboard** — Real-time overview: client health, storage usage, active tasks, replication status. All stat cards are clickable links.
-- **Client Management** — Monitor all backup clients with file/image status, last-seen, IP, OS, and UrBackup client software version. Filter by online/offline/failed.
-- **Endpoint Settings** — Per-client backup configuration: file paths, retention counts, backup windows, internet mode, auth key management.
-- **Backup Controls** — Start/stop full or incremental file and image backups from the web UI with inline status feedback.
-- **Backup History** — Complete per-client backup history with type, size, duration, and status.
-- **Storage Limits** — Set per-client storage caps with configurable warn/critical thresholds; progress bar in the endpoint list highlights clients approaching or exceeding their limit.
-
-### File Operations
-- **File Browser** — Browse any backup snapshot by date; download individual files.
-- **File Restore** — Select files from a backup and restore them directly to the client machine.
-- **Bare Metal Restore** — Download UrBackup Restore CD/USB ISO with step-by-step instructions.
-
-### Monitoring
-- **Activity Monitoring** — Live and historical backup activities. Running backups show real-time progress, speed (MB/s), and ETA. Completed image backups are grouped by session (e.g., "Image Backup (C:, D:)").
-- **Storage Visualization** — Pie chart of used vs. available backup storage per client.
-- **Logs** — Browse UrBackup server logs from the web UI.
-- **Alerts** — Configurable alert rules with history.
-- **Reports** — Backup status reports.
-
-### Replication
-- **Full Standby Replication** — Mirror the UrBackup server to one or more DR targets via SSH/rsync.
-- **Replication Targets** — Add/edit/delete targets with SSH key or password auth, bandwidth limits, path mapping.
-- **Run History** — Per-target run log with step-by-step progress viewer.
-- **Alert Channels** — Email and webhook notifications for replication failures, stale targets, and recoveries.
-- **Scheduled + Hook-based Triggers** — Trigger replication on a schedule, after each backup completes, or both. Configurable debounce.
-- **AES-256-GCM encrypted credential storage** — SSH private keys and passwords are encrypted at rest.
-
-### Settings & Admin
-- **Server Settings** — Manage global UrBackup settings (internet mode, backup windows, retention, quotas) directly from the GUI.
-- **Internet Client Setup** — Generate Windows/Linux/macOS installers with the correct server address embedded.
-- **User Management** — Role-based access control; create/delete users; admin vs. read-only roles.
-- **2FA** — TOTP two-factor authentication per user (TOTP compatible with Google Authenticator, Authy, etc.).
-- **Customer Management** — Group clients by customer organization.
-- **Profile** — Change your own password and 2FA settings.
-
-### Updates
-- **St0r auto-update** — Built-in update checker polls GitHub every 30 minutes; one-click update with live log output, progress bar, and automatic rollback on failure.
-- **UrBackup server update** — About page shows installed vs latest UrBackup server version; one-click apt-based upgrade with live terminal output.
-- **Force reinstall** — Repair-mode reinstall of the current version without needing a newer release.
-
-### UI / UX
-- **Dark Mode** — System-aware with manual toggle; preference persisted across sessions.
-- **Responsive** — Works on desktop and tablet.
-- **Tooltips** — Contextual hover hints throughout the UI; can be toggled in Settings.
-- **Bug Reporting** — In-app bug report form.
+</div>
 
 ---
 
-## Screenshots
+St0r is a web interface for administrators who already run **UrBackup Server** and want a clearer way to
+operate it day to day — seeing endpoint status, adjusting schedules and retention, browsing what was
+backed up, and replicating the backup store offsite.
 
-### Dashboard
-![Dashboard](screenshots/01-dashboard.png)
+**St0r does not replace the backup engine.** UrBackup still performs every backup, owns the storage, and
+decides what is recoverable. St0r reads UrBackup's own database and API and presents them; it changes
+UrBackup's settings only where you ask it to. If St0r is stopped, backups continue exactly as before.
 
-### Endpoints
-![Endpoints](screenshots/02-clients.png)
+<img src="docs/images/github/dashboard.png" alt="St0r dashboard showing six endpoints, backup job totals for the last seven days, replication health, backup storage capacity, and one endpoint flagged as needing attention" width="100%">
 
-### Endpoint Detail
-![Endpoint Detail](screenshots/03-client-detail.png)
+---
 
-### Endpoint Settings — Backup Paths
-![Endpoint Settings — Backup Paths](screenshots/11-client-settings.png)
+## Why St0r
 
-### Endpoint Settings — Schedule & Retention
-![Endpoint Settings — Schedule](screenshots/12-client-settings-schedule.png)
+**One view of every endpoint.** Online state, last file and image backup, storage against an optional
+per-endpoint quota, and which endpoints need attention — in one table instead of several UrBackup screens.
 
-### Endpoint Settings — Transfer
-![Endpoint Settings — Transfer](screenshots/13-client-settings-transfer.png)
+**Schedules and retention without the settings maze.** Backup intervals, backup windows, retention counts,
+excluded paths and per-endpoint storage limits are grouped into labelled tabs, with UrBackup's defaults
+shown next to each field.
 
-### Endpoint Settings — Image Backup
-![Endpoint Settings — Image Backup](screenshots/14-client-settings-image.png)
+**Offsite replication you can actually see.** Push the backup store and its databases to a standby server
+over SSH/rsync, with run history, bytes transferred, replication lag and alerting on failure.
 
-### Endpoint Settings — Permissions
-![Endpoint Settings — Permissions](screenshots/15-client-settings-permissions.png)
+> Replication copies your backup store to another machine. It is not a substitute for periodically
+> performing a **test restore**, and it does not make backups immutable — deletions and corruption
+> replicate too.
 
-### Endpoint Settings — Storage Limit
-![Endpoint Settings — Storage Limit](screenshots/16-client-settings-storage.png)
+---
 
-### Activity Monitoring
-![Activities](screenshots/04-activities.png)
+## A quick tour
 
-### Replication Management
-![Replication](screenshots/05-replication.png)
+| | |
+|---|---|
+| <img src="docs/images/github/endpoints.png" alt="Endpoint list with customer assignment, last file and image backup times, storage used against quota, and per-endpoint online and backup status badges" width="420"> | **Endpoints** — every endpoint with its customer, last backups, quota usage and status. Filter by state or customer. |
+| <img src="docs/images/github/endpoint-schedule.png" alt="Endpoint settings screen open on the Schedule and Retention tab, showing incremental and full backup intervals, backup windows, and file backup retention counts" width="420"> | **Schedules and retention** — intervals, backup windows and how many snapshots to keep, per endpoint. |
+| <img src="docs/images/github/replication.png" alt="Replication overview showing one healthy target, two hour replication lag, and a table of four recent runs with status, trigger, duration and bytes sent" width="420"> | **Replication** — target health, replication lag, and a history of each run. |
+| <img src="docs/images/github/file-browser.png" alt="File browser showing a calendar of days with backups, a selected backup, and the files inside one folder of that backup with download buttons" width="420"> | **File browser** — pick a date, open a backup, and download individual files or folders. |
 
-### File Browser
-![File Browser](screenshots/06-file-browser.png)
+More screens in [docs/screenshots.md](docs/screenshots.md).
 
-### Server Settings
-![Settings](screenshots/07-settings.png)
+---
+
+## How it works
+
+St0r runs alongside UrBackup on the same machine and talks to it three ways:
+
+1. **Reads UrBackup's SQLite databases directly.** `/var/urbackup/backup_server.db` for clients, backups,
+   images and job logs, and `backup_server_settings.db` for settings. Most access is read-only; St0r opens
+   them read-write for specific actions such as deleting a backup or applying a per-endpoint setting.
+2. **Calls UrBackup's HTTP API** on `localhost:55414` to start and stop backups, read live progress, save
+   client settings, and build pre-configured client installers.
+3. **Reads the backup storage folder from disk** to browse and download files inside a backup. The folder
+   location comes from UrBackup's settings database, so it follows the path UrBackup actually uses.
+
+Its own data — user accounts, customers, replication configuration and history — lives in a separate
+MariaDB database and never mixes with UrBackup's.
+
+**Installation on the same server as UrBackup is required.** The SQLite databases and the backup storage
+are opened as local files, so a remote UrBackup server is not supported. St0r manages one UrBackup
+instance: the one on the same host.
 
 ---
 
 ## Requirements
 
-- **Linux server running UrBackup Server 2.5.x or later**
-- Must be installed **on the same machine** as UrBackup (reads UrBackup's SQLite DB directly)
-- Node.js 20+, MariaDB, Nginx
+| | |
+|---|---|
+| **UrBackup Server** | 2.5.x — developed and verified against **2.5.38** |
+| **Operating system** | Ubuntu or Debian (the installer is `apt`-based) |
+| **Runtime** | Node.js 20+, MariaDB, Nginx — installed for you by `install.sh` |
+| **Location** | Same host as UrBackup Server |
+
+Other distributions, and UrBackup releases outside 2.5.x, are untested rather than known-broken.
 
 ---
 
-## Quick Installation
-
-### Automated (Recommended)
+## Quick start
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/agit8or1/St0r/main/install.sh | sudo bash
 ```
 
-Or download first:
+Then open `http://YOUR_SERVER_IP`.
 
-```bash
-wget https://raw.githubusercontent.com/agit8or1/St0r/main/install.sh
-chmod +x install.sh
-sudo ./install.sh
-```
+### What the installer changes
 
-The installer will:
-1. Install Node.js 20, MariaDB, Nginx
-2. Create the database and apply the schema
-3. Build the backend and frontend
-4. Configure Nginx as a reverse proxy
-5. Install and start the `urbackup-gui` systemd service
+Read this before running it on a server that already serves web content:
 
-After installation, access the GUI at: **http://YOUR_SERVER_IP**
+- **Installs packages:** Node.js 20, MariaDB, Nginx, `rsync`, `sqlite3`, `curl`, `gnupg2`. If UrBackup
+  Server is not present, it installs that too.
+- **Takes over Nginx's default site.** It writes `/etc/nginx/sites-available/urbackup-gui`, enables it as
+  `listen 80 default_server`, and **removes `/etc/nginx/sites-enabled/default`**. If something else already
+  serves port 80 or claims `default_server`, expect a conflict — put St0r behind your existing proxy
+  instead (the backend listens on `127.0.0.1:3000`).
+- **Serves plain HTTP on port 80.** No TLS is configured. Terminate TLS at your own proxy before exposing
+  St0r to anything untrusted.
+- **Adjusts UrBackup database permissions.** It adds the service user to the `urbackup` group and makes
+  `/var/urbackup/backup_server*.db` group-writable, so St0r can perform the write operations above.
+- **Creates a systemd service** `urbackup-gui` and a MariaDB database `urbackup_gui`.
 
-### Manual Installation
+### First login
 
-#### 1. Install Dependencies
+The first run creates an administrator account with **the well-known default credentials
+`admin` / `admin123`**. Signing in with that password opens a change-password dialog.
 
-```bash
-sudo apt-get update
-sudo apt-get install -y curl gnupg2 nginx mariadb-server
+Until that password is changed, be aware of how St0r advertises it:
 
-# Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
-sudo apt-get install -y nodejs
-```
+- `GET /api/setup/status` needs no authentication and reports whether the default password is still in use.
+- While it is, **the login page displays the username and password on screen** to anyone who opens it.
 
-#### 2. Configure MariaDB
+Change the password before the server is reachable by anyone you do not trust, ideally before it leaves
+localhost. This is a real weakness, documented here rather than glossed over — see
+[Known limitations](#known-limitations).
 
-```bash
-sudo systemctl start mariadb && sudo systemctl enable mariadb
-
-sudo mysql -u root <<'EOF'
-CREATE DATABASE urbackup_gui;
-CREATE USER 'urbackup'@'localhost' IDENTIFIED BY 'CHANGE_ME';
-GRANT ALL PRIVILEGES ON urbackup_gui.* TO 'urbackup'@'localhost';
-FLUSH PRIVILEGES;
-EOF
-
-sudo mysql -u root urbackup_gui < database/init/01_schema.sql
-```
-
-#### 3. Install Application
-
-```bash
-sudo mkdir -p /opt/urbackup-gui
-sudo cp -r . /opt/urbackup-gui/
-sudo chown -R $USER:$USER /opt/urbackup-gui
-
-# Backend
-cd /opt/urbackup-gui/backend
-npm install
-npm run build
-
-cat > .env <<EOF
-NODE_ENV=production
-PORT=3000
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=urbackup_gui
-DB_USER=urbackup
-DB_PASSWORD=CHANGE_ME
-JWT_SECRET=$(openssl rand -hex 32)
-APP_SECRET_KEY=$(openssl rand -hex 32)
-URBACKUP_DB_PATH=/var/urbackup/backup_server.db
-URBACKUP_API_URL=http://localhost:55414/x
-URBACKUP_USERNAME=admin
-URBACKUP_PASSWORD=
-EOF
-
-# Frontend
-cd /opt/urbackup-gui/frontend
-npm install
-npm run build
-```
-
-#### 4. Configure Services
-
-```bash
-# Systemd service
-sudo cp /opt/urbackup-gui/setup/urbackup-gui.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now urbackup-gui
-
-# Nginx
-sudo cp /opt/urbackup-gui/setup/nginx-site.conf /etc/nginx/sites-available/urbackup-gui
-sudo ln -sf /etc/nginx/sites-available/urbackup-gui /etc/nginx/sites-enabled/urbackup-gui
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo systemctl restart nginx
-```
-
-#### 5. Apply Database Migrations (if upgrading)
-
-```bash
-sudo mysql -u root urbackup_gui < database/migrations/002_add_totp_and_customers.sql
-sudo mysql -u root urbackup_gui < database/migrations/003_replication.sql
-```
+Manual, step-by-step installation is documented in
+[docs/installation.md](docs/installation.md).
 
 ---
 
-## Default Credentials
+## Documentation
 
-| Field | Value |
-|-------|-------|
-| Username | `admin` |
-| Password | `admin123` |
-
-> **Change the default password immediately after first login** via Profile → Change Password.
-
----
-
-## Service Management
-
-```bash
-# Status / start / stop / restart
-sudo systemctl status urbackup-gui
-sudo systemctl restart urbackup-gui
-
-# View live logs
-sudo journalctl -u urbackup-gui -f
-
-# Nginx
-sudo systemctl restart nginx
-sudo nginx -t          # test config
-```
+| Topic | Where |
+|---|---|
+| Manual installation, configuration reference | [docs/installation.md](docs/installation.md) |
+| Updating and uninstalling | [docs/installation.md](docs/installation.md#updating) |
+| Backing up St0r's own database | [docs/installation.md](docs/installation.md#backing-up-st0rs-own-database) |
+| Backing up UrBackup's databases | [docs/URBACKUP_DATABASE_BACKUP.md](docs/URBACKUP_DATABASE_BACKUP.md) |
+| Full screenshot catalogue | [docs/screenshots.md](docs/screenshots.md) |
+| UrBackup API reference used by St0r | [docs/URBACKUP_API_COMPLETE_REFERENCE.md](docs/URBACKUP_API_COMPLETE_REFERENCE.md) |
+| Deployment notes | [DEPLOYMENT.md](DEPLOYMENT.md) |
+| Release history | [CHANGELOG.md](CHANGELOG.md) · [Releases](https://github.com/agit8or1/St0r/releases) |
 
 ---
 
-## Updating
+## Known limitations
 
-### Via the GUI
-Go to **About** → **Check for Updates** → click **Update Now**.
-
-### Manually
-
-```bash
-cd /opt/urbackup-gui
-git pull                          # if installed from git
-
-cd backend && npm install && npm run build
-cd ../frontend && npm install && npm run build
-sudo systemctl restart urbackup-gui
-```
-
----
-
-## Configuring HTTPS
-
-```bash
-sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d yourdomain.com
-```
-
-Certbot will automatically update the Nginx configuration.
-
----
-
-## Replication Setup
-
-1. Go to **Replication → Targets → Add Target**
-2. Enter the DR server host, SSH user, and authentication details (SSH key recommended)
-3. Configure paths: the target root path and any custom repository path mappings
-4. Click **Test Connection** to verify SSH + rsync connectivity
-5. Go to **Replication → Settings** to enable replication and set the trigger mode
-6. Click **Run Now** on any target to start an immediate replication
-
-SSH keys are stored AES-256-GCM encrypted in the database. The encryption key is derived from `APP_SECRET_KEY` in the backend `.env`.
+- **Default credentials on first run.** `admin` / `admin123` is created automatically. Until it is changed,
+  an unauthenticated endpoint reports that the default is in use and the login page shows the credentials
+  on screen. Signing in with them opens a change-password dialog.
+- **No TLS out of the box.** The installer configures plain HTTP on port 80.
+- **One UrBackup server per installation**, on the same host. There is no aggregated view across several
+  UrBackup servers.
+- **Ubuntu and Debian only.** The installer assumes `apt`.
+- **The installer disables Nginx's default site**, which can disrupt an existing web server.
+- **St0r writes to UrBackup's databases** for some operations. Keep your own backup of `/var/urbackup`.
+- **Replication is push-only over SSH/rsync** to a standby server, and it is a copy, not an independent
+  verified restore.
 
 ---
 
 ## Security
 
-- JWT authentication stored in HttpOnly cookies (not localStorage)
-- bcrypt password hashing
-- Role-based access control (admin / read-only)
-- Optional per-user TOTP 2FA
-- `helmet.js` security headers
-- Rate limiting on auth endpoints
-- FQDN input validated before any SQL/shell use
-- SSH credentials encrypted at rest (AES-256-GCM)
+Please do not report security issues in public GitHub issues. Use a
+[private security advisory](https://github.com/agit8or1/St0r/security/advisories/new), or email the
+maintainer. Full policy: [SECURITY.md](SECURITY.md).
 
-See [SECURITY.md](SECURITY.md) for the vulnerability reporting policy.
+## Support and contributions
+
+Questions and bug reports: [GitHub Issues](https://github.com/agit8or1/St0r/issues).
+Pull requests are welcome — please open an issue first for anything substantial.
 
 ---
 
-## Troubleshooting
-
-### Backend not starting
-```bash
-sudo journalctl -u urbackup-gui -n 50
-sudo lsof -i :3000
-mysql -u urbackup -p urbackup_gui -e "SELECT 1;"
-```
-
-### Backup directory permission error
-The `urbackup` OS user must be able to traverse the backup storage path:
-```bash
-chmod o+x /home/administrator     # or wherever the backup folder lives
-```
-
-### Backups show start_ok=false
-- Verify the client is online in the Clients list
-- Enable **Internet → File Backups** and **Internet → Image Backups** in Server Settings
-- Check `/var/log/urbackup.log` for detailed errors
-
-### Nginx errors
-```bash
-sudo tail -f /var/log/nginx/error.log
-sudo nginx -t
-```
-
----
-
-## Uninstalling
-
-```bash
-sudo systemctl stop urbackup-gui && sudo systemctl disable urbackup-gui
-sudo rm /etc/systemd/system/urbackup-gui.service && sudo systemctl daemon-reload
-sudo rm /etc/nginx/sites-enabled/urbackup-gui /etc/nginx/sites-available/urbackup-gui
-sudo systemctl restart nginx
-sudo rm -rf /opt/urbackup-gui
-sudo mysql -u root -e "DROP DATABASE urbackup_gui; DROP USER 'urbackup'@'localhost';"
-```
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18, Vite, TailwindCSS, React Router, Recharts, Lucide React |
-| Backend | Node.js 20, Express, TypeScript |
-| Auth | JWT (HttpOnly cookie), bcrypt, TOTP (speakeasy) |
-| Databases | MariaDB (app data) + SQLite direct read (UrBackup data) |
-| Web Server | Nginx |
-| Replication | SSH, rsync, AES-256-GCM (Node.js crypto) |
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE) for details.
-
-## Support
-
-Open an issue at [github.com/agit8or1/St0r/issues](https://github.com/agit8or1/St0r/issues).
+<div align="center">
+<sub>Project managed by <b>Mia</b> the GSD 🐾</sub>
+</div>
