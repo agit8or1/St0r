@@ -83,9 +83,10 @@ Intervals, windows and how many snapshots to keep, with UrBackup's default besid
 
 ### Watch capacity before it bites
 
-[<img src="docs/images/github/disk-guard-dark.png" alt="Storage protection settings in dark theme showing disk guard thresholds for warning, critical and emergency levels and the recorded events" width="100%">](docs/images/github/disk-guard-dark.png)
+[<img src="docs/images/github/disk-guard-dark.png" alt="Storage protection settings in dark theme showing a healthy disk guard with a usage bar against warning, critical and pause thresholds, and manual reclaim actions" width="100%">](docs/images/github/disk-guard-dark.png)
 
-Warning, critical and emergency thresholds, with the events the guard has recorded. *Dark theme.*
+Free space against warning, critical and emergency thresholds — backups pause before the volume can
+fill, and resume once cleanup reclaims space. *Dark theme.*
 
 **[Browse all 26 screenshots →](docs/screenshots.md)**
 
@@ -173,6 +174,7 @@ Manual, step-by-step installation is in [docs/installation.md](docs/installation
 | Backing up St0r's own database | [docs/installation.md](docs/installation.md#backing-up-st0rs-own-database) |
 | Backing up UrBackup's databases | [docs/URBACKUP_DATABASE_BACKUP.md](docs/URBACKUP_DATABASE_BACKUP.md) |
 | Full screenshot gallery | [docs/screenshots.md](docs/screenshots.md) |
+| Walkthrough transcript | [docs/media/st0r-walkthrough-transcript.md](docs/media/st0r-walkthrough-transcript.md) |
 | Regenerating the screenshots and video | [scripts/demo/README.md](scripts/demo/README.md) |
 | UrBackup API reference used by St0r | [docs/URBACKUP_API_COMPLETE_REFERENCE.md](docs/URBACKUP_API_COMPLETE_REFERENCE.md) |
 | Release history | [CHANGELOG.md](CHANGELOG.md) · [Releases](https://github.com/agit8or1/St0r/releases) |

@@ -210,11 +210,14 @@ INSERT INTO customer_clients (customer_id,server_id,client_name) VALUES
 
 INSERT INTO customer_users (customer_id,user_id) SELECT 1,id FROM app_users WHERE username='northwind-viewer';
 
+-- Quotas sized so the demo estate sits comfortably inside them. Usage is the
+-- sum of retained backups, so these must track the history length above or the
+-- endpoint list turns into a wall of red.
 INSERT INTO client_storage_limits (client_name,limit_bytes,warn_threshold_pct,critical_threshold_pct) VALUES
-  ('SRV-DB-02',2500000000000,80,95),
-  ('SRV-FILES-03',3000000000000,80,95),
-  ('WS-FINANCE-04',400000000000,80,95),
-  ('NAS-ARCHIVE-01',4000000000000,80,95);
+  ('SRV-DB-02',7500000000000,80,95),
+  ('SRV-FILES-03',10000000000000,80,95),
+  ('WS-FINANCE-04',1100000000000,80,95),
+  ('NAS-ARCHIVE-01',16000000000000,80,95);
 
 INSERT INTO replication_targets
   (id,name,enabled,mode,host,port,ssh_user,auth_type,target_root_path,target_db_type,verify_after_sync,checksum_verify,bandwidth_limit_mbps,standby_service_mode)

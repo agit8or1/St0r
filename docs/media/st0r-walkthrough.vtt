@@ -1,0 +1,89 @@
+WEBVTT
+
+1
+00:00:03.700 --> 00:00:07.917
+St0r — a modern management interface for UrBackup
+
+2
+00:00:07.917 --> 00:00:12.528
+For administrators who already run UrBackup Server. It does not replace the backup engine.
+
+3
+00:00:12.528 --> 00:00:17.336
+The dashboard: every endpoint, job totals, replication health and capacity in one view
+
+4
+00:00:19.806 --> 00:00:24.018
+Three backups are running right now, with live progress
+
+5
+00:00:27.041 --> 00:00:31.251
+And one endpoint needs attention — surfaced instead of buried
+
+6
+00:00:35.580 --> 00:00:40.191
+Workflow one: every endpoint, its customer, last backup and quota usage
+
+7
+00:00:43.123 --> 00:00:46.933
+Filter by state or by customer to find what you are looking for
+
+8
+00:00:50.694 --> 00:00:55.107
+Opening an endpoint shows its status and full backup history
+
+9
+00:01:03.336 --> 00:01:07.746
+Workflow two: recovering a file. Pick a day that has a backup
+
+10
+00:01:15.228 --> 00:01:18.839
+Open the backup taken that day
+
+11
+00:01:21.964 --> 00:01:26.574
+Browse into the backup and download individual files or whole folders
+
+12
+00:01:39.819 --> 00:01:44.028
+Workflow three: schedules and retention, per endpoint
+
+13
+00:01:46.764 --> 00:01:51.977
+Intervals, backup windows and how many snapshots to keep — with UrBackup defaults shown
+
+14
+00:01:57.115 --> 00:02:01.124
+And an optional storage quota with warning thresholds
+
+15
+00:02:02.334 --> 00:02:05.342
+St0r ships light and dark themes
+
+16
+00:02:07.634 --> 00:02:12.242
+Replication: target health, lag, and the history of every run
+
+17
+00:02:21.408 --> 00:02:26.017
+Each run records status, trigger, duration and bytes transferred
+
+18
+00:02:32.832 --> 00:02:37.640
+Reports summarise the estate and export to CSV or PDF
+
+19
+00:02:44.928 --> 00:02:49.740
+Alerts raise failures and stale backups on the channels you choose
+
+20
+00:02:56.151 --> 00:03:00.357
+For MSPs: group endpoints by customer …
+
+21
+00:03:03.762 --> 00:03:08.772
+… then scope a read-only account to just that customer's endpoints
+
+22
+00:03:12.860 --> 00:03:16.666
+Install with one command on the same server as UrBackup

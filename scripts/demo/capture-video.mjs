@@ -15,7 +15,7 @@
  * belong in normal Git history.
  */
 import { chromium } from 'playwright-core';
-import { mkdirSync, writeFileSync, renameSync, readdirSync } from 'fs';
+import { mkdirSync, writeFileSync, renameSync, readdirSync, rmSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { resolve, join } from 'path';
 
@@ -277,9 +277,20 @@ writeFileSync(
 );
 
 if (MODE === 'full') {
+  // Poster frame for the README thumbnail: a dashboard frame under the opening
+  // caption, with a play badge composited on so the still reads as a video.
+  // The badge is drawn with ffmpeg alone — no image editor in the toolchain.
   console.log('Extracting poster …');
-  execFileSync('ffmpeg', ['-y', '-ss', '12', '-i', mp4, '-frames:v', '1', '-q:v', '2', join(OUT, 'poster.png')],
-    { stdio: ['ignore', 'ignore', 'pipe'] });
+  const font = execFileSync('fc-match', ['-f', '%{file}', 'DejaVu Sans'], { encoding: 'utf8' }).trim();
+  const badge = join(OUT, 'play-badge.png');
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'color=c=black:s=240x240:d=1',
+    '-vf', `format=rgba,geq=r='0':g='0':b='0':a='if(lte(hypot(X-120,Y-120),115),150,0)',` +
+      `drawtext=fontfile=${font}:text='▶':fontcolor=white@0.95:fontsize=110:x=(w-text_w)/2+8:y=(h-text_h)/2`,
+    '-frames:v', '1', badge], { stdio: ['ignore', 'ignore', 'pipe'] });
+  execFileSync('ffmpeg', ['-y', '-ss', '5.5', '-i', mp4, '-i', badge,
+    '-filter_complex', '[0:v][1:v]overlay=(W-w)/2:(H-h)/2-60',
+    '-frames:v', '1', join(OUT, 'poster.png')], { stdio: ['ignore', 'ignore', 'pipe'] });
+  rmSync(badge, { force: true });
 }
 
 console.log(`\n${MODE}: ${mp4}  (~${Math.round(duration / 1000)}s, ${cues.length} captions)`);

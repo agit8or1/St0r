@@ -88,7 +88,8 @@ Per-target history: status, trigger, duration and bytes sent for every run, incl
 
 ### Storage protection — Dark
 
-The disk guard: usage against warning, critical and emergency thresholds, with the events it has recorded.
+The disk guard: free space against warning, critical and pause thresholds, with manual reclaim and the
+orphan prune. Backups pause before the volume can fill and resume once cleanup reclaims space.
 
 [![Storage protection settings in dark theme showing disk guard status with warning, critical and emergency thresholds and the recorded events](images/github/disk-guard-dark.png)](images/github/disk-guard-dark.png)
 
@@ -111,9 +112,10 @@ folders.
 
 ### Bare metal restore — Dark
 
-Restore-media guidance and the endpoints that have a restorable system image, with VHD export.
+Restore media and the step-by-step procedure for restoring a full system image to new hardware. The
+endpoints with a restorable image are listed further down the page.
 
-[![Bare metal restore page in dark theme showing restore media download options, step by step restore instructions, and the endpoints that have restorable image backups](images/github/bare-metal-restore-dark.png)](images/github/bare-metal-restore-dark.png)
+[![Bare metal restore page in dark theme showing the restore CD download, a USB imaging tool link, and five numbered restore steps ending with a warning that the target disk will be erased](images/github/bare-metal-restore-dark.png)](images/github/bare-metal-restore-dark.png)
 
 ---
 
@@ -140,9 +142,9 @@ Which folders are backed up, whether the server or the client decides, and the e
 
 ### Image backup — Dark
 
-Image schedule and retention, and which volumes are imaged.
+Which volumes are imaged, and the Windows VSS writer components to include.
 
-[![Endpoint settings on the image backup tab in dark theme showing image backup schedule, retention counts and volume selection](images/github/image-backup-dark.png)](images/github/image-backup-dark.png)
+[![Endpoint settings on the image backup tab in dark theme showing the drive letters to image and toggles for VSS writer components including system state, Active Directory, Exchange, SQL Server and Hyper-V](images/github/image-backup-dark.png)](images/github/image-backup-dark.png)
 
 ### Transfer settings — Dark
 
@@ -159,9 +161,10 @@ not delete below.
 
 ### Client configuration — Dark
 
-Defaults applied to newly installed clients.
+The public hostname and port that generated client installers and agent install commands point at, plus
+the CORS lock for the St0r API.
 
-[![Server settings on the client configuration tab in dark theme showing the defaults applied to newly installed clients](images/github/client-config-dark.png)](images/github/client-config-dark.png)
+[![Settings on the client configuration tab in dark theme showing the server hostname and port used in generated installers, an explanation of how client deployment works, and a toggle to lock CORS to the configured hostname](images/github/client-config-dark.png)](images/github/client-config-dark.png)
 
 ### General settings — Dark
 
@@ -171,15 +174,16 @@ Storage path, ports, and the address internet clients connect to.
 
 ### UrBackup server settings — Dark
 
-The UrBackup server's own configuration, surfaced without leaving St0r.
+UrBackup's own storage, performance and speed-limit settings, edited without leaving St0r.
 
-[![UrBackup server settings in dark theme showing the backup server's own configuration options](images/github/server-settings-dark.png)](images/github/server-settings-dark.png)
+[![UrBackup server settings in dark theme on the general settings tab, showing backup storage folder, temporary file options, maximum simultaneous backups and active clients, and speed limit settings](images/github/server-settings-dark.png)](images/github/server-settings-dark.png)
 
 ### Replication targets — Dark
 
-Each configured standby: host, transport, verification and bandwidth limit.
+Each configured standby with its host, current status, replication lag and last successful run, plus
+per-target run, test and edit actions.
 
-[![Replication targets tab in dark theme listing two configured targets with host, SSH user, target path, verification options and bandwidth limits](images/github/replication-targets-dark.png)](images/github/replication-targets-dark.png)
+[![Replication targets tab in dark theme listing two standby targets with host and port, success status, replication lag, last successful run time, enabled state and per-target actions](images/github/replication-targets-dark.png)](images/github/replication-targets-dark.png)
 
 ---
 
@@ -187,9 +191,10 @@ Each configured standby: host, transport, verification and bandwidth limit.
 
 ### Customers — Light
 
-Group endpoints under a customer. Customer assignment is what scopes a read-only account's visibility.
+Group endpoints under a customer — expanded here to show the endpoints assigned to one. That assignment
+is what scopes a read-only account's visibility.
 
-[![Customers page in light theme listing three customers with their company, contact details, and the number of endpoints and users assigned to each](images/github/customers-light.png)](images/github/customers-light.png)
+[![Customers page in light theme with three customer cards, one expanded to list its four assigned endpoints with their online state and IP addresses](images/github/customers-light.png)](images/github/customers-light.png)
 
 ### Users and roles — Light
 
@@ -200,9 +205,10 @@ assigned to.
 
 ### Endpoint permissions — Light
 
-What the client is allowed to do locally: change settings, start backups, pause, or exit the tray icon.
+What the client may do locally: silent updates, background backups, exiting the tray icon, which manual
+backups it can start, and whether it can restore.
 
-[![Endpoint settings on the permissions tab in light theme showing toggles for whether the client may change its own settings, start backups, pause, or exit the tray icon](images/github/permissions-light.png)](images/github/permissions-light.png)
+[![Endpoint settings on the permissions tab in light theme showing client control toggles for silent update, background backups and tray exit, which manual backups the client may start, and restore permissions](images/github/permissions-light.png)](images/github/permissions-light.png)
 
 ---
 

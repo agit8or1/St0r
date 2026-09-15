@@ -55,7 +55,7 @@ const SHOTS = [
   { name: 'schedule-retention-light',   route: `/clients/${CLIENT}/settings`,         theme: 'light', tab: 'Schedule & Retention' },
   { name: 'replication-overview-light', route: '/replication',                        theme: 'light', wait: 3000 },
   { name: 'reports-light',              route: '/reports',                            theme: 'light', wait: 5000 },
-  { name: 'customers-light',            route: '/customers',                          theme: 'light', wait: 2500 },
+  { name: 'customers-light',            route: '/customers',                          theme: 'light', tab: 'Northwind Trading', wait: 2500 },
   { name: 'alerts-light',               route: '/alerts',                             theme: 'light', wait: 3000 },
   { name: 'storage-limit-light',        route: `/clients/${CLIENT}/settings`,         theme: 'light', tab: 'Storage Limit' },
   { name: 'users-light',                route: '/users',                              theme: 'light', wait: 2500 },
@@ -66,7 +66,9 @@ const SHOTS = [
   { name: 'endpoints-dark',             route: '/clients',                            theme: 'dark',  wait: 3000 },
   { name: 'replication-runs-dark',      route: `/replication/targets/${TARGET_ID}`,   theme: 'dark',  wait: 3000 },
   { name: 'replication-targets-dark',   route: '/replication',                        theme: 'dark',  tab: 'Targets' },
-  { name: 'server-settings-dark',       route: '/server-settings',                    theme: 'dark',  wait: 3500 },
+  // Configuration Backup (the default tab) lists real files from the production
+  // install path, so capture UrBackup's own settings instead.
+  { name: 'server-settings-dark',       route: '/server-settings',                    theme: 'dark',  tab: 'General Settings', wait: 3000 },
   { name: 'settings-general-dark',      route: '/settings',                           theme: 'dark',  wait: 3000 },
   { name: 'disk-guard-dark',            route: '/settings',                           theme: 'dark',  tab: 'Storage Protection' },
   { name: 'backup-paths-dark',          route: `/clients/${CLIENT}/settings`,         theme: 'dark',  tab: 'Backup Paths' },
