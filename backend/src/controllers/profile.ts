@@ -42,7 +42,8 @@ export async function changePassword(req: Request, res: Response) {
     const newPasswordHash = await hashPassword(newPassword);
 
     // Update user password
-    await updateUser(userId, { password_hash: newPasswordHash });
+    // Clearing the flag here is what ends the forced-change state.
+    await updateUser(userId, { password_hash: newPasswordHash, must_change_password: false });
 
     logger.info(`User ${user.username} (ID: ${userId}) changed their password`);
 

@@ -62,7 +62,7 @@ You will receive a response within 5 business days. If confirmed, a fix will be 
 
 After installation:
 
-- [ ] Change the default `admin` password (`admin123`) immediately
+- [ ] Change the generated first-run `admin` password, and delete `initial-admin-password.txt`
 - [ ] Set a strong, random `JWT_SECRET` in `.env` (the installer generates one automatically)
 - [ ] Set `APP_SECRET_KEY` to a 32-byte random hex string (`openssl rand -hex 32`)
 - [ ] Enable HTTPS with a valid certificate (Certbot / Let's Encrypt)

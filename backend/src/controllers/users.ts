@@ -130,6 +130,8 @@ export async function modifyUser(req: Request, res: Response) {
     if (isAdmin !== undefined) updates.is_admin = isAdmin;
     if (password) {
       updates.password_hash = await hashPassword(password);
+      // An admin setting a password explicitly satisfies any pending forced change.
+      updates.must_change_password = false;
     }
 
     const targetId = parseInt(id);

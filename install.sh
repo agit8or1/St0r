@@ -578,12 +578,29 @@ if [ "$INSTALL_STOR" = true ]; then
     echo "✓ St0r GUI v$INSTALLER_VERSION"
     echo "  Access at: http://$(hostname -I | awk '{print $1}')"
     echo ""
-    echo "  Default credentials:"
+    # The backend generates this on first start and writes it 0600. Wait briefly,
+    # since the service may still be starting.
+    PW_FILE="$INSTALL_DIR/initial-admin-password.txt"
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        [ -s "$PW_FILE" ] && break
+        sleep 1
+    done
+
+    echo "  Sign in with:"
     echo "    Username: admin"
-    echo "    Password: admin123"
+    if [ -s "$PW_FILE" ]; then
+        echo "    Password: $(cat "$PW_FILE")"
+        echo ""
+        echo "  This password was generated for this installation and saved to:"
+        echo "    $PW_FILE"
+        echo "  Delete that file once you have signed in."
+    else
+        echo "    Password: see 'journalctl -u urbackup-gui | grep -A3 \"First run\"'"
+        echo ""
+        echo "  The password is generated on first start and printed to the service log."
+    fi
     echo ""
-    echo "  ⚠ IMPORTANT: Change the default password immediately after first login!"
-    echo "    Profile → Change Password"
+    echo "  ⚠ You must change this password at first login."
     echo ""
     echo "  ⚠ Enable 2FA for the admin account after login (Profile → Enable 2FA)"
 

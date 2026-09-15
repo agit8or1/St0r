@@ -133,5 +133,5 @@ CREATE TABLE IF NOT EXISTS customer_users (
 -- Default admin user will be created by the backend on first run
 -- (no seed data here — backend handles first-run setup)
 
--- Default admin user will be created by the backend on first run
--- Password: admin123 (CHANGE THIS IMMEDIATELY AFTER FIRST LOGIN!)
+-- The first administrator is created by the backend on first run, with a
+-- password generated per installation. See README → First login.

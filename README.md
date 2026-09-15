@@ -118,17 +118,19 @@ Read this before running it on a server that already serves web content:
 
 ### First login
 
-The first run creates an administrator account with **the well-known default credentials
-`admin` / `admin123`**. Signing in with that password opens a change-password dialog.
+The first run creates an `admin` account with **a password generated for your installation** — there is no
+shared default. The installer prints it when it finishes, and it is also written to
+`/opt/urbackup-gui/initial-admin-password.txt` (mode 0600) and logged once:
 
-Until that password is changed, be aware of how St0r advertises it:
+```bash
+sudo journalctl -u urbackup-gui | grep -A3 "First run"
+```
 
-- `GET /api/setup/status` needs no authentication and reports whether the default password is still in use.
-- While it is, **the login page displays the username and password on screen** to anyone who opens it.
+You must change it at first login, and the account cannot be used normally until you do. Delete the
+password file once you have signed in.
 
-Change the password before the server is reachable by anyone you do not trust, ideally before it leaves
-localhost. This is a real weakness, documented here rather than glossed over — see
-[Known limitations](#known-limitations).
+Upgrading from a release that used the old shared `admin123` default? On first start after the update, any
+account still using it is flagged and must change its password at the next login.
 
 Manual, step-by-step installation is documented in
 [docs/installation.md](docs/installation.md).
@@ -152,9 +154,9 @@ Manual, step-by-step installation is documented in
 
 ## Known limitations
 
-- **Default credentials on first run.** `admin` / `admin123` is created automatically. Until it is changed,
-  an unauthenticated endpoint reports that the default is in use and the login page shows the credentials
-  on screen. Signing in with them opens a change-password dialog.
+- **The first-run password is written to disk.** It is generated per installation, not shared, but it sits
+  in `/opt/urbackup-gui/initial-admin-password.txt` at mode 0600 and in the service log until you change
+  the password and delete the file.
 - **No TLS out of the box.** The installer configures plain HTTP on port 80.
 - **One UrBackup server per installation**, on the same host. There is no aggregated view across several
   UrBackup servers.

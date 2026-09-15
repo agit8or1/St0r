@@ -8,6 +8,7 @@ export interface User {
   password_hash: string;
   is_admin: boolean;
   is_active: boolean;
+  must_change_password: boolean;
   last_login: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -59,7 +60,7 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   return findUserByUsername(username);
 }
 
-const ALLOWED_UPDATE_FIELDS = ['username', 'email', 'password_hash', 'is_admin', 'is_active', 'last_login', 'totp_secret', 'totp_enabled'];
+const ALLOWED_UPDATE_FIELDS = ['username', 'email', 'password_hash', 'is_admin', 'is_active', 'last_login', 'totp_secret', 'totp_enabled', 'must_change_password'];
 
 export async function updateUser(id: number, updates: Partial<User>): Promise<void> {
   const fields: string[] = [];

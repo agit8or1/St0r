@@ -89,6 +89,9 @@ export async function login(req: Request, res: Response): Promise<void> {
         email: user.email,
         isAdmin: user.is_admin,
       },
+      // Surfaced only to the authenticated account it applies to — never to an
+      // anonymous caller, which is how the old default-password banner leaked.
+      mustChangePassword: !!user.must_change_password,
     });
   } catch (error) {
     logger.error('Login error:', error);

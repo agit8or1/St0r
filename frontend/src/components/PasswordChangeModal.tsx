@@ -109,7 +109,7 @@ export function PasswordChangeModal({ onPasswordChanged }: PasswordChangeModalPr
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="input w-full"
-                placeholder="admin123"
+                placeholder="Current password"
                 autoComplete="current-password"
                 required
                 disabled={loading}

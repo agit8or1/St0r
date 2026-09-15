@@ -57,8 +57,9 @@ The installer will:
 5. Add the service user to the `urbackup` group and make `/var/urbackup/backup_server*.db` group-writable.
 6. Install and start the `urbackup-gui` systemd service.
 
-Then open `http://YOUR_SERVER_IP` and sign in with `admin` / `admin123` — change that password
-immediately. See [First login](../README.md#first-login) for how St0r advertises the default until you do.
+Then open `http://YOUR_SERVER_IP` and sign in as `admin`. The installer prints the generated password when
+it finishes; it is also in `/opt/urbackup-gui/initial-admin-password.txt` and the service log. You must
+change it at first login. See [First login](../README.md#first-login).
 
 ---
 

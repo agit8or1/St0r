@@ -20,7 +20,6 @@ import usersRoutes from './routes/users.js';
 import customersRoutes from './routes/customers.js';
 import twofaRoutes from './routes/twofa.js';
 import versionRoutes from './routes/version.js';
-import setupRoutes from './routes/setup.js';
 import profileRoutes from './routes/profile.js';
 import systemRoutes from './routes/system.js';
 import documentationRoutes from './routes/documentation.js';
@@ -132,7 +131,6 @@ app.use('/api/users', usersRoutes);
 app.use('/api/customers', customersRoutes);
 app.use('/api/2fa', twofaRoutes);
 app.use('/api/version', versionRoutes);
-app.use('/api/setup', setupRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/system-update', systemRoutes);
 app.use('/api/documentation', documentationRoutes);
@@ -223,23 +221,63 @@ async function ensureTables() {
   `);
 }
 
-// Initialize default admin user if none exists
+// Where the generated first-run password is written for the installer to read.
+const INITIAL_PASSWORD_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../../initial-admin-password.txt');
+
+/**
+ * Create the first administrator if none exists.
+ *
+ * The password is generated per installation rather than shared across every
+ * deployment. It is written to a 0600 file and logged once, and the account is
+ * flagged so the first login must change it. Nothing about it is exposed to
+ * unauthenticated callers.
+ */
 async function initializeDefaultUser() {
   const { getAllUsers } = await import('./models/user.js');
-  const { hashPassword } = await import('./utils/auth.js');
+  const { hashPassword, comparePassword } = await import('./utils/auth.js');
   const { query } = await import('./config/database.js');
+  const { randomBytes } = await import('crypto');
+  const { writeFileSync, chmodSync } = await import('fs');
 
   try {
     const users = await getAllUsers();
+
     if (users.length === 0) {
-      logger.info('No users found. Creating default admin user...');
-      const passwordHash = await hashPassword('admin123');
+      // base64url avoids shell- and copy-hostile characters while keeping ~128 bits
+      const password = randomBytes(18).toString('base64url');
+      const passwordHash = await hashPassword(password);
       await query(
-        'INSERT INTO app_users (username, email, password_hash, is_admin) VALUES (?, ?, ?, ?)',
+        'INSERT INTO app_users (username, email, password_hash, is_admin, must_change_password) VALUES (?, ?, ?, ?, 1)',
         ['admin', 'admin@localhost', passwordHash, true]
       );
-      logger.info('Default admin user created (username: admin, password: admin123)');
-      logger.warn('IMPORTANT: Change the default password immediately after first login!');
+
+      let wroteFile = true;
+      try {
+        writeFileSync(INITIAL_PASSWORD_FILE, `${password}\n`, { mode: 0o600 });
+        chmodSync(INITIAL_PASSWORD_FILE, 0o600);
+      } catch (err) {
+        wroteFile = false;
+        logger.warn(`Could not write ${INITIAL_PASSWORD_FILE}: ${err}`);
+      }
+
+      logger.warn('='.repeat(72));
+      logger.warn('First run — administrator account created');
+      logger.warn('  username: admin');
+      logger.warn(`  password: ${password}`);
+      if (wroteFile) logger.warn(`  also saved to: ${INITIAL_PASSWORD_FILE} (delete it once you have signed in)`);
+      logger.warn('You must change this password at first login.');
+      logger.warn('='.repeat(72));
+      return;
+    }
+
+    // Existing installations created before generated passwords: if an account
+    // still uses the old shared default, force a change at next login.
+    for (const user of users) {
+      if (user.must_change_password) continue;
+      if (await comparePassword('admin123', user.password_hash)) {
+        await query('UPDATE app_users SET must_change_password = 1 WHERE id = ?', [user.id]);
+        logger.warn(`Account '${user.username}' still uses the old default password — a change is now required at next login.`);
+      }
     }
   } catch (error) {
     logger.error('Failed to initialize default user:', error);

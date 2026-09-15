@@ -218,14 +218,19 @@ export function Documentation() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Default Credentials</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">First Login</h3>
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">After installation, login with:</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  The first administrator is <span className="font-mono">admin</span>, with a password generated
+                  for this installation — there is no shared default. The installer prints it when it finishes,
+                  and it is also saved to:
+                </p>
                 <div className="font-mono text-sm">
-                  <p className="text-gray-900 dark:text-gray-100">Username: <span className="text-blue-600 dark:text-blue-400">admin</span></p>
-                  <p className="text-gray-900 dark:text-gray-100">Password: <span className="text-blue-600 dark:text-blue-400">admin123</span></p>
+                  <p className="text-gray-900 dark:text-gray-100">/opt/urbackup-gui/initial-admin-password.txt</p>
                 </div>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">⚠️ Change the default password after first login!</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                  ⚠️ You must change it at first login — then delete that file.
+                </p>
               </div>
             </div>
           </div>

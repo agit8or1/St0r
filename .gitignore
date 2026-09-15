@@ -48,3 +48,6 @@ docker-compose.override.yml
 *.p12
 *.pfx
 APP_SECRET_KEY
+
+# Generated on first run by the backend; never commit
+initial-admin-password.txt
