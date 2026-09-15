@@ -122,13 +122,20 @@ tag the new files were uploaded to:
 ```markdown
 ## Watch the walkthrough
 
-[<img src="docs/images/github/walkthrough-poster.png" alt="Play the St0r walkthrough — a three minute tour of the dashboard, endpoint health, file recovery, schedules and offsite replication" width="100%">](https://github.com/agit8or1/St0r/releases/download/v3.2.116/st0r-walkthrough.mp4)
+[<img src="docs/images/github/walkthrough-poster.png" alt="Download the St0r walkthrough — a three and a half minute tour of the dashboard, endpoint health, file recovery, schedules and offsite replication" width="100%">](https://github.com/agit8or1/St0r/releases/download/v3.2.116/st0r-walkthrough.mp4)
 
 A short tour of the dashboard, endpoint health, recovering a file, schedules and retention, and offsite
-replication — in both themes.
-[Highlight clip](https://github.com/agit8or1/St0r/releases/download/v3.2.116/st0r-highlight.mp4) ·
-[Transcript](docs/media/st0r-walkthrough-transcript.md)
+replication — in both themes. GitHub will not play it inline, so the poster above **downloads the MP4**
+(3:26, 6.6 MB).
+[Highlight clip](https://github.com/agit8or1/St0r/releases/download/v3.2.116/st0r-highlight.mp4) —
+also a download (0:45, 1.7 MB) ·
+[Transcript](docs/media/st0r-walkthrough-transcript.md) — reads in the browser
 ```
+
+GitHub strips `<video>` tags and serves release assets with `Content-Disposition: attachment`, so a release
+URL can only ever download. The one thing that plays inline is a `github.com/user-attachments/assets/…`
+URL, which exists only if the file is dragged into an issue or comment box in the browser — there is no API
+for it. Update the durations and sizes above if a re-capture changes them.
 
 The poster, both transcripts and both caption files are committed —
 `docs/images/github/walkthrough-poster.png` and `docs/media/`. The MP4s are not: they are release assets
