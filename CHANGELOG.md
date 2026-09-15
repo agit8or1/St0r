@@ -5,6 +5,246 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.117] - 2026-09-15
+
+Documentation only — no application code changed since 3.2.116.
+
+### Added
+- **Walkthrough video** published as a release asset on v3.2.116: a 3:26 tour of the dashboard, endpoint health, file recovery, schedules and offsite replication in both themes, with a 45-second highlight clip, WebVTT captions and a plain-text transcript. Recorded against a demo environment with fabricated data
+- **Screenshot gallery** of 26 screens in `docs/screenshots.md`, grouped by task, each with descriptive alt text and linked to full resolution; seven appear in the README
+- **Demo capture tooling** in `scripts/demo/` — a separate demo database, a fabricated UrBackup SQLite database and a mock UrBackup API, so no production data can appear in a capture
+
+### Changed
+- **The walkthrough poster says it downloads.** GitHub strips `<video>` tags and serves release assets as attachments, so a README cannot host a player. The poster carries a download badge instead of a play triangle, and the caption states the size and length
+- Every table in the docs has a header row, and every link, anchor and image was verified against the rendered pages
+- The repository's About URL points at a page that resolves
+
+## [3.2.116] - 2026-09-15
+
+Security advisory [GHSA-2xmc-6xrh-rj4x](https://github.com/agit8or1/St0r/security/advisories/GHSA-2xmc-6xrh-rj4x) — rated critical, affecting every release before 3.2.116.
+
+### Security
+- **The shared default password is gone.** Every installation created the same first account, `admin` / `admin123`, and the product then advertised it: `GET /api/setup/status` answered without authentication whether the default was still in use, and while it was, the login page printed the credentials on screen to any anonymous visitor. Anyone who could reach a fresh install's login page could read working administrator credentials
+- **First run now generates a password unique to the installation** — logged once, written to `/opt/urbackup-gui/initial-admin-password.txt` at mode 0600, and printed by the installer when it finishes
+- **`/api/setup/status` and the login page banner are removed.** The forced password change is driven by a `must_change_password` flag returned only to the authenticated account it applies to, instead of the browser inferring it from the password typed
+
+### Changed
+- Migration `008` adds the flag, defaulting to off. On first start after updating, any account still using `admin123` is flagged and must change at next login; installations already on another password are untouched
+
+## [3.2.115] - 2026-09-15
+
+First release since v3.2.104, delivering 3.2.105–3.2.114. **Read the customer-scoping section before updating a multi-user installation.**
+
+### Fixed
+- **Backup Reports showed dates in the year 58600.** Timestamps arrive from the API already in milliseconds and were multiplied by 1000 again — in the summary, the endpoint table, and both the CSV and PDF exports
+
+### Added
+- **MIT `LICENSE` file** that `package.json` had always declared. Without it GitHub reported the repository as unlicensed, so no reuse rights were actually granted
+
+### Changed
+- README rewritten for administrators evaluating St0r, documenting the UrBackup integration as it really works — same-server installation is required, the databases are read directly, and the installer takes over Nginx's default site and configures no TLS
+- `deploy.sh` repaired: it pointed at a source path and a Node version that no longer existed, so both build steps would have failed
+
+## [3.2.114] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Removed
+- **The unreachable in-app bug report path.** Bug reports have always gone to GitHub
+
+## [3.2.113] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Changed
+- The hostname placeholder uses a reserved example domain rather than one someone could register
+
+## [3.2.112] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Fixed
+- **The installer card reported the wrong address.** It showed the web UI port paired with a configured FQDN; installers are built for UrBackup's `internet_server` on `internet_server_port`. Both values now come from UrBackup's own settings, so the label and the installer cannot drift apart
+
+## [3.2.111] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Changed
+- **Client installers are scoped per endpoint rather than per role**, so a read-only user can still install agents for their own customer's endpoints
+
+## [3.2.110] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Security
+- **Account changes take effect immediately.** The session token is stateless and lives 24 hours, and nothing re-checked the account behind it — a deleted or deactivated user kept full access until their token expired, and a demoted administrator kept administrator rights for just as long. Accounts are now re-checked on every request, with the role read from the database rather than the token
+- The admin-only user list no longer returns each account's TOTP seed
+
+## [3.2.109] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Fixed
+- **Unrestorable images are kept out of the restore picker.** UrBackup can mark an image complete after the transfer failed, leaving a zero-byte record that lists like any other backup but restores nothing — the worst thing to pick during an outage. Backup history still shows them, so a broken chain stays visible
+
+## [3.2.108] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Fixed
+- **VHD export was broken for everyone.** Downloading an image backup failed with `decompress-file exited 3`. `urbackupsrv decompress-file` drops privileges to the `urbackup` user and writes its output in place, so it needs write access to the export directory — which St0r created with none. The exported image is also no longer made world-readable while the download runs
+
+## [3.2.107] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Changed
+- **Bare Metal Restore is scoped per endpoint rather than per role**, so a read-only user can still restore their own customer's endpoints
+
+## [3.2.106] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Fixed
+- **Migrations ship through the update channel.** The release package now includes `database/migrations` and `auto-update.sh` applies them — previously a release with a schema change reached remote installations as code only. Takes effect from the next update onward, since the script that runs an update is the one already on disk
+
+## [3.2.105] - 2026-09-12
+
+_Committed between releases; shipped in [3.2.115]._
+
+### Security
+- **User roles are scoped to customers (#21).** Previously every non-admin account had full read and write access to every endpoint on the server — Customers and Users were unrelated features, so in an MSP deployment a client given a St0r login could see and change another client's backups
+- Non-admin accounts are now **read-only and customer-scoped**: a scope layer resolves each caller's visible endpoints through the customer → endpoint assignments made on the Customers page. An account with no customer assigned sees nothing; scoping fails closed
+- Every mutating endpoint requires an administrator, enforced per route **and** by a global write guard, so a route added later without the check is still refused
+- Endpoint lists, status counters, activities, job logs, backup statistics, storage usage, file browsing and downloads are filtered to the caller's customers
+- Server-wide pages — Logs, Settings, Servers, Replication, Disk Guard — are administrator-only
+- The Users page gained the customer picker that was missing
+
+**After updating, existing non-admin accounts see nothing until an administrator assigns them to a customer.** That is the intended fail-closed behaviour, but it will look like a regression if you are not expecting it.
+
+## [3.2.104] - 2026-08-31
+
+### Fixed
+- **File browser listed nothing on servers whose storage path changed after installation (#20)** — the actual root cause behind that issue; 3.2.102 fixed a real but different problem. St0r read the path from `/var/urbackup/backupfolder`, **which is only written at install time**, so changing the storage path in UrBackup's own UI left St0r looking in the original directory: backups succeed, St0r finds nothing, every backup reports missing
+- The settings database (`clientid=0, key='backupfolder'`) is now the authoritative source, falling back to `/var/urbackup/backupfolder` (with a warning) then `/etc/urbackup/backupfolder`
+- `Backup path not found` names the path actually checked and points at UrBackup's storage setting, so a misconfigured path reads as a misconfigured path rather than a missing backup
+
+## [3.2.103] - 2026-08-30
+
+### Security
+- **All npm advisories resolved — 9 down to 0.** Backend 3 (2 high, 1 moderate) → 0; frontend 6 (4 high, 2 moderate) → 0. Cleared `brace-expansion`, `js-yaml`, `undici`, `nanoid` and `postcss`
+- **react-router 6 → 7**, the only fix for `GHSA-wrjc-x8rr-h8h6` (open redirect via backslash in `<Link>`/`useNavigate`) and `GHSA-337j-9hxr-rhxg` (arbitrary constructor injection in `deserializeErrors()`). Behaviour-neutral: St0r had already opted into v7 semantics and uses only the declarative API
+
+## [3.2.102] - 2026-08-30
+
+### Fixed
+- **File browser showed a client's backups but no files inside them (#20).** UrBackup's per-client backup folders are mode `0750` owned by `urbackup:urbackup`, so St0r can only read them when its service user is in the `urbackup` group — while its database is mode `0664`. That asymmetry populated the backup dropdown and denied every file listing
+- **Permission failures are reported as `503` naming the exact fix** (`sudo usermod -a -G urbackup <service user> && sudo systemctl restart urbackup-gui`) instead of a bare 404. Three handlers had collapsed `EACCES` and `ENOENT` into the same "not found", disguising an operator-fixable problem as a missing backup
+- **Updates repair the group membership automatically.** `install.sh` only adds the service user to the `urbackup` group when UrBackup Server is already installed, so installing St0r first skipped it permanently
+- **The silent `/media/BACKUP/urbackup` fallback is gone** — an unreadable `/var/urbackup/backupfolder` now reports an unconfigured storage folder
+- `Backup not found` names the id it looked for and notes it may have been pruned
+
+## [3.2.101] - 2026-08-18
+
+### Fixed
+- **Migrations are idempotent.** `005_btrfs_replication.sql` used a bare `ADD COLUMN`, so every update after the first logged `ERROR 1060 (42S21): Duplicate column name 'btrfs_mode'`. All six migrations are now re-runnable
+- **Migration failures roll the update back.** The updater had hedged each migration with `|| echo "WARN: migration may have already been applied"`, so a real failure — bad SQL, a missing table, a permissions problem — printed a reassuring warning and the update continued to "success" against a half-migrated database. The abort deliberately uses a failing command rather than `exit`, because Bash does not fire an `ERR` trap on an explicit `exit`
+- Database connectivity is checked once before the migration loop, so an unreachable database says so plainly instead of surfacing as every migration failing in turn
+
+## [3.2.100] - 2026-08-18
+
+First release since v3.2.92 — auto-updating installs had been pinned there because 3.2.93–3.2.99 were committed but never released.
+
+### Fixed
+- **The Linux client installer was broken end to end on Debian 12/13 (#19).** `apt-key add` was removed in Debian 12 and aborted the script under `set -e`; `lsb_release -sc` is not installed by default so the codename came out empty; the apt repository it configured has no packages for bookworm/trixie; config was written to `/etc/default/urbackupclient` using keys the client never reads; and it used port 55414 (the web UI) rather than 55415 for internet clients, never enabling internet mode. It could not install, and could not have connected if it had
+- The Linux download now serves the same pre-configured self-extracting installer the UrBackup web UI hands out, with name, server address, internet port and auth key baked in — distribution-independent, no apt repository
+- Windows and Linux installers share one code path; requesting an installer for a nonexistent client id returns a clear error instead of a generic installer carrying the global auth key and no client name; download failures surface in the page instead of being saved as a broken `.sh`
+
+## [3.2.99] - 2026-08-02
+
+_Committed between releases; shipped in [3.2.100]._
+
+### Changed
+- Consolidated release build
+
+## [3.2.98] - 2026-08-02
+
+_Committed between releases; shipped in [3.2.100]._
+
+### Fixed
+- **Restore activities were missing from the Activities page entirely (#17)** — UrBackup records restores in its own table, which St0r never read. File and image restores now appear alongside backups with a Restores filter, restore badges, and the restored path on hover
+
+## [3.2.97] - 2026-08-02
+
+_Committed between releases; shipped in [3.2.100]._
+
+### Added
+- **Disk guard (#18).** Free space on the backup volume is checked every 10 minutes and escalates — warn at 75%, alert at 85%, and at 93% new file and image backups pause so the volume cannot fill. UrBackup's nightly cleanup reclaims space and backups resume automatically below 70%
+- Settings gains a Storage Protection tab with live usage, guard event history, and admin actions to reclaim space or prune orphaned files
+- Retention floors are editable in Backup Defaults
+
+### Fixed
+- **Retention floors could exceed their ceilings** (`min_file_incr=40` against a max of 20), silently stopping UrBackup from pruning old backups. Floors are realigned and the server rejects any settings save where a `min_*` is not below its `max_*`
+- The `no_images` toggle is labelled as disabling image backups rather than "Headless Mode"
+
+## [3.2.96] - 2026-07-22
+
+_Committed between releases; shipped in [3.2.100]._
+
+### Fixed
+- **Backup triggers report the real reason when the UrBackup API login fails (#16)** instead of a generic "unable to login", and login no longer caches an unauthenticated salt session that made `start_backup` fail silently
+
+### Security
+- Remaining dependency CVEs resolved
+
+## [3.2.95] - 2026-06-17
+
+_Committed between releases; shipped in [3.2.100]._
+
+### Fixed
+- **Clients with file or image backups disabled show Disabled instead of Failed (#14)**, and no longer count as needing attention. St0r reads UrBackup's authoritative `file_disabled`/`image_disabled` flags
+
+## [3.2.94] - 2026-06-15
+
+_Committed between releases; shipped in [3.2.100]._
+
+### Fixed
+- **Email & Alerts settings persist (#13)** — mail settings are saved via UrBackup's mail endpoint rather than the general endpoint that silently dropped them
+- Further disabled-backup status detection (#14)
+
+## [3.2.93] - 2026-05-13
+
+_Committed between releases; shipped in [3.2.100]._
+
+### Security
+- All npm audit findings resolved across backend and frontend — critical `node-tar`, high `undici`/`form-data`/`nodemailer`, moderate `react-router`; axios upgraded to 1.15.x clearing 15 CVEs including SSRF, prototype pollution and header injection; bcrypt, sqlite3 and nodemailer upgraded to clear high-severity advisories
+- **Database-backup endpoints now require admin**, closing a privilege-escalation path via crafted SQL dump upload
+- **The JWT is no longer returned in the login response body** — it lives only in the HttpOnly cookie
+- `\r\n` is sanitized in `.env` writes, preventing `JWT_SECRET` overwrite via Settings
+- `GET /api/users` and `PUT /api/client-settings/:id` require admin
+- Debian 13 Trixie compatibility — removed the `software-properties-common` dependency (#10)
+
+## [3.2.92] - 2026-04-01
+
+### Added
+- Customer cards are clickable to expand an inline panel showing all assigned endpoints with online/offline status dots — no need to open Edit just to see assignments
+- Bulk-add multiple endpoints to a customer at once using a checkbox list with a "Select all" shortcut, replacing the one-at-a-time dropdown
+
+### Fixed
+- Replaced browser `alert()`/`confirm()` dialogs in the Customers page with inline modal confirmations
+
+Closes #8
+
+## [3.2.91] - 2026-04-01
+
+### Fixed
+- Endpoints page falls back to the UrBackup HTTP API when the SQLite database is unreadable — fixes fresh installs with NFS-mounted storage where `/var/urbackup/backup_server.db` permissions differ from the service user
+- Endpoints page shows a clear error banner with the actual error message and a fix command (`sudo chmod 644 /var/urbackup/backup_server.db`) instead of silently showing an empty list
+- UrBackup database connection resets and retries on stale cached connections, handling an NFS remount without a service restart
+
+Closes #7
+
 ## [3.2.90] - 2026-03-27
 
 ### Security (all fixes tested and deployed)

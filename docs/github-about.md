@@ -95,9 +95,14 @@ Checked 2026-09-15. <https://mspreboot.com> describes itself as *"Practical MSP 
 independence — without the vendor pitch."* It offers a free introductory hour and a contact form.
 
 It is a **consulting practice, not a software catalogue**, so the README describes it as such and links to
-it — it does not claim MSP Reboot publishes tools, sponsors this project, or provides support for it.
-Neither site states a relationship between St0r and MSP Reboot, so none is asserted beyond shared
-authorship, which the README words as "St0r's author also runs".
+it, without claiming MSP Reboot publishes tools or sponsors this project. The relationship the README does
+assert is shared authorship — "St0r's author also runs" — plus, as of 2026-09-15, **hosting and support for
+St0r offered through MSP Reboot**, stated by the author.
+
+That offering is described in general terms on purpose. Neither site publishes its scope, pricing or
+response times, so the README points at the contact form rather than implying a service level nobody has
+written down. It also says plainly that none of it is required: the software stays MIT-licensed, free to
+run, with bug reports handled in the open regardless of whether the reporter is a customer.
 
 ### Continuous integration
 

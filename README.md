@@ -229,8 +229,12 @@ St0r's author also runs **[MSP Reboot](https://mspreboot.com)** — MSP consulti
 margins, service delivery and technology strategy, from a former 25-year MSP owner, offering a free
 introductory hour.
 
-It is a consulting practice, not a support arrangement for this project: St0r is free software, issues are
-handled on GitHub, and no service-level commitment is implied.
+**Hosting and support for St0r are available through MSP Reboot** if you would rather not run it yourself,
+or want someone to call when it matters. [Get in touch](https://mspreboot.com) for what that covers.
+
+None of it is required: St0r is MIT-licensed and self-hosted, the software is free to run with no paid
+tier, and bug reports are handled in the open on [GitHub Issues](https://github.com/agit8or1/St0r/issues)
+whether or not you are a customer.
 
 ---
 
