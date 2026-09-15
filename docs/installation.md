@@ -22,7 +22,7 @@ see the [README](../README.md#quick-start).
 St0r must be installed **on the same machine as UrBackup Server**. It opens UrBackup's SQLite databases
 and the backup storage folder as local files, so a remote UrBackup server is not supported.
 
-| | |
+| Requirement | Detail |
 |---|---|
 | UrBackup Server | 2.5.x — developed and verified against 2.5.38 |
 | OS | Ubuntu or Debian (the installer uses `apt`) |

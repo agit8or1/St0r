@@ -58,7 +58,7 @@ scripts, the manifest, or the repository.
 
 ## Capture parameters
 
-| | |
+| Parameter | Setting |
 |---|---|
 | Screenshot viewport | 1440 × 1000, deviceScaleFactor 2 |
 | Video | 1920 × 1080, 30 fps, H.264 MP4 (`+faststart`) |
