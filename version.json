@@ -1,9 +1,9 @@
 {
-  "version": "3.2.114",
-  "releaseDate": "2026-09-12",
+  "version": "3.2.115",
+  "releaseDate": "2026-09-15",
   "changelog": [
-    "Removed the unreachable in-app bug report path. The Report Bug button has always linked straight to GitHub issues, the modal behind this feature was never rendered anywhere, and nothing called its API — so it was an authenticated endpoint that emailed a hardcoded address and could not be triggered from the UI. Reporting bugs is unchanged: the button still opens GitHub.",
-    "Includes 3.2.113: the Server Hostname placeholder uses a reserved documentation domain.",
-    "Includes 3.2.105-3.2.112: user roles scoped to customers (issue #21), immediate effect for user removal and role changes, migrations shipped through the update channel, Bare Metal Restore and client installers scoped per endpoint, VHD export fixed, unrestorable images kept out of the restore picker, and the installer card reporting the address it is actually built with."
+    "Fix: Backup Reports showed nonsensical dates — 'Oldest Backup 11/5/58607' and similar. Backup timestamps arrive from the API already in milliseconds, and the Reports page multiplied them by 1000 a second time, placing every date around the year 58600.",
+    "The same double conversion affected the oldest/newest backup summary, the per-endpoint last backup and last image columns, and both the CSV and PDF exports. All five are corrected; no other page was affected.",
+    "Adds the MIT LICENSE file that backend/package.json has always declared, and a rewritten README aimed at UrBackup administrators evaluating the project."
   ]
 }

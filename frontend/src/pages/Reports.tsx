@@ -100,8 +100,10 @@ export function Reports() {
       let newestBackup: string | null = null;
 
       if (allBackupTimes.length > 0) {
-        oldestBackup = new Date(Math.min(...allBackupTimes) * 1000).toISOString();
-        newestBackup = new Date(Math.max(...allBackupTimes) * 1000).toISOString();
+        // backuptime arrives from the API already in milliseconds; multiplying
+        // again produced dates around the year 58600.
+        oldestBackup = new Date(Math.min(...allBackupTimes)).toISOString();
+        newestBackup = new Date(Math.max(...allBackupTimes)).toISOString();
       }
 
       setReportData({
@@ -144,7 +146,7 @@ export function Reports() {
         ...clients.map(c => [
           c.name,
           c.online ? 'Online' : 'Offline',
-          c.lastbackup ? new Date(c.lastbackup * 1000).toLocaleString() : 'Never',
+          c.lastbackup ? new Date(c.lastbackup).toLocaleString() : 'Never',
           c.file_ok ? 'Yes' : 'No',
           c.image_ok ? 'Yes' : 'No',
           c.ip || 'N/A',
@@ -236,7 +238,7 @@ export function Reports() {
               <tr>
                 <td>${c.name}</td>
                 <td>${c.online ? 'Online' : 'Offline'}</td>
-                <td>${c.lastbackup ? new Date(c.lastbackup * 1000).toLocaleString() : 'Never'}</td>
+                <td>${c.lastbackup ? new Date(c.lastbackup).toLocaleString() : 'Never'}</td>
                 <td>${c.file_ok ? 'OK' : 'Failed'}</td>
                 <td>${c.image_ok ? 'OK' : 'Failed'}</td>
                 <td>${c.ip || 'N/A'}</td>
@@ -595,10 +597,10 @@ export function Reports() {
                       {client.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                      {client.lastbackup ? new Date(client.lastbackup * 1000).toLocaleString() : 'Never'}
+                      {client.lastbackup ? new Date(client.lastbackup).toLocaleString() : 'Never'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                      {client.lastbackup_image ? new Date(client.lastbackup_image * 1000).toLocaleString() : 'Never'}
+                      {client.lastbackup_image ? new Date(client.lastbackup_image).toLocaleString() : 'Never'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Tooltip text={client.file_backups_disabled ? 'File backups are disabled for this endpoint' : client.file_ok ? 'Last file backup completed successfully' : 'Last file backup failed or never ran'}>
