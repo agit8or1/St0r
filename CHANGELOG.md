@@ -505,7 +505,7 @@ Closes #7
 - Client settings persistence: `getClientSettings` now returns `v.value` (effective resolved value) instead of `v.value_group`
 - Image backups in Activities now grouped by session — 3-partition backup shows as one entry ("Image Backup (C:, D:, System Reserved)")
 
-## [3.2.22] - 2026-02-xx
+## [3.2.22] - 2026-03-04
 
 ### Fixed
 - Settings persistence across page reloads
@@ -514,7 +514,7 @@ Closes #7
 - Update UI uses inline confirm state instead of `window.confirm()`
 - Reconnecting state surfaced to user; errors shown inline
 
-## [3.2.18] - 2026-01-xx
+## [3.2.18] - 2026-03-03
 
 ### Fixed
 - Windows installer embeds correct server FQDN from settings
