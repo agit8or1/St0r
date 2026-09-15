@@ -1,10 +1,11 @@
 {
-  "version": "3.2.116",
+  "version": "3.2.117",
   "releaseDate": "2026-09-15",
   "changelog": [
-    "Security: the shared admin/admin123 default is gone. First run now generates a password unique to the installation, prints it once to the service log, and writes it to /opt/urbackup-gui/initial-admin-password.txt at mode 0600. The installer shows it when it finishes.",
-    "Security: removed the unauthenticated /api/setup/status endpoint, which reported whether the default password was still in use — and with it the login page banner that printed the username and password to any anonymous visitor.",
-    "The forced password change is now driven by a must_change_password flag returned only to the authenticated account it applies to, instead of the client guessing from the password it just typed.",
-    "Upgrades: on first start after updating, any account still using the old admin123 default is flagged and must change its password at next login."
+    "Documentation only — no application code changed. Updating from 3.2.116 gains nothing but the new version number.",
+    "The walkthrough video is published as a release asset and linked from the README, with a transcript and captions.",
+    "The walkthrough poster carries a download badge instead of a play triangle, and the README says plainly that the link downloads the MP4 (3:26, 6.6 MB) rather than playing it — GitHub strips <video> tags and serves release assets as attachments.",
+    "Screenshot gallery of 26 screens, linked from the README and the header nav.",
+    "Markdown fixes across the docs: every table has a header row, and every link, anchor and image was verified against the rendered pages."
   ]
 }
