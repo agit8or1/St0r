@@ -45,6 +45,17 @@ with run history, bytes transferred, replication lag and alerting on failure.
 
 ---
 
+## Watch the walkthrough
+
+[<img src="docs/images/github/walkthrough-poster.png" alt="Play the St0r walkthrough — a three minute tour of the dashboard, endpoint health, file recovery, schedules and offsite replication" width="100%">](https://github.com/agit8or1/St0r/releases/download/v3.2.116/st0r-walkthrough.mp4)
+
+A short tour of the dashboard, endpoint health, recovering a file, schedules and retention, and offsite
+replication — in both themes.
+[Highlight clip](https://github.com/agit8or1/St0r/releases/download/v3.2.116/st0r-highlight.mp4) ·
+[Transcript](docs/media/st0r-walkthrough-transcript.md)
+
+---
+
 ## See it in action
 
 A sample of the interface in both themes. The [full gallery](docs/screenshots.md) has 26 screens.

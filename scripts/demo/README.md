@@ -105,8 +105,9 @@ cannot drift from what the video actually shows.
 
 ### Publishing
 
-GitHub will not play a video embedded from a raw file link, and the README should not carry a URL that
-does not resolve yet. Upload the files as **release assets** first:
+GitHub will not play a video embedded from a raw file link, so the MP4s live as **release assets** and the
+README links the poster to them. Both videos are published on the `v3.2.116` release; a later capture is
+uploaded the same way:
 
 ```bash
 gh release upload v3.2.116 \
@@ -115,7 +116,8 @@ gh release upload v3.2.116 \
   /tmp/st0r-media/st0r-walkthrough.vtt
 ```
 
-Then add the poster to the repository and link it from the README, immediately after the hero image:
+The README carries this block, directly above **See it in action** — repoint the two release URLs at the
+tag the new files were uploaded to:
 
 ```markdown
 ## Watch the walkthrough
@@ -128,10 +130,9 @@ replication — in both themes.
 [Transcript](docs/media/st0r-walkthrough-transcript.md)
 ```
 
-The poster, both transcripts and both caption files are **already committed** —
-`docs/images/github/walkthrough-poster.png` and `docs/media/`. Only the two MP4s still need a host, which
-is why the README section above is kept here rather than in the README: adding it before the upload would
-leave a dead link on the front page.
+The poster, both transcripts and both caption files are committed —
+`docs/images/github/walkthrough-poster.png` and `docs/media/`. The MP4s are not: they are release assets
+only, so a fresh clone has the poster and the transcripts but pulls the videos from GitHub.
 
 If a later capture changes the video, refresh the committed copies too:
 
