@@ -95,7 +95,7 @@ binaries do not belong in normal Git history.
 |---|---|
 | `st0r-walkthrough.mp4` | The main walkthrough — 1920×1080, 30 fps, H.264, `+faststart` |
 | `st0r-highlight.mp4` | The short highlight clip |
-| `poster.png` | A walkthrough frame with a play badge composited on, for use as a thumbnail |
+| `poster.png` | A walkthrough frame with a download badge composited on, for use as the README thumbnail |
 | `st0r-walkthrough.vtt` | WebVTT captions, generated from the same cue list the video was drawn from |
 | `st0r-walkthrough-transcript.md` | Plain-text transcript with timestamps |
 | `raw/` | The original WebM recordings — delete these once the MP4s are verified |

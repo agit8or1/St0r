@@ -15,7 +15,7 @@
  * belong in normal Git history.
  */
 import { chromium } from 'playwright-core';
-import { mkdirSync, writeFileSync, renameSync, readdirSync, rmSync } from 'fs';
+import { mkdirSync, writeFileSync, renameSync, readdirSync, rmSync, statSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { resolve, join } from 'path';
 
@@ -278,14 +278,30 @@ writeFileSync(
 
 if (MODE === 'full') {
   // Poster frame for the README thumbnail: a dashboard frame under the opening
-  // caption, with a play badge composited on so the still reads as a video.
-  // The badge is drawn with ffmpeg alone — no image editor in the toolchain.
+  // caption, with a download badge composited on. Deliberately NOT a play
+  // triangle — GitHub strips <video> and serves release assets as attachments,
+  // so the poster link downloads the file rather than playing it, and the still
+  // should not promise a player. The badge is drawn with ffmpeg alone — no
+  // image editor in the toolchain.
   console.log('Extracting poster …');
   const font = execFileSync('fc-match', ['-f', '%{file}', 'DejaVu Sans'], { encoding: 'utf8' }).trim();
-  const badge = join(OUT, 'play-badge.png');
-  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'color=c=black:s=240x240:d=1',
-    '-vf', `format=rgba,geq=r='0':g='0':b='0':a='if(lte(hypot(X-120,Y-120),115),150,0)',` +
-      `drawtext=fontfile=${font}:text='▶':fontcolor=white@0.95:fontsize=110:x=(w-text_w)/2+8:y=(h-text_h)/2`,
+  const mb = (statSync(mp4).size / 1e6).toFixed(1);
+  // Length from the encoded file, not the recording clock — they differ by a
+  // frame or two and the badge is read next to the README's own figures.
+  const secs = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries',
+    'format=duration', '-of', 'csv=p=0', mp4], { encoding: 'utf8' }).trim());
+  // The colon in mm:ss must be escaped — drawtext parses a bare ':' as the end
+  // of the option, which silently truncates the label at that point.
+  const mmss = fmt(Math.round(secs) * 1000).slice(3, 8).replace(':', '\\:');
+  const label = `MP4 download · ${mmss} · ${mb} MB`;
+  // The canvas is wide enough for the whole label — a narrow one crops it,
+  // since drawtext does not wrap or shrink to fit.
+  const badge = join(OUT, 'download-badge.png');
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'color=c=black:s=1000x340:d=1',
+    '-vf', `format=rgba,geq=r='0':g='0':b='0':a='if(lte(hypot(X-500,Y-120),115),175,0)',` +
+      `drawtext=fontfile=${font}:text='↓':fontcolor=white@0.97:fontsize=150:x=(w-text_w)/2:y=120-text_h/2-10,` +
+      `drawtext=fontfile=${font}:text='${label}':fontcolor=white:fontsize=34:x=(w-text_w)/2:y=268:` +
+      `box=1:boxcolor=black@0.78:boxborderw=16`,
     '-frames:v', '1', badge], { stdio: ['ignore', 'ignore', 'pipe'] });
   execFileSync('ffmpeg', ['-y', '-ss', '5.5', '-i', mp4, '-i', badge,
     '-filter_complex', '[0:v][1:v]overlay=(W-w)/2:(H-h)/2-60',
