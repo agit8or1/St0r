@@ -1,119 +1,225 @@
-# Screenshots
+# Screenshot gallery
 
-Every image is a real capture of the St0r interface at 1440×900, taken against a disposable demo
-environment with fabricated endpoints, customers and file names. No production data appears in them.
+Every image is a real capture of the St0r interface at 1440 × 1000, taken against an isolated demo
+environment. The endpoints, customers, IP addresses, file names and metrics are all **fabricated sample
+data** — no production system or customer information appears anywhere in this gallery.
 
-Back to the [README](../README.md).
+Each screenshot is labelled **Light** or **Dark**. Click any image to open the full-size original.
 
----
-
-## Overview
-
-### Dashboard
-
-Estate summary: endpoint counts, backup job totals for the last seven days, replication health, server
-resources, storage capacity, and any endpoints needing attention.
-
-<img src="images/github/dashboard.png" alt="St0r dashboard showing six endpoints with five online, thirty-five successful and three failed backup jobs over seven days, healthy replication with two hour lag, backup storage capacity, and one endpoint listed as needing attention" width="100%">
-
-### Endpoints
-
-Every endpoint with its customer, last file and image backup, storage against an optional quota, IP
-address and status. Filterable by state or customer.
-
-<img src="images/github/endpoints.png" alt="Endpoint list showing six endpoints with customer assignment, last backup times, storage used against quota bars, IP addresses, and online or offline status badges" width="100%">
-
-### Activities
-
-Running and recent backup jobs, with progress and the ability to stop a running job.
-
-<img src="images/github/activities.png" alt="Backup jobs screen listing recent backup activity with status and type filters" width="100%">
-
-### Alerts
-
-Endpoints whose backups are failing or overdue.
-
-<img src="images/github/alerts.png" alt="Alerts screen listing endpoints with backup problems" width="100%">
+[← Back to the README](../README.md) · [Quick start](../README.md#quick-start) · [MSP Reboot](https://mspreboot.com)
 
 ---
 
-## Endpoint management
+## Contents
 
-### Endpoint detail
+- [Overview and dashboards](#overview-and-dashboards)
+- [Visual insights and monitoring](#visual-insights-and-monitoring)
+- [Everyday workflows](#everyday-workflows)
+- [Management and configuration](#management-and-configuration)
+- [Access and administration](#access-and-administration)
+- [How these were made](#how-these-were-made)
 
-One endpoint's status, backup history and per-endpoint actions.
+---
 
-<img src="images/github/endpoint-detail.png" alt="Endpoint detail page showing status summary and backup history for a single endpoint" width="100%">
+## Overview and dashboards
 
-### Backup paths
+### Dashboard — Light
 
-Which folders are backed up, and whether the server or the client decides.
+Endpoint counts, seven-day job totals, replication health, server resources, storage capacity, running
+backups and anything needing attention, on one screen.
 
-<img src="images/github/endpoint-paths.png" alt="Endpoint settings on the Backup Paths tab showing server-managed folder list and exclude patterns" width="100%">
+[![St0r dashboard in light theme: nine endpoints with eight online, fifty-six successful and three failed backup jobs over seven days, healthy replication with six hour lag, server CPU and memory gauges, a backup storage capacity ring, three running backups with progress, and one endpoint flagged as needing attention](images/github/dashboard-light.png)](images/github/dashboard-light.png)
 
-### Schedule and retention
+### Dashboard — Dark
 
-Incremental and full intervals, backup windows, and how many snapshots to keep.
+The same overview in the dark theme. Theme choice is per user and persists between sessions.
 
-<img src="images/github/endpoint-schedule.png" alt="Endpoint settings on the Schedule and Retention tab showing incremental and full backup intervals, backup windows, and file backup retention counts with UrBackup defaults noted" width="100%">
+[![St0r dashboard in dark theme showing the same estate summary: endpoint counts, backup job totals, replication health, server resource gauges, storage capacity and running backups](images/github/dashboard-dark.png)](images/github/dashboard-dark.png)
 
-### Image backup
+### Endpoints — Light
 
-Image backup schedule and retention, and which volumes are imaged.
+Every endpoint with its customer, last file and image backup, storage against an optional quota, address
+and status. Filter by state or by customer.
 
-<img src="images/github/endpoint-image.png" alt="Endpoint settings on the Image Backup tab showing image schedule and retention options" width="100%">
+[![Endpoint list in light theme showing nine endpoints with customer assignment, last backup times, green quota usage bars, IP addresses and online status badges, with one offline endpoint whose last backup was four days ago](images/github/endpoints-light.png)](images/github/endpoints-light.png)
 
-### Storage limit
+### Endpoints — Dark
+
+The same list in dark, with the quota bars and status badges tuned for the dark palette.
+
+[![Endpoint list in dark theme with customer assignment, last backup times, quota usage bars and status badges](images/github/endpoints-dark.png)](images/github/endpoints-dark.png)
+
+---
+
+## Visual insights and monitoring
+
+### Running backups — Light
+
+Live progress for every running job: percentage, data transferred, throughput and estimated time
+remaining, with filters for state, type, endpoint and period.
+
+[![Backup jobs screen in light theme showing three running backups with progress bars at sixty-four, twenty-eight and ninety-one percent, each with data transferred, speed in megabytes per second and estimated time remaining, above summary tiles for running, completed and errored jobs](images/github/activity-progress-light.png)](images/github/activity-progress-light.png)
+
+### Alerts and notification rules — Light
+
+Active alerts you can acknowledge or dismiss, and the rules that raise them — thresholds and delivery
+channels per rule.
+
+[![Alerts and notifications screen in light theme with one active client-offline warning, and four alert rules for backup failure, client offline, low storage and stale backups, each showing its threshold and delivery channel](images/github/alerts-light.png)](images/github/alerts-light.png)
+
+### Reports — Light
+
+Estate summary over a chosen period: totals, storage, backup timeline and success rate, exportable to CSV
+or PDF.
+
+[![Backup reports screen in light theme with report type and date filters, tiles for total clients, successful and failed backups, total storage used and average backup size, a backup timeline showing oldest and newest backup dates, and a success rate bar](images/github/reports-light.png)](images/github/reports-light.png)
+
+### Replication overview — Light
+
+Health across every target, worst replication lag, and the most recent runs.
+
+[![Replication overview in light theme showing overall health, two of two targets healthy, worst lag of six hours, target cards for an offsite disaster recovery site and cold storage, and a table of recent runs](images/github/replication-overview-light.png)](images/github/replication-overview-light.png)
+
+### Replication run history — Dark
+
+Per-target history: status, trigger, duration and bytes sent for every run, including failures.
+
+[![Replication target detail in dark theme showing last status, lag, last sync time and bytes sent, above a run history list of nine runs with one failed run among successful ones, each showing trigger, timestamp, duration and volume](images/github/replication-runs-dark.png)](images/github/replication-runs-dark.png)
+
+### Storage protection — Dark
+
+The disk guard: usage against warning, critical and emergency thresholds, with the events it has recorded.
+
+[![Storage protection settings in dark theme showing disk guard status with warning, critical and emergency thresholds and the recorded events](images/github/disk-guard-dark.png)](images/github/disk-guard-dark.png)
+
+---
+
+## Everyday workflows
+
+### Endpoint detail — Light
+
+One endpoint's status, backup history and per-endpoint actions, with its pre-configured client installers.
+
+[![Endpoint detail page in light theme showing online status, last seen time, pre-configured Windows, Linux and macOS client downloads, and the backup history for that endpoint](images/github/endpoint-detail-light.png)](images/github/endpoint-detail-light.png)
+
+### File recovery — Light
+
+Pick a day that has a backup, open it, and browse into the backup to download individual files or whole
+folders.
+
+[![File browser in light theme showing a September calendar with days that have backups highlighted, a selected backup, and the files inside one project folder with size, timestamp and download buttons](images/github/file-browser-light.png)](images/github/file-browser-light.png)
+
+### Bare metal restore — Dark
+
+Restore-media guidance and the endpoints that have a restorable system image, with VHD export.
+
+[![Bare metal restore page in dark theme showing restore media download options, step by step restore instructions, and the endpoints that have restorable image backups](images/github/bare-metal-restore-dark.png)](images/github/bare-metal-restore-dark.png)
+
+---
+
+## Management and configuration
+
+### Schedule and retention — Light
+
+Incremental and full intervals, backup windows, and how many snapshots to keep — per endpoint, with
+UrBackup's defaults shown beside each field.
+
+[![Endpoint settings on the schedule and retention tab in light theme, showing incremental and full backup intervals, backup windows, and file backup retention counts with UrBackup defaults noted under each field](images/github/schedule-retention-light.png)](images/github/schedule-retention-light.png)
+
+### Storage quota — Light
 
 An optional per-endpoint quota with warning and critical thresholds.
 
-<img src="images/github/endpoint-storage-limit.png" alt="Endpoint settings on the Storage Limit tab showing a per-endpoint quota with warning and critical thresholds" width="100%">
+[![Endpoint settings on the storage limit tab in light theme showing a per-endpoint storage quota with warning and critical percentage thresholds](images/github/storage-limit-light.png)](images/github/storage-limit-light.png)
+
+### Backup paths — Dark
+
+Which folders are backed up, whether the server or the client decides, and the exclusion patterns.
+
+[![Endpoint settings on the backup paths tab in dark theme showing server-managed folder list, a toggle for who controls the paths, and exclude patterns](images/github/backup-paths-dark.png)](images/github/backup-paths-dark.png)
+
+### Image backup — Dark
+
+Image schedule and retention, and which volumes are imaged.
+
+[![Endpoint settings on the image backup tab in dark theme showing image backup schedule, retention counts and volume selection](images/github/image-backup-dark.png)](images/github/image-backup-dark.png)
+
+### Transfer settings — Dark
+
+Transfer mode, compression, encryption and bandwidth limits for this endpoint.
+
+[![Endpoint settings on the transfer tab in dark theme showing transfer mode, compression, encryption and bandwidth limit options](images/github/transfer-settings-dark.png)](images/github/transfer-settings-dark.png)
+
+### Backup defaults — Dark
+
+Estate-wide defaults for new endpoints, including the retention floors that an out-of-space cleanup will
+not delete below.
+
+[![Server settings on the backup defaults tab in dark theme showing default maximum and minimum full and incremental backup counts, default intervals, and minimum ages before deletion](images/github/backup-defaults-dark.png)](images/github/backup-defaults-dark.png)
+
+### Client configuration — Dark
+
+Defaults applied to newly installed clients.
+
+[![Server settings on the client configuration tab in dark theme showing the defaults applied to newly installed clients](images/github/client-config-dark.png)](images/github/client-config-dark.png)
+
+### General settings — Dark
+
+Storage path, ports, and the address internet clients connect to.
+
+[![General settings in dark theme showing backup storage path, server port, maximum simultaneous backups, internet server name and port, and option toggles](images/github/settings-general-dark.png)](images/github/settings-general-dark.png)
+
+### UrBackup server settings — Dark
+
+The UrBackup server's own configuration, surfaced without leaving St0r.
+
+[![UrBackup server settings in dark theme showing the backup server's own configuration options](images/github/server-settings-dark.png)](images/github/server-settings-dark.png)
+
+### Replication targets — Dark
+
+Each configured standby: host, transport, verification and bandwidth limit.
+
+[![Replication targets tab in dark theme listing two configured targets with host, SSH user, target path, verification options and bandwidth limits](images/github/replication-targets-dark.png)](images/github/replication-targets-dark.png)
 
 ---
 
-## Recovery
+## Access and administration
 
-### File browser
+### Customers — Light
 
-Pick a date, open a backup from that day, and download individual files or folders.
+Group endpoints under a customer. Customer assignment is what scopes a read-only account's visibility.
 
-<img src="images/github/file-browser.png" alt="File browser showing a September calendar with backup days highlighted, a selected backup, and the files inside one folder with download buttons" width="100%">
+[![Customers page in light theme listing three customers with their company, contact details, and the number of endpoints and users assigned to each](images/github/customers-light.png)](images/github/customers-light.png)
 
-### Bare metal restore
+### Users and roles — Light
 
-Guidance for restoring a full system image, and export of an image backup as a VHD.
+Administrator and read-only accounts. A read-only account sees only the endpoints of the customers it is
+assigned to.
 
-<img src="images/github/bare-metal-restore.png" alt="Bare metal restore page showing restore media instructions and a list of endpoints with restorable image backups" width="100%">
+[![Users page in light theme listing accounts with their role, assigned customers, last login and status](images/github/users-light.png)](images/github/users-light.png)
 
----
+### Endpoint permissions — Light
 
-## Replication
+What the client is allowed to do locally: change settings, start backups, pause, or exit the tray icon.
 
-Target health, replication lag, and the history of each run.
-
-<img src="images/github/replication.png" alt="Replication overview showing one healthy target, two hour lag, and a table of four recent runs with status, trigger, duration and bytes sent" width="100%">
-
-Replication copies the backup store to a standby machine. It is not a substitute for a tested restore,
-and it does not make backups immutable.
+[![Endpoint settings on the permissions tab in light theme showing toggles for whether the client may change its own settings, start backups, pause, or exit the tray icon](images/github/permissions-light.png)](images/github/permissions-light.png)
 
 ---
 
-## Administration
+## How these were made
 
-### Customers
+Captured from an isolated demo environment — a separate database, a fabricated UrBackup database, and a
+mock UrBackup API so the demo instance can never reach a real backup server. The tooling is in
+[`scripts/demo/`](../scripts/demo/README.md) and each shot's route and theme are recorded in the capture
+manifest, so the whole gallery can be regenerated reproducibly.
 
-Group endpoints under a customer, and scope read-only accounts to them.
+Themes are switched using the application's own theme selector and verified before each capture.
 
-<img src="images/github/customers.png" alt="Customers page listing three customers with their assigned endpoint and user counts" width="100%">
+The Logs page is deliberately absent: it renders the host's `journalctl` output, which is real system data
+even when the rest of the environment is demo data.
 
-### Users
+---
 
-Administrator and read-only accounts. Read-only accounts can be limited to specific customers' endpoints.
-
-<img src="images/github/users.png" alt="Users page listing accounts with their role and assigned customers" width="100%">
-
-### Settings
-
-Server-wide configuration: storage path, ports, internet client settings and backup defaults.
-
-<img src="images/github/settings.png" alt="Settings page on the General tab showing backup storage path, server port, internet server name and port, and option toggles" width="100%">
+<div align="center">
+<sub><a href="../README.md">← Back to the README</a> · <a href="https://mspreboot.com">MSP Reboot</a></sub>
+</div>

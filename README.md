@@ -5,39 +5,39 @@
 **A modern management interface for UrBackup.**
 
 [![Latest release](https://img.shields.io/github/v/release/agit8or1/St0r?label=release)](https://github.com/agit8or1/St0r/releases)
+[![License](https://img.shields.io/github/license/agit8or1/St0r)](LICENSE)
 [![UrBackup](https://img.shields.io/badge/UrBackup-2.5.x-4c6ef5)](https://www.urbackup.org/)
 [![Platform](https://img.shields.io/badge/platform-Ubuntu%20%7C%20Debian-informational)](#requirements)
-[![License](https://img.shields.io/github/license/agit8or1/St0r)](LICENSE)
 
-[Screenshots](docs/screenshots.md) · [Quick start](#quick-start) · [Compatibility](#requirements) · [Documentation](#documentation) · [Releases](https://github.com/agit8or1/St0r/releases)
+[Quick start](#quick-start) · [Screenshots](docs/screenshots.md) · [Documentation](#documentation) · [Releases](https://github.com/agit8or1/St0r/releases) · [MSP Reboot](https://mspreboot.com)
 
 </div>
 
 ---
 
 St0r is a web interface for administrators who already run **UrBackup Server** and want a clearer way to
-operate it day to day — seeing endpoint status, adjusting schedules and retention, browsing what was
-backed up, and replicating the backup store offsite.
+operate it day to day — seeing endpoint status, adjusting schedules and retention, recovering files, and
+replicating the backup store offsite.
 
-**St0r does not replace the backup engine.** UrBackup still performs every backup, owns the storage, and
+**It does not replace the backup engine.** UrBackup still performs every backup, owns the storage, and
 decides what is recoverable. St0r reads UrBackup's own database and API and presents them; it changes
-UrBackup's settings only where you ask it to. If St0r is stopped, backups continue exactly as before.
+UrBackup's settings only where you ask it to. Stop St0r and backups carry on exactly as before.
 
-<img src="docs/images/github/dashboard.png" alt="St0r dashboard showing six endpoints, backup job totals for the last seven days, replication health, backup storage capacity, and one endpoint flagged as needing attention" width="100%">
+<img src="docs/images/github/dashboard-light.png" alt="St0r dashboard: nine endpoints with eight online, fifty-six successful and three failed backup jobs over seven days, healthy replication, server resource gauges, backup storage capacity, three running backups with live progress, and one endpoint flagged as needing attention" width="100%">
 
 ---
 
 ## Why St0r
 
 **One view of every endpoint.** Online state, last file and image backup, storage against an optional
-per-endpoint quota, and which endpoints need attention — in one table instead of several UrBackup screens.
+quota, and what needs attention — in one table instead of several UrBackup screens.
 
-**Schedules and retention without the settings maze.** Backup intervals, backup windows, retention counts,
-excluded paths and per-endpoint storage limits are grouped into labelled tabs, with UrBackup's defaults
-shown next to each field.
+**Schedules and retention without the settings maze.** Intervals, backup windows, retention counts,
+excluded paths and per-endpoint quotas, grouped into labelled tabs with UrBackup's defaults beside each
+field.
 
-**Offsite replication you can actually see.** Push the backup store and its databases to a standby server
-over SSH/rsync, with run history, bytes transferred, replication lag and alerting on failure.
+**Offsite replication you can actually see.** Push the backup store to a standby server over SSH/rsync,
+with run history, bytes transferred, replication lag and alerting on failure.
 
 > Replication copies your backup store to another machine. It is not a substitute for periodically
 > performing a **test restore**, and it does not make backups immutable — deletions and corruption
@@ -45,16 +45,49 @@ over SSH/rsync, with run history, bytes transferred, replication lag and alertin
 
 ---
 
-## A quick tour
+## See it in action
 
-| | |
-|---|---|
-| <img src="docs/images/github/endpoints.png" alt="Endpoint list with customer assignment, last file and image backup times, storage used against quota, and per-endpoint online and backup status badges" width="420"> | **Endpoints** — every endpoint with its customer, last backups, quota usage and status. Filter by state or customer. |
-| <img src="docs/images/github/endpoint-schedule.png" alt="Endpoint settings screen open on the Schedule and Retention tab, showing incremental and full backup intervals, backup windows, and file backup retention counts" width="420"> | **Schedules and retention** — intervals, backup windows and how many snapshots to keep, per endpoint. |
-| <img src="docs/images/github/replication.png" alt="Replication overview showing one healthy target, two hour replication lag, and a table of four recent runs with status, trigger, duration and bytes sent" width="420"> | **Replication** — target health, replication lag, and a history of each run. |
-| <img src="docs/images/github/file-browser.png" alt="File browser showing a calendar of days with backups, a selected backup, and the files inside one folder of that backup with download buttons" width="420"> | **File browser** — pick a date, open a backup, and download individual files or folders. |
+A sample of the interface in both themes. The [full gallery](docs/screenshots.md) has 26 screens.
 
-More screens in [docs/screenshots.md](docs/screenshots.md).
+### Know what is running, right now
+
+[<img src="docs/images/github/activity-progress-light.png" alt="Backup jobs screen showing three running backups with progress bars, data transferred, throughput and estimated time remaining" width="100%">](docs/images/github/activity-progress-light.png)
+
+Live progress for every running job — data, throughput and time remaining — with filters by state, type,
+endpoint and period. *Light theme.*
+
+### Every endpoint, grouped by customer
+
+[<img src="docs/images/github/endpoints-dark.png" alt="Endpoint list in dark theme with customer assignment, last file and image backup times, quota usage bars and online status badges" width="100%">](docs/images/github/endpoints-dark.png)
+
+Last backup, quota usage and status per endpoint, filterable by state or customer. *Dark theme.*
+
+### Recover a single file
+
+[<img src="docs/images/github/file-browser-light.png" alt="File browser showing a calendar with backup days highlighted, a selected backup, and the files inside a folder with sizes and download buttons" width="100%">](docs/images/github/file-browser-light.png)
+
+Pick a day, open that day's backup, browse in and download a file or a whole folder. *Light theme.*
+
+### Replicate offsite, and prove it ran
+
+[<img src="docs/images/github/replication-runs-dark.png" alt="Replication target detail in dark theme showing last status, lag, last sync and bytes sent, above a run history including one failed run" width="100%">](docs/images/github/replication-runs-dark.png)
+
+Status, trigger, duration and volume for every run — including the ones that failed. *Dark theme.*
+
+### Tune schedules and retention per endpoint
+
+[<img src="docs/images/github/schedule-retention-light.png" alt="Endpoint settings on the schedule and retention tab showing backup intervals, backup windows and retention counts with UrBackup defaults noted" width="100%">](docs/images/github/schedule-retention-light.png)
+
+Intervals, windows and how many snapshots to keep, with UrBackup's default beside each field.
+*Light theme.*
+
+### Watch capacity before it bites
+
+[<img src="docs/images/github/disk-guard-dark.png" alt="Storage protection settings in dark theme showing disk guard thresholds for warning, critical and emergency levels and the recorded events" width="100%">](docs/images/github/disk-guard-dark.png)
+
+Warning, critical and emergency thresholds, with the events the guard has recorded. *Dark theme.*
+
+**[Browse all 26 screenshots →](docs/screenshots.md)**
 
 ---
 
@@ -62,16 +95,16 @@ More screens in [docs/screenshots.md](docs/screenshots.md).
 
 St0r runs alongside UrBackup on the same machine and talks to it three ways:
 
-1. **Reads UrBackup's SQLite databases directly.** `/var/urbackup/backup_server.db` for clients, backups,
-   images and job logs, and `backup_server_settings.db` for settings. Most access is read-only; St0r opens
-   them read-write for specific actions such as deleting a backup or applying a per-endpoint setting.
+1. **Reads UrBackup's SQLite databases directly** — `/var/urbackup/backup_server.db` for clients, backups,
+   images and job logs, and `backup_server_settings.db` for settings. Mostly read-only; opened read-write
+   for specific actions such as deleting a backup or applying a per-endpoint setting.
 2. **Calls UrBackup's HTTP API** on `localhost:55414` to start and stop backups, read live progress, save
-   client settings, and build pre-configured client installers.
-3. **Reads the backup storage folder from disk** to browse and download files inside a backup. The folder
-   location comes from UrBackup's settings database, so it follows the path UrBackup actually uses.
+   client settings and build pre-configured installers.
+3. **Reads the backup storage folder from disk** to browse and download files. The location comes from
+   UrBackup's settings database, so it follows the path UrBackup actually uses.
 
-Its own data — user accounts, customers, replication configuration and history — lives in a separate
-MariaDB database and never mixes with UrBackup's.
+Its own data — accounts, customers, replication configuration and history — lives in a separate MariaDB
+database and never mixes with UrBackup's.
 
 **Installation on the same server as UrBackup is required.** The SQLite databases and the backup storage
 are opened as local files, so a remote UrBackup server is not supported. St0r manages one UrBackup
@@ -105,15 +138,14 @@ Then open `http://YOUR_SERVER_IP`.
 Read this before running it on a server that already serves web content:
 
 - **Installs packages:** Node.js 20, MariaDB, Nginx, `rsync`, `sqlite3`, `curl`, `gnupg2`. If UrBackup
-  Server is not present, it installs that too.
-- **Takes over Nginx's default site.** It writes `/etc/nginx/sites-available/urbackup-gui`, enables it as
-  `listen 80 default_server`, and **removes `/etc/nginx/sites-enabled/default`**. If something else already
-  serves port 80 or claims `default_server`, expect a conflict — put St0r behind your existing proxy
-  instead (the backend listens on `127.0.0.1:3000`).
+  Server is absent, it installs that too.
+- **Takes over Nginx's default site.** It enables its own site as `listen 80 default_server` and **removes
+  `/etc/nginx/sites-enabled/default`**. If something else already serves port 80, put St0r behind your
+  existing proxy instead — the backend listens on `127.0.0.1:3000`.
 - **Serves plain HTTP on port 80.** No TLS is configured. Terminate TLS at your own proxy before exposing
   St0r to anything untrusted.
-- **Adjusts UrBackup database permissions.** It adds the service user to the `urbackup` group and makes
-  `/var/urbackup/backup_server*.db` group-writable, so St0r can perform the write operations above.
+- **Adjusts UrBackup database permissions** — adds the service user to the `urbackup` group and makes
+  `/var/urbackup/backup_server*.db` group-writable.
 - **Creates a systemd service** `urbackup-gui` and a MariaDB database `urbackup_gui`.
 
 ### First login
@@ -126,14 +158,9 @@ shared default. The installer prints it when it finishes, and it is also written
 sudo journalctl -u urbackup-gui | grep -A3 "First run"
 ```
 
-You must change it at first login, and the account cannot be used normally until you do. Delete the
-password file once you have signed in.
+You must change it at first login. Delete the password file once you have signed in.
 
-Upgrading from a release that used the old shared `admin123` default? On first start after the update, any
-account still using it is flagged and must change its password at the next login.
-
-Manual, step-by-step installation is documented in
-[docs/installation.md](docs/installation.md).
+Manual, step-by-step installation is in [docs/installation.md](docs/installation.md).
 
 ---
 
@@ -145,18 +172,18 @@ Manual, step-by-step installation is documented in
 | Updating and uninstalling | [docs/installation.md](docs/installation.md#updating) |
 | Backing up St0r's own database | [docs/installation.md](docs/installation.md#backing-up-st0rs-own-database) |
 | Backing up UrBackup's databases | [docs/URBACKUP_DATABASE_BACKUP.md](docs/URBACKUP_DATABASE_BACKUP.md) |
-| Full screenshot catalogue | [docs/screenshots.md](docs/screenshots.md) |
+| Full screenshot gallery | [docs/screenshots.md](docs/screenshots.md) |
+| Regenerating the screenshots and video | [scripts/demo/README.md](scripts/demo/README.md) |
 | UrBackup API reference used by St0r | [docs/URBACKUP_API_COMPLETE_REFERENCE.md](docs/URBACKUP_API_COMPLETE_REFERENCE.md) |
-| Deployment notes | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | Release history | [CHANGELOG.md](CHANGELOG.md) · [Releases](https://github.com/agit8or1/St0r/releases) |
 
 ---
 
 ## Known limitations
 
-- **The first-run password is written to disk.** It is generated per installation, not shared, but it sits
-  in `/opt/urbackup-gui/initial-admin-password.txt` at mode 0600 and in the service log until you change
-  the password and delete the file.
+- **The first-run password is written to disk.** Generated per installation, not shared, but it sits in
+  `/opt/urbackup-gui/initial-admin-password.txt` at mode 0600 and in the service log until you change the
+  password and delete the file.
 - **No TLS out of the box.** The installer configures plain HTTP on port 80.
 - **One UrBackup server per installation**, on the same host. There is no aggregated view across several
   UrBackup servers.
@@ -179,12 +206,19 @@ maintainer. Full policy: [SECURITY.md](SECURITY.md).
 Questions and bug reports: [GitHub Issues](https://github.com/agit8or1/St0r/issues).
 Pull requests are welcome — please open an issue first for anything substantial.
 
-## License
+---
 
-[MIT](LICENSE).
+## MSP Reboot
+
+St0r's author also runs **[MSP Reboot](https://mspreboot.com)** — MSP consulting on pricing, operations,
+margins, service delivery and technology strategy, from a former 25-year MSP owner, offering a free
+introductory hour.
+
+It is a consulting practice, not a support arrangement for this project: St0r is free software, issues are
+handled on GitHub, and no service-level commitment is implied.
 
 ---
 
 <div align="center">
-<sub>Project managed by <b>Mia</b> the GSD 🐾</sub>
+<sub>Project managed by <b>Mia</b> the GSD 🐾 · <a href="https://mspreboot.com">mspreboot.com</a></sub>
 </div>

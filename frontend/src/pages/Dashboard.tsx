@@ -327,10 +327,12 @@ export function Dashboard() {
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 cursor-default inline-block">Endpoint Status</h2>
             </Tooltip>
             <ResponsiveContainer width="100%" height={160}>
-              <PieChart>
+              {/* Labels render outside the arc, so the chart needs horizontal
+                  margin or they are clipped at the container edge. */}
+              <PieChart margin={{ top: 4, right: 62, bottom: 4, left: 62 }}>
                 <Pie data={statusData} cx="50%" cy="50%" labelLine={false}
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={65} dataKey="value">
+                  outerRadius={58} dataKey="value">
                   {statusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
                 <ChartTooltip />

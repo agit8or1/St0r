@@ -1,0 +1,15 @@
+{
+  "name": "st0r-demo-capture",
+  "private": true,
+  "type": "module",
+  "description": "Demo fixtures and screenshot/video capture tooling. Not part of the application build.",
+  "scripts": {
+    "fixtures": "node build-demo-data.mjs",
+    "mock-api": "node mock-urbackup-api.mjs",
+    "screenshots": "node capture-screenshots.mjs",
+    "video": "node capture-video.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.56.0"
+  }
+}

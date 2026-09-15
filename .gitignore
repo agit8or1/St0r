@@ -51,3 +51,7 @@ APP_SECRET_KEY
 
 # Generated on first run by the backend; never commit
 initial-admin-password.txt
+
+# Demo capture tooling deps and raw captures (never committed)
+scripts/demo/node_modules/
+scripts/demo/.auth/

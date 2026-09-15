@@ -9,41 +9,37 @@ Verified on 2026-09-15.
 
 ## Description
 
-Current:
+**Applied 2026-09-15.**
+
+Previously:
 
 > St0r is a addon web gui for Urbackup Server | Project managed by MIA the GSD 🐾
 
-Proposed (338 characters is the GitHub limit; this is 118):
+Now:
 
 ```
 A modern management interface for UrBackup — endpoint status, schedules and retention, file recovery, and offsite replication.
 ```
 
-Why change it: the current text has two small grammar slips (“a addon”, “Urbackup”), and the search-facing
-description is a good place to say what the tool does rather than who maintains it. The Mia credit is kept
-in the README instead.
+Why: the old text had two grammar slips (“a addon”, “Urbackup”), and the search-facing description is
+better spent saying what the tool does than who maintains it. The Mia credit lives in the README instead.
 
 ---
 
 ## Website
 
-**Current setting is broken.** The repository's homepage is `https://st0r.mspreboot.com`, which has no DNS
-record and does not resolve.
+**Applied 2026-09-15.** The homepage was `https://st0r.mspreboot.com`, which has no DNS record and does not
+resolve. It now points at the project page, which does.
 
-| URL | Result |
-|---|---|
-| `https://st0r.mspreboot.com` | ❌ does not resolve (no DNS record) |
-| `https://agit8or.net/projects/stor.html` | ✅ HTTP 200 |
-| `https://mspreboot.com` | ✅ HTTP 200 |
+| URL | Result | Role |
+|---|---|---|
+| `https://agit8or.net/projects/stor.html` | ✅ HTTP 200 | **About URL** — the product page, best for visitors arriving from GitHub |
+| `https://mspreboot.com` | ✅ HTTP 200 | linked from the README, not the About panel |
+| `https://st0r.mspreboot.com` | ❌ no DNS record | previous setting, removed |
 
-Proposed:
-
-```
-https://agit8or.net/projects/stor.html
-```
-
-That is the project page and it responds. If `st0r.mspreboot.com` is meant to be the canonical home, the
-DNS record needs creating first — until then the About panel links visitors to a dead host.
+The product page is kept as the primary About URL because it describes St0r specifically; MSP Reboot is the
+author's consulting practice and is linked from the README instead. If `st0r.mspreboot.com` is meant to
+become the canonical home, create the DNS record first and switch then.
 
 ---
 
@@ -89,9 +85,19 @@ to appear after the file lands on the default branch.
 
 ### Releases
 
-The latest GitHub release is `v3.2.104`, while `VERSION` in the repository is ahead of that. Publishing a
-release for the current version keeps the README's release badge meaningful, since it reads the latest
-release tag.
+**Resolved.** `v3.2.115` and `v3.2.116` are published, so the README's release badge now reports the
+current version rather than a stale one.
+
+### MSP Reboot
+
+Checked 2026-09-15. <https://mspreboot.com> describes itself as *"Practical MSP consulting from a former
+25-year MSP owner. Improve pricing, operations, margins, service delivery, technology strategy and owner
+independence — without the vendor pitch."* It offers a free introductory hour and a contact form.
+
+It is a **consulting practice, not a software catalogue**, so the README describes it as such and links to
+it — it does not claim MSP Reboot publishes tools, sponsors this project, or provides support for it.
+Neither site states a relationship between St0r and MSP Reboot, so none is asserted beyond shared
+authorship, which the README words as "St0r's author also runs".
 
 ### Continuous integration
 

@@ -235,6 +235,43 @@ git pull
 sudo ./deploy.sh
 ```
 
+### Deploying only one half
+
+The backend and the frontend can be deployed independently:
+
+```bash
+# Backend — needs a service restart
+cd backend && npm run build
+sudo rsync -a --delete dist/ /opt/urbackup-gui/backend/dist/
+sudo systemctl restart urbackup-gui
+
+# Frontend — nginx serves the files directly, so no restart
+cd frontend && npm run build
+sudo rsync -a --delete --exclude downloads dist/ /opt/urbackup-gui/frontend/dist/
+```
+
+`--exclude downloads` matters: `frontend/dist/downloads/` holds published installers and is not
+build output.
+
+### Layout
+
+```
+<checkout>/                     Development and source
+├── backend/src/                TypeScript source
+├── backend/dist/               Compiled output (gitignored)
+├── frontend/src/               React source
+├── frontend/dist/              Vite build output (gitignored)
+└── deploy.sh                   Build, sync, migrate and restart
+
+/opt/urbackup-gui/              Production
+├── backend/dist/               Running backend
+├── backend/.env                Secrets — preserved across updates
+├── frontend/dist/              Static files served by nginx
+└── version.json                Version manifest the update checker reads
+```
+
+---
+
 `deploy.sh` builds both halves, syncs them into `/opt/urbackup-gui`, applies migrations, deploys
 `version.json`, and restarts the service — failing loudly with logs if it does not come back.
 
