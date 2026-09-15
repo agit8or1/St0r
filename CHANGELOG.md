@@ -5,6 +5,17 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.118] - 2026-09-15
+
+Documentation only — no application code changed since 3.2.117.
+
+### Added
+- **This file is a complete history again.** It stopped at 3.2.90 while 27 versions shipped, so the release history the README pointed at was not one. Entries for 3.2.91 through 3.2.118 are reconstructed from the release notes
+- Versions that were committed but never released on their own — 3.2.93–3.2.99 and 3.2.105–3.2.114 — each have an entry attributed to its commit and marked with the release that carried it
+
+### Changed
+- **The README states that hosting and support for St0r are available through MSP Reboot.** The previous wording ruled out a support arrangement entirely. It stays explicit that none of it is required: the software is MIT-licensed and free to run, and bug reports are handled in the open whether or not the reporter is a customer
+
 ## [3.2.117] - 2026-09-15
 
 Documentation only — no application code changed since 3.2.116.

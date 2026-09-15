@@ -1,11 +1,10 @@
 {
-  "version": "3.2.117",
+  "version": "3.2.118",
   "releaseDate": "2026-09-15",
   "changelog": [
-    "Documentation only — no application code changed. Updating from 3.2.116 gains nothing but the new version number.",
-    "The walkthrough video is published as a release asset and linked from the README, with a transcript and captions.",
-    "The walkthrough poster carries a download badge instead of a play triangle, and the README says plainly that the link downloads the MP4 (3:26, 6.6 MB) rather than playing it — GitHub strips <video> tags and serves release assets as attachments.",
-    "Screenshot gallery of 26 screens, linked from the README and the header nav.",
-    "Markdown fixes across the docs: every table has a header row, and every link, anchor and image was verified against the rendered pages."
+    "Documentation only — no application code changed. There is nothing to gain by updating from 3.2.117.",
+    "CHANGELOG.md is a complete history again: it had stopped at 3.2.90 while 27 versions shipped. Entries for 3.2.91 through 3.2.118 are reconstructed from the release notes.",
+    "Versions that were committed but never released on their own (3.2.93-3.2.99, 3.2.105-3.2.114) each have an entry, marked with the release that actually carried them.",
+    "The README states that hosting and support for St0r are available through MSP Reboot, while keeping it explicit that the software is free to run and that issues are handled in the open either way."
   ]
 }
