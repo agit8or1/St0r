@@ -7,6 +7,7 @@
 [![Latest release](https://img.shields.io/github/v/release/agit8or1/St0r?label=release)](https://github.com/agit8or1/St0r/releases)
 [![UrBackup](https://img.shields.io/badge/UrBackup-2.5.x-4c6ef5)](https://www.urbackup.org/)
 [![Platform](https://img.shields.io/badge/platform-Ubuntu%20%7C%20Debian-informational)](#requirements)
+[![License](https://img.shields.io/github/license/agit8or1/St0r)](LICENSE)
 
 [Screenshots](docs/screenshots.md) · [Quick start](#quick-start) · [Compatibility](#requirements) · [Documentation](#documentation) · [Releases](https://github.com/agit8or1/St0r/releases)
 
@@ -175,6 +176,10 @@ maintainer. Full policy: [SECURITY.md](SECURITY.md).
 
 Questions and bug reports: [GitHub Issues](https://github.com/agit8or1/St0r/issues).
 Pull requests are welcome — please open an issue first for anything substantial.
+
+## License
+
+[MIT](LICENSE).
 
 ---
 

@@ -71,22 +71,21 @@ Optional additions, each accurate for this project:
 
 | Setting | Current | Suggested |
 |---|---|---|
-| License | **None detected by GitHub** | See below |
+| License | MIT (`LICENSE` added 2026-09-15) | Done — see below |
 | Issues | Enabled | Keep |
 | Releases | 30 published, latest `v3.2.104` | See below |
 
 ### License
 
-`backend/package.json` declares `"license": "MIT"`, but **there is no `LICENSE` file**, so GitHub reports
-the repository as unlicensed and shows no licence badge. Without that file, the default position is that
-no permission is granted to reuse the code — which contradicts the package metadata.
+**Resolved.** A `LICENSE` file (MIT) is now in the repository, matching the `"license": "MIT"` already
+declared in `backend/package.json`, and the README carries a licence badge.
 
-Adding a `LICENSE` file is a decision for the copyright holder, so this has been left alone rather than
-chosen on your behalf. Once one exists, add a badge to the README:
+Copyright line: `Copyright (c) 2025-2026 Agit8or` — the year span comes from the commit history, and the
+holder name from the identity the application publishes on its About page. Change it if a different legal
+name or entity should hold the copyright.
 
-```markdown
-[![License](https://img.shields.io/github/license/agit8or1/St0r)](LICENSE)
-```
+GitHub detects `LICENSE` automatically and will show *MIT* in the About panel; that may take a few minutes
+to appear after the file lands on the default branch.
 
 ### Releases
 
