@@ -45,3 +45,39 @@
     @apply block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200;
   }
 }
+
+@layer components {
+  /* "Help Us Grow" entry button: a gentle double-thump heartbeat with a soft
+     red glow on the heart. Long pause between beats so it reads as alive
+     rather than as an alarm.
+     Both animations live in one shorthand on purpose — two classes each
+     setting `animation` would override one another, leaving only one running.
+     The class goes on the icon, so the button keeps its Tailwind shadow. */
+  .heartbeat {
+    animation: heartbeat-pulse 2.6s ease-in-out infinite,
+      heartbeat-glow 2.6s ease-in-out infinite;
+    transform-origin: center;
+  }
+
+  @keyframes heartbeat-pulse {
+    0%, 28%, 100% { transform: scale(1); }
+    8% { transform: scale(1.2); }
+    16% { transform: scale(1); }
+    22% { transform: scale(1.12); }
+  }
+
+  @keyframes heartbeat-glow {
+    0%, 28%, 100% { filter: drop-shadow(0 0 1px rgba(239, 68, 68, 0.25)); }
+    8% { filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.85)); }
+    22% { filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.55)); }
+  }
+
+  /* Respect the OS "reduce motion" setting: keep the heart and a static glow,
+     drop the movement. */
+  @media (prefers-reduced-motion: reduce) {
+    .heartbeat {
+      animation: none !important;
+      filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.45));
+    }
+  }
+}
