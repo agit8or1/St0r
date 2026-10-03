@@ -3,6 +3,7 @@
  * HTTP client that talks to a remote stor-agent instance.
  * All requests include the API key header.
  */
+import { isIP } from 'net';
 import { logger } from '../utils/logger.js';
 
 export interface AgentServer {
@@ -14,7 +15,10 @@ export interface AgentServer {
 }
 
 function agentUrl(server: AgentServer, path: string): string {
-  return `http://${server.host}:${server.agent_port}${path}`;
+  const loopback = ['127.0.0.1', '::1', 'localhost'].includes(server.host);
+  const scheme = loopback || process.env.STOR_AGENT_ALLOW_INSECURE_HTTP === 'true' ? 'http' : 'https';
+  const hostname = isIP(server.host) === 6 ? `[${server.host}]` : server.host;
+  return `${scheme}://${hostname}:${server.agent_port}${path}`;
 }
 
 function agentHeaders(server: AgentServer): Record<string, string> {
@@ -29,6 +33,7 @@ export async function agentGet<T = any>(server: AgentServer, path: string, timeo
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const resp = await fetch(agentUrl(server, path), {
+      redirect: 'error',
       headers: agentHeaders(server),
       signal: controller.signal,
     });
@@ -47,6 +52,7 @@ export async function agentPost<T = any>(server: AgentServer, path: string, body
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const resp = await fetch(agentUrl(server, path), {
+      redirect: 'error',
       method: 'POST',
       headers: agentHeaders(server),
       body: JSON.stringify(body),
