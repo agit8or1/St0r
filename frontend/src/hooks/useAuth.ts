@@ -11,10 +11,15 @@ export function useAuth() {
     if (userData) {
       try {
         setUser(JSON.parse(userData));
-        // Verify the cookie-based session is still valid
-        api.validateToken().catch(() => {
-          localStorage.removeItem('user');
-          setUser(null);
+        // Verify the cookie-based session is still valid. validateToken()
+        // resolves false rather than rejecting, so this must branch on the
+        // result -- a .catch() here can never fire and the guard would treat
+        // any stale or hand-written localStorage entry as a live session.
+        api.validateToken().then((valid) => {
+          if (!valid) {
+            localStorage.removeItem('user');
+            setUser(null);
+          }
         }).finally(() => {
           setLoading(false);
         });

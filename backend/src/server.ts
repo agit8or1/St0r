@@ -162,6 +162,14 @@ app.use(express.static(frontendDist, {
   }
 }));
 
+// Unmatched API paths must 404 as JSON. Without this they fall through to the
+// SPA fallback below and return index.html with a 200, so the frontend parses
+// HTML as JSON and a mistyped or removed endpoint looks like a broken page
+// rather than a missing route.
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
 // SPA fallback — serve index.html for all non-API routes
 app.get('*', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

@@ -1,10 +1,13 @@
 {
-  "version": "3.2.118",
-  "releaseDate": "2026-09-15",
+  "version": "3.2.119",
+  "releaseDate": "2026-10-03",
   "changelog": [
-    "Documentation only — no application code changed. There is nothing to gain by updating from 3.2.117.",
-    "CHANGELOG.md is a complete history again: it had stopped at 3.2.90 while 27 versions shipped. Entries for 3.2.91 through 3.2.118 are reconstructed from the release notes.",
-    "Versions that were committed but never released on their own (3.2.93-3.2.99, 3.2.105-3.2.114) each have an entry, marked with the release that actually carried them.",
-    "The README states that hosting and support for St0r are available through MSP Reboot, while keeping it explicit that the software is free to run and that issues are handled in the open either way."
+    "Security: the frontend auth guard no longer fails open. useAuth revalidated the session with a .catch() on a promise that never rejects, so a stale or hand-written localStorage entry rendered the full UI (including admin routes) without a login. It now branches on the validation result.",
+    "Security: CORS no longer reflects arbitrary origins with credentials. CORS_LOCK is enabled in the deployed environment; the allowlist is built from URBACKUP_SERVER_FQDN.",
+    "Security: GET /api/version/stats now requires authentication -- it reported fleet-wide installation counts to anonymous callers.",
+    "Security: the installId telemetry parameter is validated against ^[A-Za-z0-9_-]{11,64}$ before it reaches a database row. GET /api/version stays unauthenticated so remote installs can still check in.",
+    "Unmatched /api/* paths now return a JSON 404 instead of falling through to the SPA fallback and returning index.html with a 200, which made a missing endpoint look like a broken page.",
+    "The auto-update script shipped at the repo root pointed at https://stor.agit8or.net/downloads/urbackup-gui.tar.gz, which does not exist and -- because of the SPA fallback -- returned 200 text/html, so tar failed on an HTML page and every update rolled back. setup/auto-update.sh (GitHub releases) is the correct script.",
+    "The About page no longer shows the active-installation count."
   ]
 }

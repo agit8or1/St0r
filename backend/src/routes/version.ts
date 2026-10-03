@@ -4,6 +4,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { query } from '../config/database.js';
 import { logger } from '../utils/logger.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -15,8 +16,11 @@ router.get('/', async (req: Request, res: Response) => {
     const versionData = JSON.parse(readFileSync(versionPath, 'utf-8'));
 
     // Track installation anonymously
+    // Remote installs ping this endpoint to register themselves, so it stays
+    // unauthenticated -- but the id is attacker-controlled and lands in a row,
+    // so accept only an opaque token of a bounded length.
     const installId = req.query.installId as string;
-    if (installId && installId.length > 10) {
+    if (typeof installId === 'string' && /^[A-Za-z0-9_-]{11,64}$/.test(installId)) {
       try {
         // Check if installation exists
         const existing = await query(
@@ -50,8 +54,11 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// Get active installation count (installations seen in last 30 days)
-router.get('/stats', async (req: Request, res: Response) => {
+// Get active installation count (installations seen in last 30 days).
+// Authenticated: this is fleet-wide telemetry about other deployments, not
+// something an anonymous caller needs. `GET /` above stays open because remote
+// installs check in against it.
+router.get('/stats', authenticate, async (req: Request, res: Response) => {
   try {
     const result = await query(
       'SELECT COUNT(*) as active_installs FROM installations WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 30 DAY)'

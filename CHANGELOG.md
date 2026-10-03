@@ -5,6 +5,42 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.119] - 2026-10-03
+
+Security fixes, and a repair to the update mechanism itself. Found while investigating a report that
+the site showed no login and served the UrBackup web interface.
+
+### Fixed
+- **The frontend auth guard failed open.** `useAuth` revalidated the session with `.catch()` on
+  `validateToken()`, which resolves `false` rather than rejecting, so the rejection path was
+  unreachable. The guard trusted `localStorage['user']` alone, meaning a stale — or hand-written —
+  entry with `isAdmin: true` rendered the full UI, including admin routes, with no login. It now
+  branches on the returned boolean. No data was ever exposed: every API call still returned 401
+- **Updates silently rolled back.** The `auto-update.sh` that shipped at the repo root pointed at
+  `https://stor.agit8or.net/downloads/urbackup-gui.tar.gz`, which does not exist. Because unmatched
+  GETs fell through to the SPA fallback, it answered `200 text/html`, so `wget` saved an HTML page
+  as `.tar.gz` and `tar` failed on it — the error trap then restored the backup, and the update
+  appeared to do nothing. That script is deleted; `setup/auto-update.sh`, which resolves the release
+  through the GitHub API and uses `curl -fsSL`, is now the only copy, and `deploy.sh` and
+  `build-package.sh` source it instead of the repo root
+- **Unmatched `/api/*` paths returned the app shell with a 200** instead of a 404, so a mistyped or
+  removed endpoint surfaced as a page that loaded but did nothing. They now return JSON 404
+
+### Security
+- **CORS no longer reflects arbitrary origins with credentials.** The origin callback allowed any
+  origin unless `CORS_LOCK` was set; it is now enabled in the deployed environment, with the
+  allowlist built from `URBACKUP_SERVER_FQDN`
+- **`GET /api/version/stats` requires authentication.** It reported fleet-wide installation counts
+  to anonymous callers
+- **The `installId` telemetry parameter is validated** against `^[A-Za-z0-9_-]{11,64}$` before it
+  reaches a database row. `GET /api/version` stays unauthenticated so remote installations can
+  still check in
+
+### Changed
+- The About page no longer shows the active-installation count
+- `VERSION`, `version.json` and both `package.json` files agree again; the two packages had been
+  left at 3.2.116
+
 ## [3.2.118] - 2026-09-15
 
 Documentation only — no application code changed since 3.2.117.

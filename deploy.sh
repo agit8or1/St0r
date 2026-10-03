@@ -89,7 +89,7 @@ echo -e "${YELLOW}[5/6] Deploying migrations and version manifest...${NC}"
 rsync -a "$SOURCE_DIR/database/" "$DEPLOY_DIR/database/"
 cp "$SOURCE_DIR/version.json" "$DEPLOY_DIR/version.json"
 cp "$SOURCE_DIR/VERSION" "$DEPLOY_DIR/VERSION"
-cp "$SOURCE_DIR/auto-update.sh" "$DEPLOY_DIR/auto-update.sh"
+cp "$SOURCE_DIR/setup/auto-update.sh" "$DEPLOY_DIR/auto-update.sh"
 chmod +x "$DEPLOY_DIR/auto-update.sh"
 
 # Apply any new migrations (idempotent — every file uses IF NOT EXISTS guards)

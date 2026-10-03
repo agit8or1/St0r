@@ -37,13 +37,15 @@ echo "Copying database migrations..."
 mkdir -p "$BUILD_DIR/urbackup-gui/database"
 cp -r "$SCRIPT_DIR/database/migrations" "$BUILD_DIR/urbackup-gui/database/"
 
-# Copy auto-update script — the repo copy is authoritative
+# Copy auto-update script. setup/auto-update.sh is the ONLY authoritative copy:
+# it resolves the release through the GitHub API. A root-level auto-update.sh
+# used to exist pointing at a non-existent /downloads/ URL that answered 200
+# text/html via the SPA fallback, so tar failed on an HTML page and every
+# update silently rolled back. Never fall back to /opt — that is how the
+# broken copy propagated.
 echo "Copying auto-update script..."
-if [ -f "$SCRIPT_DIR/auto-update.sh" ]; then
-    cp "$SCRIPT_DIR/auto-update.sh" "$BUILD_DIR/urbackup-gui/"
-elif [ -f "/opt/urbackup-gui/auto-update.sh" ]; then
-    cp "/opt/urbackup-gui/auto-update.sh" "$BUILD_DIR/urbackup-gui/"
-fi
+cp "$SCRIPT_DIR/setup/auto-update.sh" "$BUILD_DIR/urbackup-gui/auto-update.sh"
+chmod +x "$BUILD_DIR/urbackup-gui/auto-update.sh"
 
 # Create tarball
 echo "Creating tarball..."
