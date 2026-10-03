@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken, JWTPayload } from '../utils/auth.js';
+import { verifyToken, JWTPayload, matchesCredentialVersion } from '../utils/auth.js';
 import { logger } from '../utils/logger.js';
 import { findUserById } from '../models/user.js';
 import type { UserScope } from './scope.js';
@@ -17,7 +17,7 @@ export interface AuthRequest extends Request {
  * rather than one per request.
  */
 const USER_TTL_MS = 10_000;
-const userCache = new Map<number, { ts: number; isAdmin: boolean } | { ts: number; revoked: true }>();
+const userCache = new Map<number, { ts: number; isAdmin: boolean; passwordHash: string } | { ts: number; revoked: true }>();
 
 /** Drop cached account state — call after changing or removing a user. */
 export function invalidateUserCache(userId?: number): void {
@@ -29,10 +29,10 @@ export function invalidateUserCache(userId?: number): void {
  * Returns the account's current admin flag, or null when the account no longer
  * exists or has been deactivated (findUserById filters on is_active).
  */
-async function currentUser(userId: number): Promise<{ isAdmin: boolean } | null> {
+async function currentUser(userId: number): Promise<{ isAdmin: boolean; passwordHash: string } | null> {
   const cached = userCache.get(userId);
   if (cached && Date.now() - cached.ts < USER_TTL_MS) {
-    return 'revoked' in cached ? null : { isAdmin: cached.isAdmin };
+    return 'revoked' in cached ? null : { isAdmin: cached.isAdmin, passwordHash: cached.passwordHash };
   }
 
   const user = await findUserById(userId);
@@ -42,8 +42,8 @@ async function currentUser(userId: number): Promise<{ isAdmin: boolean } | null>
   }
 
   const isAdmin = !!user.is_admin;
-  userCache.set(userId, { ts: Date.now(), isAdmin });
-  return { isAdmin };
+  userCache.set(userId, { ts: Date.now(), isAdmin, passwordHash: user.password_hash });
+  return { isAdmin, passwordHash: user.password_hash };
 }
 
 function getTokenFromRequest(req: AuthRequest): string | undefined {
@@ -91,7 +91,7 @@ export async function authenticate(
 
   try {
     const account = await currentUser(decoded.userId);
-    if (!account) {
+    if (!account || !matchesCredentialVersion(decoded.credentialVersion, account.passwordHash)) {
       logger.warn(`[${decoded.username}] rejected — account deleted or deactivated`);
       res.clearCookie('auth_token');
       res.status(401).json({ error: 'Account is no longer active' });

@@ -46,9 +46,10 @@ fi
 # Install dependencies and build
 cd "$INSTALL_DIR"
 echo "--- Installing npm dependencies ---"
-npm install --omit=dev 2>&1
+npm ci --include=dev 2>&1
 echo "--- Building agent ---"
 npm run build 2>&1
+npm prune --omit=dev 2>&1
 
 # Generate config (this also generates the API key on first run)
 mkdir -p "$CONFIG_DIR"
@@ -66,7 +67,6 @@ CONF
   chmod 600 "$CONFIG_DIR/config.json"
   echo "--- Generated API key ---"
 else
-  API_KEY=$(node -e "console.log(require('$CONFIG_DIR/config.json').api_key)")
   echo "--- Using existing API key ---"
 fi
 
@@ -89,6 +89,7 @@ StandardError=journal
 SyslogIdentifier=stor-agent
 Environment=NODE_ENV=production
 Environment=STOR_AGENT_CONFIG_DIR=$CONFIG_DIR
+EnvironmentFile=-$CONFIG_DIR/tls.env
 
 [Install]
 WantedBy=multi-user.target
@@ -103,11 +104,12 @@ echo "============================================"
 echo "  St0r Agent installed successfully!"
 echo "============================================"
 echo "  Service: stor-agent (port $PORT)"
-echo "  API Key: $API_KEY"
+echo "  API key: stored in root-readable config (not printed)"
 echo "  Config:  $CONFIG_DIR/config.json"
 echo ""
 echo "  Add this server in St0r > Servers using:"
 echo "    Host: $(hostname -I | awk '{print $1}')"
 echo "    Port: $PORT"
-echo "    API Key: $API_KEY"
+echo "    Read the API key from $CONFIG_DIR/config.json as root."
+echo "    Configure TLS in $CONFIG_DIR/tls.env for remote connections."
 echo "============================================"

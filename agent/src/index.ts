@@ -5,7 +5,8 @@ import { readFile } from 'fs/promises';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { randomBytes } from 'crypto';
-import { createServer } from 'http';
+import { createServer as createHttpServer } from 'http';
+import { createServer as createHttpsServer } from 'https';
 
 const execFileAsync = promisify(execFile);
 
@@ -37,7 +38,7 @@ function loadOrCreateConfig(): AgentConfig {
   };
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
   console.log(`[stor-agent] New API key generated. Config saved to ${CONFIG_FILE}`);
-  console.log(`[stor-agent] API_KEY=${config.api_key}`);
+  // The API key is available only in the root-readable configuration file.
   return config;
 }
 
@@ -119,6 +120,11 @@ app.use(express.json());
 // API key auth middleware
 app.use((req, res, next) => {
   if (req.path === '/health') { next(); return; }
+  const peer = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  if (config.allowed_ips.length && !config.allowed_ips.some(ip => ip.replace(/^::ffff:/, '') === peer)) {
+    res.status(403).json({ error: 'Source address not permitted' });
+    return;
+  }
   const key = req.headers['x-stor-agent-key'] as string || req.headers['authorization']?.replace('Bearer ', '');
   if (key !== config.api_key) {
     res.status(401).json({ error: 'Unauthorized' });
@@ -319,8 +325,19 @@ app.post('/reboot', async (_req, res) => {
   }, 5000);
 });
 
-const server = createServer(app);
-server.listen(PORT, '0.0.0.0', () => {
+const tlsCert = process.env.STOR_AGENT_TLS_CERT;
+const tlsKey = process.env.STOR_AGENT_TLS_KEY;
+if (!!tlsCert !== !!tlsKey) throw new Error('Both STOR_AGENT_TLS_CERT and STOR_AGENT_TLS_KEY are required');
+const hasTls = !!tlsCert && !!tlsKey;
+const server = hasTls
+  ? createHttpsServer({ cert: readFileSync(tlsCert!), key: readFileSync(tlsKey!) }, app)
+  : createHttpServer(app);
+// Plain HTTP is only safe behind a local TLS proxy or an authenticated tunnel.
+const bindHost = process.env.STOR_AGENT_BIND_HOST || (hasTls ? '0.0.0.0' : '127.0.0.1');
+if (!hasTls && !['127.0.0.1', '::1', 'localhost'].includes(bindHost)) {
+  throw new Error('Cleartext agent must bind to loopback; configure TLS for remote access');
+}
+server.listen(PORT, bindHost, () => {
   console.log(`[stor-agent] Listening on port ${PORT}`);
   console.log(`[stor-agent] Config: ${CONFIG_FILE}`);
 });

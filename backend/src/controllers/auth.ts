@@ -1,3 +1,4 @@
+import { credentialVersion } from '../utils/auth.js';
 import { Request, Response } from 'express';
 import { findUserByUsername, updateLastLogin } from '../models/user.js';
 import { comparePassword, generateToken } from '../utils/auth.js';
@@ -70,6 +71,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       userId: user.id,
       username: user.username,
       isAdmin: user.is_admin,
+      credentialVersion: credentialVersion(user.password_hash),
     });
 
     res.cookie('auth_token', token, {
