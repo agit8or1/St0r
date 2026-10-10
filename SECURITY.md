@@ -13,7 +13,7 @@ Only the latest release receives security fixes.
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
-Report security issues by emailing the maintainer directly or opening a [GitHub Security Advisory](https://github.com/agit8or1/St0r/security/advisories/new) (private disclosure).
+Report security issues by emailing **agit8or@agit8or.net** or by opening a [GitHub Security Advisory](https://github.com/agit8or1/St0r/security/advisories/new) (private disclosure).
 
 Include:
 - Description of the vulnerability and potential impact
