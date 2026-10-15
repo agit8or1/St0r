@@ -46,9 +46,12 @@ fi
 # Install dependencies and build
 cd "$INSTALL_DIR"
 echo "--- Installing npm dependencies ---"
-npm install --omit=dev 2>&1
+# TypeScript is a dev dependency: --omit=dev left nothing to compile with.
+# Install from the lockfile, build, then drop the build-only packages.
+npm ci --include=dev 2>&1
 echo "--- Building agent ---"
 npm run build 2>&1
+npm prune --omit=dev 2>&1
 
 # Generate config (this also generates the API key on first run)
 mkdir -p "$CONFIG_DIR"

@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scrollback. It is now only in the root-readable `/etc/stor-agent/config.json`. St0r's own
   "Install agent" and install-script flows already read it from there.
 
+### Fixed (agent)
+- **The agent installer could not build the agent.** It ran `npm install --omit=dev`, which skips
+  TypeScript, then compiled. It now installs from a committed lockfile with dev dependencies,
+  builds, and prunes them afterwards.
+
 ## [3.2.119] - 2026-10-03
 
 Security fixes, and a repair to the update mechanism itself. Found while investigating a report that
