@@ -5,6 +5,21 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **The one-line installer installed 3.2.78.** `install.sh` carried a hard-coded
+  `INSTALLER_VERSION="3.2.78"` that stopped being bumped in April, so
+  `curl … install.sh | sudo bash` downloaded the March 2026 release however many had been published
+  since. It now installs the latest published GitHub release (the one the in-app updater uses); run
+  from a checkout it installs that checkout's `VERSION`; `ST0R_INSTALL_VERSION` pins one. A
+  hard-coded version remains only as a fallback when GitHub cannot be reached, and says so.
+- **Installs recorded the wrong version.** The installer overwrote `version.json` with
+  `3.2.78` even when installing newer code from a checkout, so the About page showed the wrong
+  version and an empty changelog. It now keeps the installed tree's own `version.json` when it
+  matches the version installed.
+- The upgrade prompt's "What's new" list described 3.2.78; it now links to this changelog.
+
 ## [3.2.119] - 2026-10-03
 
 Security fixes, and a repair to the update mechanism itself. Found while investigating a report that

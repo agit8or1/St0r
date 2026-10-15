@@ -5,12 +5,76 @@
 set -e
 
 # Version
-INSTALLER_VERSION="3.2.78"
-INSTALLER_DATE="2026-03-22"
+#
+# Which St0r this run installs. It used to be a number typed in here, which
+# stopped being bumped at 3.2.78 — so `curl ... | sudo bash` kept installing a
+# March 2026 release long after newer ones were out, and wrote that number into
+# version.json even when installing newer code from a checkout.
+#
+#  - Run from a checkout (backend/ and frontend/ beside this script): the
+#    checkout's own VERSION file. That is the code that gets installed.
+#  - Run on its own (curl | bash, or a downloaded install.sh): the latest
+#    published GitHub release — the same one the in-app updater
+#    (setup/auto-update.sh) installs.
+#  - ST0R_INSTALL_VERSION=3.2.118 pins a release explicitly.
+#  - If GitHub cannot be asked, FALLBACK_VERSION, with a warning. It is a
+#    last resort, not the normal path, so it going stale is no longer silent.
+FALLBACK_VERSION="3.2.118"
+FALLBACK_DATE="2026-09-15"
+RELEASES_API="https://api.github.com/repos/agit8or1/St0r/releases/latest"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Prints "<version> <date>" for the latest published release, or nothing.
+latest_release() {
+    local json=""
+    if command -v curl >/dev/null 2>&1; then
+        json=$(curl -fsSL --max-time 20 -H "Accept: application/vnd.github+json" \
+            -H "User-Agent: St0r-Installer" "$RELEASES_API" 2>/dev/null) || json=""
+    elif command -v wget >/dev/null 2>&1; then
+        json=$(wget -qO- --timeout=20 --header="Accept: application/vnd.github+json" \
+            "$RELEASES_API" 2>/dev/null) || json=""
+    fi
+    local tag date
+    tag=$(printf '%s' "$json" | tr -d '\n' | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\{0,1\}\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)".*/\1/p')
+    date=$(printf '%s' "$json" | tr -d '\n' | sed -n 's/.*"published_at"[[:space:]]*:[[:space:]]*"\([0-9-]\{10\}\)T.*/\1/p')
+    if [ -n "$tag" ]; then
+        echo "$tag ${date:-unknown}"
+    fi
+}
+
+INSTALL_SOURCE=""
+if [ -n "${ST0R_INSTALL_VERSION:-}" ]; then
+    if ! printf '%s' "$ST0R_INSTALL_VERSION" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+$'; then
+        echo "Error: ST0R_INSTALL_VERSION must look like 3.2.118 (got: $ST0R_INSTALL_VERSION)"
+        exit 1
+    fi
+    INSTALLER_VERSION="${ST0R_INSTALL_VERSION#v}"
+    INSTALLER_DATE="pinned"
+    INSTALL_SOURCE="release v$INSTALLER_VERSION (pinned by ST0R_INSTALL_VERSION)"
+elif [ -d "$SCRIPT_DIR/backend" ] && [ -d "$SCRIPT_DIR/frontend" ] && [ -f "$SCRIPT_DIR/VERSION" ]; then
+    INSTALLER_VERSION=$(tr -d '[:space:]' < "$SCRIPT_DIR/VERSION")
+    INSTALLER_DATE=$(sed -n 's/.*"releaseDate"[[:space:]]*:[[:space:]]*"\([0-9-]*\)".*/\1/p' "$SCRIPT_DIR/version.json" 2>/dev/null | head -1)
+    INSTALLER_DATE="${INSTALLER_DATE:-unknown}"
+    INSTALL_SOURCE="the checkout in $SCRIPT_DIR"
+else
+    LATEST=$(latest_release)
+    if [ -n "$LATEST" ]; then
+        INSTALLER_VERSION="${LATEST%% *}"
+        INSTALLER_DATE="${LATEST#* }"
+        INSTALL_SOURCE="the latest GitHub release"
+    else
+        INSTALLER_VERSION="$FALLBACK_VERSION"
+        INSTALLER_DATE="$FALLBACK_DATE"
+        INSTALL_SOURCE="the built-in fallback (GitHub could not be reached)"
+        echo "Warning: could not read the latest release from GitHub; falling back to v$FALLBACK_VERSION."
+        echo "         Newer releases may exist: https://github.com/agit8or1/St0r/releases"
+        echo ""
+    fi
+fi
 
 echo "============================================"
 echo "St0r Universal Installer"
-echo "Version: $INSTALLER_VERSION ($INSTALLER_DATE)"
+echo "Version: $INSTALLER_VERSION ($INSTALLER_DATE), from $INSTALL_SOURCE"
 echo "============================================"
 echo ""
 
@@ -163,14 +227,7 @@ else
     else
         echo "Upgrade available: $STOR_VERSION → $INSTALLER_VERSION"
         echo ""
-        echo "What's new in v$INSTALLER_VERSION:"
-        echo "  • Full Standby Replication — mirror to DR targets via SSH/rsync"
-        echo "  • AES-256-GCM encrypted storage of SSH keys and passwords"
-        echo "  • Replication dashboard with health cards, run history, alerts"
-        echo "  • Image backups grouped by session (C:, D:, System Reserved)"
-        echo "  • Clickable Dashboard stat cards"
-        echo "  • All alert()/confirm() calls replaced with inline modals"
-        echo "  • Settings pipeline fixes (boolean, client override, global)"
+        echo "What's new: https://github.com/agit8or1/St0r/blob/main/CHANGELOG.md"
         echo ""
         read -p "Upgrade to v$INSTALLER_VERSION? (Y/n): " -n 1 -r < /dev/tty
         echo ""
@@ -352,8 +409,8 @@ if [ "$INSTALL_STOR" = true ]; then
     # Copy/update application files
     mkdir -p $INSTALL_DIR
 
-    # Determine installation method
-    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    # Determine installation method (SCRIPT_DIR is set at the top, where the
+    # version is chosen, so the two always agree)
     DOWNLOAD_URL="https://github.com/agit8or1/St0r/archive/refs/tags/v${INSTALLER_VERSION}.tar.gz"
     IS_SOURCE_INSTALL=false
 
@@ -547,8 +604,12 @@ EOF
     systemctl restart nginx
     systemctl enable nginx
 
-    # Write version file
-    echo "{\"version\":\"$INSTALLER_VERSION\",\"date\":\"$INSTALLER_DATE\"}" > "$VERSION_FILE"
+    # Write version file — unless the installed tree already carries its own
+    # version.json for this exact version, which has the changelog the About
+    # page shows. Overwriting it used to record 3.2.78 over newer code.
+    if ! grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"$INSTALLER_VERSION\"" "$VERSION_FILE" 2>/dev/null; then
+        echo "{\"version\":\"$INSTALLER_VERSION\",\"date\":\"$INSTALLER_DATE\"}" > "$VERSION_FILE"
+    fi
     chown $ACTUAL_USER:$ACTUAL_USER "$VERSION_FILE"
 
     echo ""
