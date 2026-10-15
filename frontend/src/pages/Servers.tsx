@@ -22,6 +22,7 @@ interface ManagedServer {
   ssh_port: number;
   auth_type: 'ssh_key' | 'password' | null;
   ssh_known_host_fingerprint: string | null;
+  agent_tls_fingerprint: string | null;
   last_seen: number | null;
   notes: string | null;
   enabled: boolean;
@@ -104,6 +105,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
 
   // Manual key field
   const [apiKey, setApiKey] = useState('');
+  const [tlsFingerprint, setTlsFingerprint] = useState('');
 
   // Status
   const [saving, setSaving] = useState(false);
@@ -153,7 +155,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
           await fetch(`/api/servers/${serverId}/register-agent-key`, {
             method: 'POST', credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ api_key: apiKey.trim() }),
+            body: JSON.stringify({ api_key: apiKey.trim(), tls_fingerprint: tlsFingerprint.trim() }),
           });
         }
         onClose();
@@ -386,6 +388,12 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
               <label className="label">Agent API Key</label>
               <input className="input font-mono text-sm" value={apiKey} onChange={e => setApiKey(e.target.value)}
                 placeholder="Paste the API key from /etc/stor-agent/config.json" />
+              <label className="label mt-3">TLS fingerprint (SHA-256)</label>
+              <input className="input font-mono text-sm" value={tlsFingerprint} onChange={e => setTlsFingerprint(e.target.value)}
+                placeholder="AB:CD:… as printed by the agent installer" />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Leave empty only if the agent uses a certificate from a CA St0r trusts.
+              </p>
             </div>
           )}
 
@@ -460,6 +468,7 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
   const [installError, setInstallError] = useState('');
   const [showManualKey, setShowManualKey] = useState(false);
   const [manualKey, setManualKey] = useState('');
+  const [manualFingerprint, setManualFingerprint] = useState('');
   const [confirmReboot, setConfirmReboot] = useState(false);
 
   // Install command state
@@ -565,11 +574,11 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
       const resp = await fetch(`/api/servers/${server.id}/register-agent-key`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: manualKey.trim() }),
+        body: JSON.stringify({ api_key: manualKey.trim(), tls_fingerprint: manualFingerprint.trim() }),
       });
       const d = await resp.json();
       if (!resp.ok || !d.success) throw new Error(d.error || 'Failed');
-      setShowManualKey(false); setManualKey('');
+      setShowManualKey(false); setManualKey(''); setManualFingerprint('');
       onRefresh();
     } catch (e: any) {
       setInstallError(e.message);
@@ -657,11 +666,13 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
 
       {expanded && (
         <>
-          {/* Agent not installed warning */}
-          {!server.is_local && !server.agent_installed && user?.isAdmin && (
+          {/* Agent not installed, or installed before agent TLS and now unreachable */}
+          {!server.is_local && (!server.agent_installed || (!server.agent_tls_fingerprint && !!metricsError)) && user?.isAdmin && (
             <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
               <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-3">
-                St0r Agent is not installed on this server.
+                {server.agent_installed
+                  ? 'No certificate is pinned for this agent. Agents installed by an older St0r need installing again to switch to TLS; the agent keeps its API key.'
+                  : 'St0r Agent is not installed on this server.'}
               </p>
               <div className="flex flex-wrap gap-2">
                 {(server.has_ssh_key || server.has_ssh_password) && (
@@ -681,9 +692,11 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
                 </button>
               </div>
               {showManualKey && (
-                <div className="mt-3 flex gap-2">
-                  <input className="input text-sm font-mono" value={manualKey} onChange={e => setManualKey(e.target.value)}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <input className="input text-sm font-mono flex-1 min-w-0" value={manualKey} onChange={e => setManualKey(e.target.value)}
                     placeholder="Paste API key from /etc/stor-agent/config.json" />
+                  <input className="input text-sm font-mono flex-1 min-w-0" value={manualFingerprint} onChange={e => setManualFingerprint(e.target.value)}
+                    placeholder="TLS fingerprint printed by the installer" />
                   <button onClick={registerManualKey} className="btn btn-primary text-sm flex-shrink-0">Register</button>
                 </div>
               )}

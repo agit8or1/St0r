@@ -72,6 +72,32 @@ else
   echo "--- Using existing API key ---"
 fi
 
+# TLS. St0r reaches remote agents over HTTPS only. Unless tls.env already
+# exists (your own certificate, or an empty file to keep the agent on loopback
+# behind a proxy), generate a self-signed certificate: St0r pins its SHA-256
+# fingerprint rather than trusting a CA. Re-running keeps the certificate.
+TLS_DIR="$CONFIG_DIR/tls"
+if [ ! -e "$CONFIG_DIR/tls.env" ]; then
+  command -v openssl &>/dev/null || apt-get install -y openssl
+  mkdir -p "$TLS_DIR"
+  chmod 700 "$TLS_DIR"
+  openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 3650 \
+    -subj "/CN=stor-agent" -keyout "$TLS_DIR/agent.key" -out "$TLS_DIR/agent.crt" 2>/dev/null
+  chmod 600 "$TLS_DIR/agent.key"
+  cat > "$CONFIG_DIR/tls.env" <<TLS
+STOR_AGENT_TLS_CERT=$TLS_DIR/agent.crt
+STOR_AGENT_TLS_KEY=$TLS_DIR/agent.key
+TLS
+  chmod 600 "$CONFIG_DIR/tls.env"
+  echo "--- Generated a self-signed TLS certificate ---"
+else
+  echo "--- Using existing $CONFIG_DIR/tls.env ---"
+fi
+TLS_FINGERPRINT=""
+if grep -Fqx "STOR_AGENT_TLS_CERT=$TLS_DIR/agent.crt" "$CONFIG_DIR/tls.env"; then
+  TLS_FINGERPRINT=$(openssl x509 -in "$TLS_DIR/agent.crt" -noout -fingerprint -sha256 | cut -d= -f2)
+fi
+
 # Install systemd service
 cat > "$SERVICE_FILE" <<SERVICE
 [Unit]
@@ -91,6 +117,7 @@ StandardError=journal
 SyslogIdentifier=stor-agent
 Environment=NODE_ENV=production
 Environment=STOR_AGENT_CONFIG_DIR=$CONFIG_DIR
+EnvironmentFile=-$CONFIG_DIR/tls.env
 
 [Install]
 WantedBy=multi-user.target
@@ -112,4 +139,9 @@ echo "  Add this server in St0r > Servers using:"
 echo "    Host: $(hostname -I | awk '{print $1}')"
 echo "    Port: $PORT"
 echo "    Read the API key from $CONFIG_DIR/config.json as root."
+if [ -n "$TLS_FINGERPRINT" ]; then
+  echo "    TLS fingerprint (SHA-256): $TLS_FINGERPRINT"
+else
+  echo "    TLS: your own settings in $CONFIG_DIR/tls.env (no fingerprint to pin)."
+fi
 echo "============================================"

@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { query } from '../config/database.js';
 import { encrypt, decrypt } from '../services/secrets.js';
-import { agentGet, agentPost, pingAgent } from '../services/agentClient.js';
-import { testSshConnection, installAgentViaSsh } from '../services/serverSsh.js';
+import { agentGet, agentPost, pingAgent, normalizeFingerprint } from '../services/agentClient.js';
+import { testSshConnection, installAgentViaSsh, AGENT_TLS_FINGERPRINT_CMD } from '../services/serverSsh.js';
 import { logger } from '../utils/logger.js';
 import { randomUUID } from 'crypto';
 import { dirname, resolve } from 'path';
@@ -42,6 +42,7 @@ async function ensureTable() {
       host          VARCHAR(255)  NULL,
       agent_port    INT           NOT NULL DEFAULT 7420,
       agent_api_key_encrypted TEXT NULL,
+      agent_tls_fingerprint CHAR(64) NULL,
       ssh_port      INT           NOT NULL DEFAULT 22,
       ssh_user      VARCHAR(100)  NULL,
       auth_type     ENUM('ssh_key','password') NULL,
@@ -66,6 +67,9 @@ async function ensureTable() {
   } catch { /* already exists */ }
   try {
     await query('ALTER TABLE managed_servers ADD COLUMN install_token_expires BIGINT NULL');
+  } catch { /* already exists */ }
+  try {
+    await query('ALTER TABLE managed_servers ADD COLUMN agent_tls_fingerprint CHAR(64) NULL AFTER agent_api_key_encrypted');
   } catch { /* already exists */ }
 
   // Seed local server if none exist
@@ -96,7 +100,18 @@ function buildAgentRef(row: any) {
     agent_port: row.agent_port,
     agent_api_key_encrypted: row.agent_api_key_encrypted,
     decryptedKey: safeDecrypt(row.agent_api_key_encrypted) || '',
+    tls_fingerprint: row.agent_tls_fingerprint || null,
   };
+}
+
+/**
+ * Reads an optional fingerprint from a request body. Missing or empty gives
+ * null; anything else must be a SHA-256 fingerprint.
+ */
+function fingerprintFromBody(value: unknown): { ok: true; value: string | null } | { ok: false } {
+  if (value === undefined || value === null || (typeof value === 'string' && !value.trim())) return { ok: true, value: null };
+  const fp = normalizeFingerprint(value);
+  return fp ? { ok: true, value: fp } : { ok: false };
 }
 
 // Sanitize a row for API response (strip encrypted fields)
@@ -373,11 +388,13 @@ export async function installAgent(req: Request, res: Response) {
   );
 
   if (result.ok && result.apiKey) {
+    // No fingerprint means the agent has a certificate of its own, which is
+    // then verified against CAs.
     await query(
-      'UPDATE managed_servers SET agent_installed = 1, agent_api_key_encrypted = ?, updated_at = NOW() WHERE id = ?',
-      [encrypt(result.apiKey), server.id]
+      'UPDATE managed_servers SET agent_installed = 1, agent_api_key_encrypted = ?, agent_tls_fingerprint = ?, updated_at = NOW() WHERE id = ?',
+      [encrypt(result.apiKey), result.tlsFingerprint || null, server.id]
     );
-    logger.info(`[servers] Agent installed on ${server.host} (id: ${server.id})`);
+    logger.info(`[servers] Agent installed on ${server.host} (id: ${server.id}, TLS ${result.tlsFingerprint ? 'pinned' : 'CA-verified'})`);
     res.json({ success: true, message: 'Agent installed successfully' });
   } else {
     res.status(500).json({ success: false, error: result.error || 'Installation failed' });
@@ -389,16 +406,22 @@ export async function registerAgentKey(req: Request, res: Response) {
   const user = (req as any).user;
   if (!user?.isAdmin) { res.status(403).json({ error: 'Admins only' }); return; }
 
-  const { api_key } = req.body;
+  const { api_key, tls_fingerprint } = req.body;
   if (!api_key?.trim()) { res.status(400).json({ error: 'api_key is required' }); return; }
+  const fp = fingerprintFromBody(tls_fingerprint);
+  if (!fp.ok) { res.status(400).json({ error: 'tls_fingerprint must be a SHA-256 fingerprint (64 hex digits, colons optional)' }); return; }
 
   const rows: any[] = await query('SELECT * FROM managed_servers WHERE id = ?', [req.params.id]);
   if (!rows.length) { res.status(404).json({ error: 'Server not found' }); return; }
   const server = rows[0];
   if (server.is_local) { res.status(400).json({ error: 'Not applicable for local server' }); return; }
 
+  // A fingerprint given here replaces the stored one; without one, keep it.
+  const fingerprint = fp.value ?? server.agent_tls_fingerprint ?? null;
+
   // Verify the key works before saving
-  const agentRef = buildAgentRef({ ...server, agent_api_key_encrypted: encrypt(api_key.trim()), decryptedKey: api_key.trim() });
+  const agentRef = buildAgentRef({ ...server, agent_tls_fingerprint: fingerprint });
+  agentRef.decryptedKey = api_key.trim();
   const pingResult = await pingAgent(agentRef);
   if (!pingResult.ok) {
     res.status(400).json({ error: `Could not connect to agent: ${pingResult.error}` });
@@ -406,8 +429,8 @@ export async function registerAgentKey(req: Request, res: Response) {
   }
 
   await query(
-    'UPDATE managed_servers SET agent_installed = 1, agent_api_key_encrypted = ?, updated_at = NOW() WHERE id = ?',
-    [encrypt(api_key.trim()), server.id]
+    'UPDATE managed_servers SET agent_installed = 1, agent_api_key_encrypted = ?, agent_tls_fingerprint = ?, updated_at = NOW() WHERE id = ?',
+    [encrypt(api_key.trim()), fingerprint, server.id]
   );
   res.json({ success: true, latencyMs: pingResult.latencyMs });
 }
@@ -724,6 +747,9 @@ STOR_AGENT_PORT="\$AGENT_PORT" bash install.sh
 
 # Read the generated API key
 API_KEY=\$(node -e "console.log(require('/etc/stor-agent/config.json').api_key)" 2>/dev/null || echo "")
+# And the fingerprint of the agent's self-signed certificate, for St0r to pin
+# (empty when /etc/stor-agent/tls.env names a certificate of your own)
+TLS_FINGERPRINT=\$(${AGENT_TLS_FINGERPRINT_CMD} || true)
 
 if [ -z "\$API_KEY" ]; then
   echo "ERROR: Could not read agent API key from /etc/stor-agent/config.json" >&2
@@ -734,7 +760,7 @@ fi
 echo "--- Registering agent with St0r ---"
 REG_RESULT=\$(curl -fsSL -X POST "\$STOR_SERVER/api/agent-register" \\
   -H "Content-Type: application/json" \\
-  -d "{\\\"token\\\":\\\"\$REGISTER_TOKEN\\\",\\\"api_key\\\":\\\"\$API_KEY\\\",\\\"port\\\":\$AGENT_PORT}" \\
+  -d "{\\\"token\\\":\\\"\$REGISTER_TOKEN\\\",\\\"api_key\\\":\\\"\$API_KEY\\\",\\\"tls_fingerprint\\\":\\\"\$TLS_FINGERPRINT\\\",\\\"port\\\":\$AGENT_PORT}" \\
   2>/dev/null || echo '{"error":"connection failed"}')
 
 echo "Registration: \$REG_RESULT"
@@ -801,12 +827,16 @@ export async function serveAgentPackage(req: Request, res: Response) {
  * Token auth (no session/JWT needed).
  */
 export async function agentRegister(req: Request, res: Response) {
-  const { token, api_key, port } = req.body;
+  const { token, api_key, port, tls_fingerprint } = req.body;
 
   if (!token || !api_key || !/^[a-f0-9]{64}$/.test(token)) {
     res.status(400).json({ error: 'token and api_key are required' });
     return;
   }
+  // Sent by the install script with the API key, over the same channel.
+  // Empty means the agent has a certificate of its own, verified against CAs.
+  const fp = fingerprintFromBody(tls_fingerprint);
+  if (!fp.ok) { res.status(400).json({ error: 'tls_fingerprint must be a SHA-256 fingerprint' }); return; }
 
   const rows: any[] = await query(
     'SELECT * FROM managed_servers WHERE install_token = ? AND install_token_expires > ? LIMIT 1',
@@ -827,13 +857,14 @@ export async function agentRegister(req: Request, res: Response) {
     `UPDATE managed_servers
      SET agent_installed = 1,
          agent_api_key_encrypted = ?,
+         agent_tls_fingerprint = ?,
          agent_port = ?,
          last_seen = ?,
          install_token = NULL,
          install_token_expires = NULL,
          updated_at = NOW()
      WHERE id = ?`,
-    [encrypt(api_key), agentPort, Date.now(), server.id]
+    [encrypt(api_key), fp.value, agentPort, Date.now(), server.id]
   );
 
   logger.info(`[servers] Agent registered for server "${server.name}" (id: ${server.id}) on port ${agentPort}`);

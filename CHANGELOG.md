@@ -20,6 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   matches the version installed.
 - The upgrade prompt's "What's new" list described 3.2.78; it now links to this changelog.
 
+### Changed — BREAKING for remote agents
+- **Remote agents are reached over TLS, with a pinned certificate.** The agent installer now
+  generates a self-signed certificate (kept on re-install) and prints its SHA-256 fingerprint.
+  "Install agent" over SSH and the one-time install command send that fingerprint back, and St0r
+  then accepts only that certificate, checking it before the API key is sent. "Enter API key" takes
+  the fingerprint too. An agent with a certificate of its own (named in `/etc/stor-agent/tls.env`)
+  is verified against CAs instead. Redirects are refused, an agent without TLS listens on loopback
+  only, and `allowed_ips` is enforced against the connecting address.
+- **Existing remote agents stop answering until they are installed again**, by "Install agent"
+  over SSH or a new install command; they keep their API keys. The server card says so when an
+  agent without a pinned certificate cannot be reached. `STOR_AGENT_ALLOW_INSECURE_HTTP=true` on
+  the backend keeps unpinned agents on cleartext HTTP meanwhile. See
+  `docs/security-review-2026-10-02.md`.
+- nodemailer 10.1 (from 9.x): fixes an advisory covering 10.0.8 and earlier.
+
 ### Security
 - **A password change now ends every existing session.** Tokens were signed with the user's id
   and role only, so a stolen token stayed valid after the password was changed or reset. Each
