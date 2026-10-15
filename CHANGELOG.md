@@ -38,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   TypeScript, then compiled. It now installs from a committed lockfile with dev dependencies,
   builds, and prunes them afterwards.
 
+### Dependencies
+- Backend: axios 1.20, multer 2.3, mysql2 3.22, and in-range fixes for express, body-parser, qs,
+  proxy-addr (critical) and undici. Frontend: axios 1.20. `npm audit --omit=dev` now reports
+  nothing for the frontend and only nodemailer for the backend; nodemailer needs a major upgrade
+  (to 10.0.9 or later) and is held until replication alert emails have been tested on it.
+
 ## [3.2.119] - 2026-10-03
 
 Security fixes, and a repair to the update mechanism itself. Found while investigating a report that
