@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { createHmac, timingSafeEqual } from 'crypto';
 import jwt from 'jsonwebtoken';
 
 const FALLBACK_SECRET = 'change-this-secret-in-production';
@@ -23,6 +24,7 @@ export interface JWTPayload {
   userId: number;
   username: string;
   isAdmin: boolean;
+  credentialVersion: string;
 }
 
 export function generateToken(payload: JWTPayload): string {
@@ -33,4 +35,14 @@ export function generateToken(payload: JWTPayload): string {
 
 export function verifyToken(token: string): JWTPayload {
   return jwt.verify(token, JWT_SECRET) as JWTPayload;
+}
+
+/** A keyed fingerprint invalidates existing sessions after any password reset. */
+export function credentialVersion(passwordHash: string): string {
+  return createHmac('sha256', JWT_SECRET).update(passwordHash).digest('hex');
+}
+
+export function matchesCredentialVersion(version: unknown, passwordHash: string): boolean {
+  if (typeof version !== 'string' || !/^[a-f0-9]{64}$/.test(version)) return false;
+  return timingSafeEqual(Buffer.from(version, 'hex'), Buffer.from(credentialVersion(passwordHash), 'hex'));
 }

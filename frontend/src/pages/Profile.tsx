@@ -85,10 +85,10 @@ export function Profile() {
         throw new Error(error.error || 'Failed to change password');
       }
 
-      setMessage({ type: 'success', text: 'Password changed successfully' });
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      // The password change revokes every prior session, including this one.
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.location.assign('/login');
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
     } finally {

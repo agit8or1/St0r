@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   matches the version installed.
 - The upgrade prompt's "What's new" list described 3.2.78; it now links to this changelog.
 
+### Security
+- **A password change now ends every existing session.** Tokens were signed with the user's id
+  and role only, so a stolen token stayed valid after the password was changed or reset. Each
+  token now carries a keyed fingerprint of the password hash it was issued against, and the
+  auth middleware rejects one that no longer matches; other processes converge within the
+  existing 10-second account cache. Changing your own password signs you out and returns you to
+  the login page. **Upgrading signs every user out once**, because existing tokens carry no
+  fingerprint. A revoked session is logged as revoked, not as a deleted account.
+
 ## [3.2.119] - 2026-10-03
 
 Security fixes, and a repair to the update mechanism itself. Found while investigating a report that

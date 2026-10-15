@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { invalidateUserCache } from '../middleware/auth.js';
 import { findUserById, updateUser } from '../models/user.js';
 import { comparePassword, hashPassword } from '../utils/auth.js';
 import { logger } from '../utils/logger.js';
@@ -44,6 +45,8 @@ export async function changePassword(req: Request, res: Response) {
     // Update user password
     // Clearing the flag here is what ends the forced-change state.
     await updateUser(userId, { password_hash: newPasswordHash, must_change_password: false });
+    invalidateUserCache(userId);
+    res.clearCookie('auth_token');
 
     logger.info(`User ${user.username} (ID: ${userId}) changed their password`);
 
