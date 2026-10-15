@@ -66,7 +66,6 @@ CONF
   chmod 600 "$CONFIG_DIR/config.json"
   echo "--- Generated API key ---"
 else
-  API_KEY=$(node -e "console.log(require('$CONFIG_DIR/config.json').api_key)")
   echo "--- Using existing API key ---"
 fi
 
@@ -103,11 +102,11 @@ echo "============================================"
 echo "  St0r Agent installed successfully!"
 echo "============================================"
 echo "  Service: stor-agent (port $PORT)"
-echo "  API Key: $API_KEY"
+echo "  API key: stored in root-readable config (not printed)"
 echo "  Config:  $CONFIG_DIR/config.json"
 echo ""
 echo "  Add this server in St0r > Servers using:"
 echo "    Host: $(hostname -I | awk '{print $1}')"
 echo "    Port: $PORT"
-echo "    API Key: $API_KEY"
+echo "    Read the API key from $CONFIG_DIR/config.json as root."
 echo "============================================"

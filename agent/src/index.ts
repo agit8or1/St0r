@@ -37,7 +37,8 @@ function loadOrCreateConfig(): AgentConfig {
   };
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
   console.log(`[stor-agent] New API key generated. Config saved to ${CONFIG_FILE}`);
-  console.log(`[stor-agent] API_KEY=${config.api_key}`);
+  // The API key is only in the root-readable config file: printing it put it
+  // in the journal, readable by anyone in the adm or systemd-journal group.
   return config;
 }
 

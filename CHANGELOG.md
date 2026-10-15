@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   existing 10-second account cache. Changing your own password signs you out and returns you to
   the login page. **Upgrading signs every user out once**, because existing tokens carry no
   fingerprint. A revoked session is logged as revoked, not as a deleted account.
+- **The agent no longer prints its API key.** The agent wrote the key to its log on first start,
+  and the installer printed it at the end, so it sat in the systemd journal and in terminal
+  scrollback. It is now only in the root-readable `/etc/stor-agent/config.json`. St0r's own
+  "Install agent" and install-script flows already read it from there.
 
 ## [3.2.119] - 2026-10-03
 
