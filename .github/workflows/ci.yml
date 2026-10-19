@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Build backend
+        working-directory: backend
+        run: |
+          npm ci --include=dev --no-audit --no-fund
+          npm run build
+
+      - name: Build agent
+        working-directory: agent
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --include=dev --no-audit --no-fund
+          else
+            npm install --include=dev --no-audit --no-fund
+          fi
+          npm run build
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci --include=dev --no-audit --no-fund
+          npm run build
+
+      # Runs every node:test file in backend/tests and agent/tests, if any.
+      - name: Test
+        run: |
+          shopt -s nullglob
+          status=0
+          for f in backend/tests/*.test.mjs; do
+            echo "::group::$f"
+            (cd backend && node --experimental-test-module-mocks "${f#backend/}") || status=1
+            echo "::endgroup::"
+          done
+          for f in agent/tests/*.test.mjs; do
+            echo "::group::$f"
+            (cd agent && node "${f#agent/}") || status=1
+            echo "::endgroup::"
+          done
+          exit $status
