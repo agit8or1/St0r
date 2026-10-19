@@ -47,6 +47,12 @@ less install.sh
 sudo bash install.sh
 ```
 
+Run on its own like this, the installer installs the **latest published GitHub release**, the same
+one **About → Check for Updates** installs. Run from inside a clone (`git clone`, then
+`sudo ./install.sh` in it), it installs that checkout. To install a specific release, set
+`ST0R_INSTALL_VERSION`, for example `curl -fsSL …/install.sh | sudo ST0R_INSTALL_VERSION=3.2.118 bash`.
+The first line it prints says which version it chose and why.
+
 The installer will:
 
 1. Install Node.js 20, MariaDB, Nginx, `rsync`, `sqlite3` — and UrBackup Server if absent.

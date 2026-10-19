@@ -5,6 +5,16 @@
  */
 import { Client as SshClient } from 'ssh2';
 import { logger } from '../utils/logger.js';
+import { normalizeFingerprint } from './agentClient.js';
+
+/**
+ * Prints the SHA-256 fingerprint of the agent's self-signed certificate, or
+ * nothing when the agent uses a certificate of its own (verified against CAs
+ * instead) or has none. Mirrors the check at the end of agent/install.sh.
+ */
+export const AGENT_TLS_FINGERPRINT_CMD =
+  "grep -Fqx 'STOR_AGENT_TLS_CERT=/etc/stor-agent/tls/agent.crt' /etc/stor-agent/tls.env 2>/dev/null" +
+  " && openssl x509 -in /etc/stor-agent/tls/agent.crt -noout -fingerprint -sha256 | cut -d= -f2";
 
 export interface SshTarget {
   host: string;
@@ -130,15 +140,23 @@ export async function testSshConnection(target: SshTarget): Promise<{
   }
 }
 
+/** Read over the same SSH session that installs the agent, so it is as trusted as that session. */
+async function readAgentTlsFingerprint(client: SshClient): Promise<string | null> {
+  const { stdout } = await execSsh(client, AGENT_TLS_FINGERPRINT_CMD);
+  return normalizeFingerprint(stdout.trim());
+}
+
 /**
  * Install the stor-agent on a remote server via SSH.
- * Copies the agent directory, runs the install script, returns the generated API key.
+ * Copies the agent directory, runs the install script, returns the generated
+ * API key and, when the agent uses its self-signed certificate, that
+ * certificate's fingerprint for the backend to pin.
  */
 export async function installAgentViaSsh(
   target: SshTarget,
   agentDir: string,
   agentPort: number
-): Promise<{ ok: boolean; apiKey?: string; error?: string }> {
+): Promise<{ ok: boolean; apiKey?: string; tlsFingerprint?: string | null; error?: string }> {
   let client: SshClient | null = null;
   try {
     client = await connectSsh(target);
@@ -148,13 +166,17 @@ export async function installAgentViaSsh(
     const checkResult = await execSsh(client, 'systemctl is-active stor-agent 2>/dev/null || echo not-installed');
     const isInstalled = !checkResult.stdout.trim().includes('not-installed') && !checkResult.stdout.trim().includes('inactive');
 
-    if (isInstalled) {
+    // An agent installed before TLS has no tls.env and must be re-installed
+    // to get a certificate; the installer keeps its API key.
+    const hasTlsSettings = (await execSsh(client, 'test -e /etc/stor-agent/tls.env && echo yes || echo no')).stdout.trim() === 'yes';
+
+    if (isInstalled && hasTlsSettings) {
       // Just retrieve the existing API key
       const keyResult = await execSsh(client, 'cat /etc/stor-agent/config.json 2>/dev/null || echo {}');
       try {
         const conf = JSON.parse(keyResult.stdout.trim());
         if (conf.api_key) {
-          return { ok: true, apiKey: conf.api_key };
+          return { ok: true, apiKey: conf.api_key, tlsFingerprint: await readAgentTlsFingerprint(client) };
         }
       } catch { /* parse failed */ }
     }
@@ -190,17 +212,19 @@ export async function installAgentViaSsh(
       throw new Error(`Install script failed (exit ${installResult.exitCode}): ${installResult.stderr.slice(-300)}`);
     }
 
+    const tlsFingerprint = await readAgentTlsFingerprint(client);
+
     // Extract API key from install output
     const keyMatch = installResult.stdout.match(/API Key:\s*([a-f0-9]{64})/i);
     if (keyMatch) {
-      return { ok: true, apiKey: keyMatch[1] };
+      return { ok: true, apiKey: keyMatch[1], tlsFingerprint };
     }
 
     // Fallback: read config file
     const readKey = await execSsh(client, 'cat /etc/stor-agent/config.json 2>/dev/null || echo {}');
     try {
       const conf = JSON.parse(readKey.stdout.trim());
-      if (conf.api_key) return { ok: true, apiKey: conf.api_key };
+      if (conf.api_key) return { ok: true, apiKey: conf.api_key, tlsFingerprint };
     } catch { /* parse failed */ }
 
     throw new Error('Agent installed but could not retrieve API key');

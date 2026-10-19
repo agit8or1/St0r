@@ -5,6 +5,60 @@ All notable changes to St0r (UrBackup GUI) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **The one-line installer installed 3.2.78.** `install.sh` carried a hard-coded
+  `INSTALLER_VERSION="3.2.78"` that stopped being bumped in April, so
+  `curl … install.sh | sudo bash` downloaded the March 2026 release however many had been published
+  since. It now installs the latest published GitHub release (the one the in-app updater uses); run
+  from a checkout it installs that checkout's `VERSION`; `ST0R_INSTALL_VERSION` pins one. A
+  hard-coded version remains only as a fallback when GitHub cannot be reached, and says so.
+- **Installs recorded the wrong version.** The installer overwrote `version.json` with
+  `3.2.78` even when installing newer code from a checkout, so the About page showed the wrong
+  version and an empty changelog. It now keeps the installed tree's own `version.json` when it
+  matches the version installed.
+- The upgrade prompt's "What's new" list described 3.2.78; it now links to this changelog.
+
+### Changed — BREAKING for remote agents
+- **Remote agents are reached over TLS, with a pinned certificate.** The agent installer now
+  generates a self-signed certificate (kept on re-install) and prints its SHA-256 fingerprint.
+  "Install agent" over SSH and the one-time install command send that fingerprint back, and St0r
+  then accepts only that certificate, checking it before the API key is sent. "Enter API key" takes
+  the fingerprint too. An agent with a certificate of its own (named in `/etc/stor-agent/tls.env`)
+  is verified against CAs instead. Redirects are refused, an agent without TLS listens on loopback
+  only, and `allowed_ips` is enforced against the connecting address.
+- **Existing remote agents stop answering until they are installed again**, by "Install agent"
+  over SSH or a new install command; they keep their API keys. The server card says so when an
+  agent without a pinned certificate cannot be reached. `STOR_AGENT_ALLOW_INSECURE_HTTP=true` on
+  the backend keeps unpinned agents on cleartext HTTP meanwhile. See
+  `docs/security-review-2026-10-02.md`.
+- nodemailer 10.1 (from 9.x): fixes an advisory covering 10.0.8 and earlier.
+
+### Security
+- **A password change now ends every existing session.** Tokens were signed with the user's id
+  and role only, so a stolen token stayed valid after the password was changed or reset. Each
+  token now carries a keyed fingerprint of the password hash it was issued against, and the
+  auth middleware rejects one that no longer matches; other processes converge within the
+  existing 10-second account cache. Changing your own password signs you out and returns you to
+  the login page. **Upgrading signs every user out once**, because existing tokens carry no
+  fingerprint. A revoked session is logged as revoked, not as a deleted account.
+- **The agent no longer prints its API key.** The agent wrote the key to its log on first start,
+  and the installer printed it at the end, so it sat in the systemd journal and in terminal
+  scrollback. It is now only in the root-readable `/etc/stor-agent/config.json`. St0r's own
+  "Install agent" and install-script flows already read it from there.
+
+### Fixed (agent)
+- **The agent installer could not build the agent.** It ran `npm install --omit=dev`, which skips
+  TypeScript, then compiled. It now installs from a committed lockfile with dev dependencies,
+  builds, and prunes them afterwards.
+
+### Dependencies
+- Backend: axios 1.20, multer 2.3, mysql2 3.22, and in-range fixes for express, body-parser, qs,
+  proxy-addr (critical) and undici. Frontend: axios 1.20. `npm audit --omit=dev` now reports
+  nothing for the frontend and only nodemailer for the backend; nodemailer needs a major upgrade
+  (to 10.0.9 or later) and is held until replication alert emails have been tested on it.
+
 ## [3.2.119] - 2026-10-03
 
 Security fixes, and a repair to the update mechanism itself. Found while investigating a report that
