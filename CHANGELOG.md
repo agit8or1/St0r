@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.120] - 2026-10-20
+
+Session revocation on password change, TLS with pinned certificates for remote agents, a working
+agent installer, and a one-line installer that installs the latest release. **Upgrading signs every
+user out once, and existing remote agents must be installed again** — see *Changed* below. 3.2.119
+was tagged but never published as a release, so updating from 3.2.118 brings its fixes too.
+
 ### Fixed
 - **The one-line installer installed 3.2.78.** `install.sh` carried a hard-coded
   `INSTALLER_VERSION="3.2.78"` that stopped being bumped in April, so
@@ -55,9 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 - Backend: axios 1.20, multer 2.3, mysql2 3.22, and in-range fixes for express, body-parser, qs,
-  proxy-addr (critical) and undici. Frontend: axios 1.20. `npm audit --omit=dev` now reports
-  nothing for the frontend and only nodemailer for the backend; nodemailer needs a major upgrade
-  (to 10.0.9 or later) and is held until replication alert emails have been tested on it.
+  proxy-addr (critical) and undici. Frontend: axios 1.20. With nodemailer 10.1 (above),
+  `npm audit --omit=dev` reports nothing for the backend, frontend or agent.
 
 ## [3.2.119] - 2026-10-03
 

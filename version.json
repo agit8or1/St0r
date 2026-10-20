@@ -1,13 +1,12 @@
 {
-  "version": "3.2.119",
-  "releaseDate": "2026-10-03",
+  "version": "3.2.120",
+  "releaseDate": "2026-10-20",
   "changelog": [
-    "Security: the frontend auth guard no longer fails open. useAuth revalidated the session with a .catch() on a promise that never rejects, so a stale or hand-written localStorage entry rendered the full UI (including admin routes) without a login. It now branches on the validation result.",
-    "Security: CORS no longer reflects arbitrary origins with credentials. CORS_LOCK is enabled in the deployed environment; the allowlist is built from URBACKUP_SERVER_FQDN.",
-    "Security: GET /api/version/stats now requires authentication -- it reported fleet-wide installation counts to anonymous callers.",
-    "Security: the installId telemetry parameter is validated against ^[A-Za-z0-9_-]{11,64}$ before it reaches a database row. GET /api/version stays unauthenticated so remote installs can still check in.",
-    "Unmatched /api/* paths now return a JSON 404 instead of falling through to the SPA fallback and returning index.html with a 200, which made a missing endpoint look like a broken page.",
-    "The auto-update script shipped at the repo root pointed at https://stor.agit8or.net/downloads/urbackup-gui.tar.gz, which does not exist and -- because of the SPA fallback -- returned 200 text/html, so tar failed on an HTML page and every update rolled back. setup/auto-update.sh (GitHub releases) is the correct script.",
-    "The About page no longer shows the active-installation count."
+    "Upgrading signs every user out once. A password change now ends every existing session: each token carries a keyed fingerprint of the password hash it was issued against, and one that no longer matches is rejected.",
+    "BREAKING for remote agents: St0r now reaches remote agents over TLS with a pinned certificate. Existing remote agents stop answering until each is installed again (\"Install agent\" over SSH or a new install command); they keep their API keys. STOR_AGENT_ALLOW_INSECURE_HTTP=true on the backend keeps them on plain HTTP in the meantime.",
+    "The agent no longer prints its API key to the journal or the installer output. It is only in the root-readable /etc/stor-agent/config.json.",
+    "The agent installer builds again. It ran npm install --omit=dev and then failed with tsc: not found; it now installs from a lockfile with dev dependencies and prunes them afterwards.",
+    "The one-line installer installs the latest GitHub release instead of a hard-coded 3.2.78, and records the version it actually installed.",
+    "Dependencies: axios 1.20, multer 2.3, mysql2 3.22, nodemailer 10.1 and in-range fixes. npm audit --omit=dev reports nothing for the backend, frontend or agent."
   ]
 }
