@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.121] - 2026-10-21
+
+Fixes the update script, which never refreshed the remote agent package: installs updated to 3.2.120
+kept sending remote hosts an agent that could not build and had no certificate. **After updating to
+3.2.121, click Update Now once more** (see the last item below).
+
 ### Fixed
 - **Updates never refreshed the remote agent package.** `setup/auto-update.sh` copied the backend,
   frontend, migrations and scripts but not `agent/`, which "Install agent" and the install command
@@ -15,9 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   certificate, which the 3.2.120 backend requires. The update now syncs `agent/`.
 - **Updates left `VERSION` behind.** The update copied `version.json` but not `VERSION`, so the
   installed file kept whichever version was first installed. It is now copied too.
-- An update runs the *installed* copy of this script, so the first update after these fixes is
-  still done by the old one. Run **Update Now** a second time to pick up the agent package, or
-  copy `agent/` from the release into `/opt/urbackup-gui/agent/` by hand.
+- An update runs the *installed* copy of this script, so the update to 3.2.121 is still done by
+  the 3.2.120 one and leaves the old agent package in place. Run **Update Now** a second time to
+  pick it up, or copy `agent/` from the release into `/opt/urbackup-gui/agent/` by hand.
 
 ## [3.2.120] - 2026-10-20
 

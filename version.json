@@ -1,12 +1,9 @@
 {
-  "version": "3.2.120",
-  "releaseDate": "2026-10-20",
+  "version": "3.2.121",
+  "releaseDate": "2026-10-21",
   "changelog": [
-    "Upgrading signs every user out once. A password change now ends every existing session: each token carries a keyed fingerprint of the password hash it was issued against, and one that no longer matches is rejected.",
-    "BREAKING for remote agents: St0r now reaches remote agents over TLS with a pinned certificate. Existing remote agents stop answering until each is installed again (\"Install agent\" over SSH or a new install command); they keep their API keys. STOR_AGENT_ALLOW_INSECURE_HTTP=true on the backend keeps them on plain HTTP in the meantime.",
-    "The agent no longer prints its API key to the journal or the installer output. It is only in the root-readable /etc/stor-agent/config.json.",
-    "The agent installer builds again. It ran npm install --omit=dev and then failed with tsc: not found; it now installs from a lockfile with dev dependencies and prunes them afterwards.",
-    "The one-line installer installs the latest GitHub release instead of a hard-coded 3.2.78, and records the version it actually installed.",
-    "Dependencies: axios 1.20, multer 2.3, mysql2 3.22, nodemailer 10.1 and in-range fixes. npm audit --omit=dev reports nothing for the backend, frontend or agent."
+    "After updating to 3.2.121, click Update Now once more. Updates run the previously installed update script, and only the 3.2.121 script refreshes the remote agent package — the second run applies it.",
+    "Updates now refresh the remote agent package. \"Install agent\" and the install command send /opt/urbackup-gui/agent to remote hosts, and updates never refreshed it, so updated installs kept shipping the agent they were first installed with. On 3.2.120 that agent failed with tsc: not found and set up no certificate, which the 3.2.120 backend requires.",
+    "Updates now copy VERSION as well as version.json."
   ]
 }
