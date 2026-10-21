@@ -1,9 +1,8 @@
 {
-  "version": "3.2.121",
+  "version": "3.2.122",
   "releaseDate": "2026-10-21",
   "changelog": [
-    "After updating to 3.2.121, click Update Now once more. Updates run the previously installed update script, and only the 3.2.121 script refreshes the remote agent package — the second run applies it.",
-    "Updates now refresh the remote agent package. \"Install agent\" and the install command send /opt/urbackup-gui/agent to remote hosts, and updates never refreshed it, so updated installs kept shipping the agent they were first installed with. On 3.2.120 that agent failed with tsc: not found and set up no certificate, which the 3.2.120 backend requires.",
-    "Updates now copy VERSION as well as version.json."
+    "Updates prune their old backups. Each update copies the whole install, .env included, to /opt/urbackup-gui-backup-<timestamp> and never removed one. After a successful update the three newest are now kept and older ones deleted. A failure while pruning is logged and cannot roll back the update.",
+    "Pruning is done by the update script, and an update runs the previously installed one, so it starts with the update after this one."
   ]
 }

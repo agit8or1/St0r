@@ -7,11 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.122] - 2026-10-21
+
+Housekeeping: updates stop piling up old backups of the install. Nothing else changed.
+
 ### Changed
 - **Updates prune their old backups.** Each update copies the whole install, `.env` included, to
   `/opt/urbackup-gui-backup-<timestamp>` and never removed one, so they piled up (38 on one server,
   2.3 GB). After a successful update the three newest are kept and older ones deleted. Pruning runs
   after the update is complete, so a failure there is logged and cannot trigger a rollback.
+  An update runs the previously installed script, so pruning starts with the update after 3.2.122.
 
 ## [3.2.121] - 2026-10-21
 
