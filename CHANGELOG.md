@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Updates prune their old backups.** Each update copies the whole install, `.env` included, to
+  `/opt/urbackup-gui-backup-<timestamp>` and never removed one, so they piled up (38 on one server,
+  2.3 GB). After a successful update the three newest are kept and older ones deleted. Pruning runs
+  after the update is complete, so a failure there is logged and cannot trigger a rollback.
+
 ## [3.2.121] - 2026-10-21
 
 Fixes the update script, which never refreshed the remote agent package: installs updated to 3.2.120

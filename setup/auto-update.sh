@@ -262,5 +262,23 @@ fi
 echo "$(timestamp) Starting urbackup-gui service..."
 systemctl start urbackup-gui 2>/dev/null || true
 
+# ── 9. Prune old backups ──────────────────────────────────────────────────
+# Every update leaves a full copy of the install (with .env) in /opt; keep the
+# newest KEEP_BACKUPS. The update has succeeded by now, so nothing here may
+# trigger a rollback.
+trap - ERR
+KEEP_BACKUPS=3
+shopt -s nullglob
+backups=(/opt/urbackup-gui-backup-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9])
+shopt -u nullglob
+# The timestamped names sort chronologically, and globs expand sorted.
+if (( ${#backups[@]} > KEEP_BACKUPS )); then
+  for old in "${backups[@]:0:${#backups[@]}-KEEP_BACKUPS}"; do
+    [ "$old" = "$BACKUP_DIR" ] && continue
+    echo "$(timestamp) Removing old backup $old"
+    rm -rf --one-file-system -- "$old" || echo "$(timestamp) WARN: could not remove $old"
+  done
+fi
+
 echo "$(timestamp) Update completed successfully - $VERSION installed"
 echo "SUCCESS"
