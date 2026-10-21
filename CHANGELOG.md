@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Updates never refreshed the remote agent package.** `setup/auto-update.sh` copied the backend,
+  frontend, migrations and scripts but not `agent/`, which "Install agent" and the install command
+  package and send to remote hosts. An updated install kept shipping the agent it was first
+  installed with; on 3.2.120 that meant an agent that failed with `tsc: not found` and set up no
+  certificate, which the 3.2.120 backend requires. The update now syncs `agent/`.
+- **Updates left `VERSION` behind.** The update copied `version.json` but not `VERSION`, so the
+  installed file kept whichever version was first installed. It is now copied too.
+- An update runs the *installed* copy of this script, so the first update after these fixes is
+  still done by the old one. Run **Update Now** a second time to pick up the agent package, or
+  copy `agent/` from the release into `/opt/urbackup-gui/agent/` by hand.
+
 ## [3.2.120] - 2026-10-20
 
 Session revocation on password change, TLS with pinned certificates for remote agents, a working

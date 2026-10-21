@@ -161,6 +161,12 @@ rsync -a --exclude='.env' --exclude='node_modules' --exclude='dist' \
 rsync -a --exclude='node_modules' --exclude='dist' \
   "$TEMP_DIR/src/frontend/" "$INSTALL_DIR/frontend/"
 
+# Remote agent package. "Install agent" tars this directory as-is and ships it to
+# remote hosts, so --delete keeps files dropped upstream from going with it. Not
+# built here — the agent builds on the host it is installed on.
+rsync -a --delete --exclude='node_modules' --exclude='dist' \
+  "$TEMP_DIR/src/agent/" "$INSTALL_DIR/agent/"
+
 # Database migrations
 rsync -a "$TEMP_DIR/src/database/" "$INSTALL_DIR/database/"
 
@@ -172,6 +178,7 @@ chmod +x "$INSTALL_DIR/auto-update.sh"
 
 # Version manifest (used by /api/version to report the installed version)
 cp -f "$TEMP_DIR/src/version.json" "$INSTALL_DIR/version.json"
+cp -f "$TEMP_DIR/src/VERSION" "$INSTALL_DIR/VERSION"
 
 # ── 6. Build backend ──────────────────────────────────────────────────────
 echo "$(timestamp) Installing backend dependencies..."
