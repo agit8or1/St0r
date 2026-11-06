@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
+import { gzipSync } from 'node:zlib';
 
 async function startAgent(t, allowed, env = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'stor-agent-test-'));
@@ -51,4 +52,26 @@ test('allowed source still needs a valid key', async t => {
 });
 test('cleartext non-loopback listener is refused', async t => {
   await assert.rejects(startAgent(t, [], { STOR_AGENT_BIND_HOST: '0.0.0.0' }), /Cleartext agent must bind to loopback/);
+});
+
+// GHSA-27r3-jxmh-p828: express.json() runs ahead of the key check, so any caller that can
+// reach the port could end the agent with a compressed body followed by trailing bytes.
+test('compressed body with trailing bytes cannot crash the agent before authentication', async t => {
+  const url = await startAgent(t, ['127.0.0.1'], { NODE_ENV: 'production' });
+  const body = Buffer.concat([gzipSync('{"a":1}'), Buffer.from([0]), Buffer.alloc(100 * 1024, 0x58)]);
+  const res = await fetch(url + '/no-management-action', { method: 'POST', body,
+    headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' } });
+  assert.equal(res.status, 401);
+  await new Promise(resolve => setTimeout(resolve, 250));
+  assert.equal((await fetch(url + '/health')).status, 200);
+});
+test('malformed compressed body gets a 400 without a stack trace', async t => {
+  const url = await startAgent(t, ['127.0.0.1'], { NODE_ENV: 'production' });
+  for (const body of [Buffer.from('not gzip'), gzipSync('{"a":1}').subarray(0, 12)]) {
+    const res = await fetch(url + '/no-management-action', { method: 'POST', body,
+      headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip', 'x-stor-agent-key': 'synthetic-test-key' } });
+    assert.equal(res.status, 400);
+    assert.equal((await res.text()).includes('node_modules'), false);
+  }
+  assert.equal((await fetch(url + '/health')).status, 200);
 });

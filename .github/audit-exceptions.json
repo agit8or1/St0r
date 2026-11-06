@@ -1,0 +1,21 @@
+{
+  "_comment": "Advisories accepted by .github/scripts/audit-gate.mjs. Each entry needs a reason and an expiry (YYYY-MM-DD); devOnly entries stop applying if the package reaches the production dependency tree. Remove entries once fixed.",
+  "exceptions": [
+    {
+      "project": "backend",
+      "package": "minimatch",
+      "advisory": "GHSA-g3hv-75wg-m249",
+      "devOnly": true,
+      "expires": "2027-02-06",
+      "reason": "Lint tooling only (@typescript-eslint/typescript-estree requires minimatch ^10; fixed only in 11.x). Patterns come from the repo's own lint config, not from users."
+    },
+    {
+      "project": "frontend",
+      "package": "minimatch",
+      "advisory": "GHSA-g3hv-75wg-m249",
+      "devOnly": true,
+      "expires": "2027-02-06",
+      "reason": "Lint tooling only (@typescript-eslint/typescript-estree requires minimatch ^10; fixed only in 11.x). Patterns come from the repo's own lint config, not from users. Not part of the built bundle."
+    }
+  ]
+}

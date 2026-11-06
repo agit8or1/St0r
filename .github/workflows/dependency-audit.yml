@@ -1,0 +1,44 @@
+name: Dependency audit
+
+# Advisories appear without any change to this repository, so this also runs daily.
+# Accepted exceptions live in .github/audit-exceptions.json; see .github/scripts/audit-gate.mjs.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: npm audit (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [backend, agent, frontend, scripts/demo]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Test the audit gate
+        run: node .github/scripts/audit-gate.test.mjs
+
+      # Exit 1: unaccepted advisories or invalid exceptions. Exit 2: the scanner itself
+      # failed. Both fail the job; neither is reported as clean.
+      - name: Audit
+        run: node .github/scripts/audit-gate.mjs "${{ matrix.project }}"

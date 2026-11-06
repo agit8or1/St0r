@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **A single unauthenticated request could stop the backend or a remote agent** (body-parser
+  GHSA-27r3-jxmh-p828). A gzip or deflate body followed by trailing bytes was answered normally, then
+  crashed the process. Both parse request bodies before checking credentials. Fixed by body-parser
+  1.20.9 (express 4.22.3). **Remote agents keep the old copy until their install command is re-run.**
+- Dependency updates: multer 2.5.0, nodemailer 10.3.1 (recipient parsing, GHSA-8c8m/m943/85x2),
+  follow-redirects 1.16.2, qs 6.16.2, axios 1.21.0, vite 7.3.7, and in-range refreshes of
+  browserslist, source-map-js, postcss-selector-parser, brace-expansion, minimatch and sucrase (drops
+  glob). typescript-eslint 6 → 8 (lint only). The blanket `minimatch >=9.0.5` override, which forced
+  minimatch 10 onto eslint and glob 7 (both declare `^3`), is gone; they now get minimatch 3.1.5.
+- **Dependency audit in CI** (`.github/workflows/dependency-audit.yml`): backend, agent, frontend and
+  `scripts/demo` on every pull request, push to main and daily. A failed or empty scan fails the job.
+  Accepted advisories are listed with a reason and an expiry in `.github/audit-exceptions.json`.
+- Regression tests: compressed-body crash (backend and agent), malformed/oversized/over-nested
+  bodies, upload limit/abort/temp-file cleanup, alert e-mail recipients, and credential stripping
+  on redirects. The backend tests run the real server in a child process with the database mocked.
+
 ## [3.2.122] - 2026-10-21
 
 Housekeeping: updates stop piling up old backups of the install. Nothing else changed.
