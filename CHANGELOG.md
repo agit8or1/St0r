@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.127] - 2026-11-07
+
+Maintenance: linting works again and runs in CI. No behaviour changes beyond one extra log line.
+
 ### Changed
 - **Linting works again: ESLint 9 with a config.** `npm run lint` in backend and frontend failed outright, since
   there was never a config. Each now has an `eslint.config.js` (ESLint 9.39, typescript-eslint 8, plus the
