@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Folder, FolderOpen, ChevronRight, ChevronDown, Loader2, Plus, HardDrive, Archive, Home, CornerDownRight } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -52,11 +52,7 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
   const [error, setError] = useState<string | null>(null);
   const [archiveLoaded, setArchiveLoaded] = useState(false);
 
-  useEffect(() => {
-    if (mode === 'archive' && !archiveLoaded) browseArchive([], null);
-  }, [mode]);
-
-  const browseArchive = async (parts: string[], bkId: string | null) => {
+  const browseArchive = useCallback(async (parts: string[], bkId: string | null) => {
     setLoading(true);
     setError(null);
     try {
@@ -72,7 +68,11 @@ export function ClientFileBrowser({ clientId, onSelect, onClose, existingPaths }
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    if (mode === 'archive' && !archiveLoaded) browseArchive([], null);
+  }, [mode, archiveLoaded, browseArchive]);
 
   const handleAdd = (path: string) => {
     if (path && !existingPaths.includes(path)) {

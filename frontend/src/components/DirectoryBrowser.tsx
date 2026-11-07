@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChevronRight, ChevronDown, Folder, HardDrive, Loader2, FolderOpen } from 'lucide-react';
 
 interface DirectoryNode {
@@ -22,11 +22,7 @@ export function DirectoryBrowser({ clientId, onSelect, selectedPath }: Directory
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadRoots();
-  }, [clientId]);
-
-  const loadRoots = async () => {
+  const loadRoots = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -47,7 +43,11 @@ export function DirectoryBrowser({ clientId, onSelect, selectedPath }: Directory
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    loadRoots();
+  }, [loadRoots]);
 
   const loadChildren = async (node: DirectoryNode, path: DirectoryNode[]) => {
     try {

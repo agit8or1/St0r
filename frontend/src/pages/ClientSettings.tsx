@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
@@ -78,6 +78,125 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   );
 }
 
+const getDefaults = (): ClientSettings => ({
+  // UrBackup default backup path for Windows
+  default_dirs: 'C:\\Users',
+  // Standard Windows exclusions: only junction points, OS files, and cache dirs.
+  // Does NOT exclude whole dirs like ProgramData or Program Files — add those
+  // manually if you don't want them backed up.
+  exclude_files: [
+    // OS virtual / swap files (no backup value)
+    ':\\pagefile.sys',
+    ':\\hiberfil.sys',
+    ':\\swapfile.sys',
+    ':\\$Recycle.Bin',
+    ':\\System Volume Information',
+    // Windows OS dirs (rarely needed in a restore)
+    'C:\\Windows',
+    'C:\\Windows.old',
+    'C:\\$Windows.~BT',
+    'C:\\$GetCurrent',
+    // Junction points — Windows compatibility symlinks that duplicate content
+    'C:\\Documents and Settings',           // → C:\Users
+    'C:\\Users\\All Users',                 // → C:\ProgramData
+    'C:\\Users\\Default User',              // → C:\Users\Default
+    'C:\\Users\\*\\Application Data',       // → AppData\Roaming
+    'C:\\Users\\*\\Local Settings',         // → AppData\Local
+    'C:\\Users\\*\\My Documents',           // → Documents
+    'C:\\Users\\*\\My Music',               // → Music
+    'C:\\Users\\*\\My Pictures',            // → Pictures
+    'C:\\Users\\*\\My Videos',              // → Videos
+    'C:\\Users\\*\\Cookies',
+    'C:\\Users\\*\\Recent',
+    'C:\\Users\\*\\NetHood',
+    'C:\\Users\\*\\PrintHood',
+    'C:\\Users\\*\\SendTo',
+    'C:\\Users\\*\\Start Menu',
+    'C:\\Users\\*\\Templates',
+    // Cache / temp files
+    'C:\\Windows\\Temp',
+    'C:\\Users\\*\\AppData\\Local\\Temp',
+    'C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files',
+    'C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache',
+    'C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Media Cache',
+    'C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache',
+    'C:\\Users\\*\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\*\\cache2',
+    'C:\\Users\\*\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\*\\cache',
+    'C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache*',
+    // ProgramData — large volatile files not worth backing up
+    'C:\\ProgramData\\Microsoft\\Windows Defender\\Scans\\mpcache-*',
+    'C:\\ProgramData\\Microsoft\\Network\\Downloader\\*',
+    'C:\\ProgramData\\Microsoft\\Windows\\WER\\*',
+    'C:\\Windows\\softwaredistribution\\*.*',
+  ].join(';'),
+  include_files: '',
+  backup_dirs_optional: false,
+  // Schedule
+  backup_window_incr_file: '1-7/0-24',
+  backup_window_full_file: '1-7/0-24',
+  backup_window_incr_image: '1-7/0-24',
+  backup_window_full_image: '1-7/0-24',
+  update_freq_incr: 18000,
+  update_freq_full: 2592000,
+  update_freq_image_incr: 604800,
+  update_freq_image_full: 5184000,
+  max_file_incr: 100,
+  max_file_full: 10,
+  max_image_incr: 30,
+  max_image_full: 5,
+  min_file_incr: 40,
+  min_file_full: 2,
+  min_image_incr: 4,
+  min_image_full: 2,
+  // Transfer
+  internet_full_file_transfer_mode: 'raw',
+  internet_incr_file_transfer_mode: 'blockhash',
+  internet_full_image_transfer_mode: 'raw',
+  internet_image_transfer_mode: 'raw',
+  local_full_file_transfer_mode: 'hashed',
+  local_incr_file_transfer_mode: 'hashed',
+  local_image_transfer_mode: 'hashed',
+  internet_compress: true,
+  internet_encrypt: true,
+  local_compress: true,
+  local_encrypt: true,
+  internet_speed: -1,
+  local_speed: -1,
+  internet_full_file_backups: true,
+  internet_image_backups: false,
+  internet_mode_enabled: true,
+  internet_file_dataplan_limit: 5242880000,
+  internet_image_dataplan_limit: 20971520000,
+  // Image
+  image_letters: 'C',
+  internet_full_image_style: 'synthetic',
+  internet_incr_image_style: 'to-last',
+  local_full_image_style: 'full',
+  local_incr_image_style: 'to-full',
+  vss_select_components: '',
+  cbt_volumes: 'ALL',
+  image_file_format: 'default',
+  // Permissions
+  client_set_settings: false,
+  allow_config_paths: false,
+  allow_file_restore: true,
+  allow_component_restore: true,
+  allow_component_config: true,
+  allow_log_view: true,
+  allow_overwrite: true,
+  allow_pause: true,
+  allow_tray_exit: true,
+  allow_starting_full_file_backups: true,
+  allow_starting_incr_file_backups: true,
+  allow_starting_full_image_backups: true,
+  allow_starting_incr_image_backups: true,
+  silent_update: true,
+  background_backups: true,
+  end_to_end_file_backup_verification: false,
+  client_quota: '',
+  startup_backup_delay: 0,
+});
+
 export function ClientSettings() {
   const { clientName } = useParams<{ clientName: string }>();
   const navigate = useNavigate();
@@ -105,9 +224,7 @@ export function ClientSettings() {
   const [savingLimit, setSavingLimit] = useState(false);
   const [limitMessage, setLimitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => { loadSettings(); }, [clientName]);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
       const clients = await (await fetch('/api/urbackup/clients', { credentials: 'include' })).json();
@@ -150,126 +267,9 @@ export function ClientSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientName]);
 
-  const getDefaults = (): ClientSettings => ({
-    // UrBackup default backup path for Windows
-    default_dirs: 'C:\\Users',
-    // Standard Windows exclusions: only junction points, OS files, and cache dirs.
-    // Does NOT exclude whole dirs like ProgramData or Program Files — add those
-    // manually if you don't want them backed up.
-    exclude_files: [
-      // OS virtual / swap files (no backup value)
-      ':\\pagefile.sys',
-      ':\\hiberfil.sys',
-      ':\\swapfile.sys',
-      ':\\$Recycle.Bin',
-      ':\\System Volume Information',
-      // Windows OS dirs (rarely needed in a restore)
-      'C:\\Windows',
-      'C:\\Windows.old',
-      'C:\\$Windows.~BT',
-      'C:\\$GetCurrent',
-      // Junction points — Windows compatibility symlinks that duplicate content
-      'C:\\Documents and Settings',           // → C:\Users
-      'C:\\Users\\All Users',                 // → C:\ProgramData
-      'C:\\Users\\Default User',              // → C:\Users\Default
-      'C:\\Users\\*\\Application Data',       // → AppData\Roaming
-      'C:\\Users\\*\\Local Settings',         // → AppData\Local
-      'C:\\Users\\*\\My Documents',           // → Documents
-      'C:\\Users\\*\\My Music',               // → Music
-      'C:\\Users\\*\\My Pictures',            // → Pictures
-      'C:\\Users\\*\\My Videos',              // → Videos
-      'C:\\Users\\*\\Cookies',
-      'C:\\Users\\*\\Recent',
-      'C:\\Users\\*\\NetHood',
-      'C:\\Users\\*\\PrintHood',
-      'C:\\Users\\*\\SendTo',
-      'C:\\Users\\*\\Start Menu',
-      'C:\\Users\\*\\Templates',
-      // Cache / temp files
-      'C:\\Windows\\Temp',
-      'C:\\Users\\*\\AppData\\Local\\Temp',
-      'C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files',
-      'C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache',
-      'C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Media Cache',
-      'C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache',
-      'C:\\Users\\*\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\*\\cache2',
-      'C:\\Users\\*\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\*\\cache',
-      'C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache*',
-      // ProgramData — large volatile files not worth backing up
-      'C:\\ProgramData\\Microsoft\\Windows Defender\\Scans\\mpcache-*',
-      'C:\\ProgramData\\Microsoft\\Network\\Downloader\\*',
-      'C:\\ProgramData\\Microsoft\\Windows\\WER\\*',
-      'C:\\Windows\\softwaredistribution\\*.*',
-    ].join(';'),
-    include_files: '',
-    backup_dirs_optional: false,
-    // Schedule
-    backup_window_incr_file: '1-7/0-24',
-    backup_window_full_file: '1-7/0-24',
-    backup_window_incr_image: '1-7/0-24',
-    backup_window_full_image: '1-7/0-24',
-    update_freq_incr: 18000,
-    update_freq_full: 2592000,
-    update_freq_image_incr: 604800,
-    update_freq_image_full: 5184000,
-    max_file_incr: 100,
-    max_file_full: 10,
-    max_image_incr: 30,
-    max_image_full: 5,
-    min_file_incr: 40,
-    min_file_full: 2,
-    min_image_incr: 4,
-    min_image_full: 2,
-    // Transfer
-    internet_full_file_transfer_mode: 'raw',
-    internet_incr_file_transfer_mode: 'blockhash',
-    internet_full_image_transfer_mode: 'raw',
-    internet_image_transfer_mode: 'raw',
-    local_full_file_transfer_mode: 'hashed',
-    local_incr_file_transfer_mode: 'hashed',
-    local_image_transfer_mode: 'hashed',
-    internet_compress: true,
-    internet_encrypt: true,
-    local_compress: true,
-    local_encrypt: true,
-    internet_speed: -1,
-    local_speed: -1,
-    internet_full_file_backups: true,
-    internet_image_backups: false,
-    internet_mode_enabled: true,
-    internet_file_dataplan_limit: 5242880000,
-    internet_image_dataplan_limit: 20971520000,
-    // Image
-    image_letters: 'C',
-    internet_full_image_style: 'synthetic',
-    internet_incr_image_style: 'to-last',
-    local_full_image_style: 'full',
-    local_incr_image_style: 'to-full',
-    vss_select_components: '',
-    cbt_volumes: 'ALL',
-    image_file_format: 'default',
-    // Permissions
-    client_set_settings: false,
-    allow_config_paths: false,
-    allow_file_restore: true,
-    allow_component_restore: true,
-    allow_component_config: true,
-    allow_log_view: true,
-    allow_overwrite: true,
-    allow_pause: true,
-    allow_tray_exit: true,
-    allow_starting_full_file_backups: true,
-    allow_starting_incr_file_backups: true,
-    allow_starting_full_image_backups: true,
-    allow_starting_incr_image_backups: true,
-    silent_update: true,
-    background_backups: true,
-    end_to_end_file_backup_verification: false,
-    client_quota: '',
-    startup_backup_delay: 0,
-  });
+  useEffect(() => { loadSettings(); }, [loadSettings]);
 
   const s = <T = any>(key: string): T => settings[key] as T;
   const set = (key: string, value: any) => setSettings(prev => ({ ...prev, [key]: value }));

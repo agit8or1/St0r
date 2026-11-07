@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
@@ -64,10 +64,7 @@ export function FileBrowser() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayBackups, setDayBackups] = useState<Backup[]>([]);
 
-  useEffect(() => { loadBackups(); }, [clientName]);
-  useEffect(() => { if (selectedBackup && clientId) loadFiles(currentPath); }, [selectedBackup, currentPath, clientId]);
-
-  const loadBackups = async () => {
+  const loadBackups = useCallback(async () => {
     try {
       setLoading(true);
       const data = await fetch(`/api/browse/backups?clientName=${encodeURIComponent(clientName!)}`, {
@@ -87,9 +84,9 @@ export function FileBrowser() {
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  };
+  }, [clientName]);
 
-  const loadFiles = async (path: string) => {
+  const loadFiles = useCallback(async (path: string) => {
     try {
       setLoadingFiles(true);
       const data = await fetch(
@@ -99,7 +96,10 @@ export function FileBrowser() {
       setFiles(Array.isArray(data.files) ? data.files : Array.isArray(data) ? data : []);
     } catch { setFiles([]); }
     finally { setLoadingFiles(false); }
-  };
+  }, [clientId, selectedBackup]);
+
+  useEffect(() => { loadBackups(); }, [loadBackups]);
+  useEffect(() => { if (selectedBackup && clientId) loadFiles(currentPath); }, [selectedBackup, currentPath, clientId, loadFiles]);
 
   // ---- Calendar helpers ----
   const backupsByDay = useMemo(() => {

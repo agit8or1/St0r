@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FileText, Search, RefreshCw, Download } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Tooltip } from '../components/Tooltip';
@@ -10,30 +10,40 @@ interface LogEntry {
   message: string;
 }
 
+const parseLogData = (data: any): LogEntry[] => {
+  // Handle different log formats from UrBackup
+  if (Array.isArray(data)) {
+    return data.map((log: any) => ({
+      time: log.time || new Date().toISOString(),
+      level: log.level || 'info',
+      message: log.message || log.toString(),
+    }));
+  }
+
+  if (typeof data === 'object' && data.logs) {
+    return parseLogData(data.logs);
+  }
+
+  // If it's a plain string, split by lines
+  if (typeof data === 'string') {
+    return data.split('\n').map((line) => ({
+      time: new Date().toISOString(),
+      level: 'info',
+      message: line,
+    }));
+  }
+
+  return [];
+};
+
 export function Logs() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<string>('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
-  useEffect(() => {
-    loadLogs();
-  }, []);
-
-  useEffect(() => {
-    if (autoRefresh) {
-      const interval = setInterval(loadLogs, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh]);
-
-  useEffect(() => {
-    filterLogs();
-  }, [logs, searchTerm, levelFilter]);
-
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     try {
       const data = await fetch('/api/logs', {
         headers: {
@@ -49,35 +59,20 @@ export function Logs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const parseLogData = (data: any): LogEntry[] => {
-    // Handle different log formats from UrBackup
-    if (Array.isArray(data)) {
-      return data.map((log: any) => ({
-        time: log.time || new Date().toISOString(),
-        level: log.level || 'info',
-        message: log.message || log.toString(),
-      }));
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
+
+  useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(loadLogs, 5000);
+      return () => clearInterval(interval);
     }
+  }, [autoRefresh, loadLogs]);
 
-    if (typeof data === 'object' && data.logs) {
-      return parseLogData(data.logs);
-    }
-
-    // If it's a plain string, split by lines
-    if (typeof data === 'string') {
-      return data.split('\n').map((line) => ({
-        time: new Date().toISOString(),
-        level: 'info',
-        message: line,
-      }));
-    }
-
-    return [];
-  };
-
-  const filterLogs = () => {
+  const filteredLogs = useMemo(() => {
     let filtered = logs;
 
     if (searchTerm) {
@@ -90,8 +85,8 @@ export function Logs() {
       filtered = filtered.filter(log => log.level === levelFilter);
     }
 
-    setFilteredLogs(filtered);
-  };
+    return filtered;
+  }, [logs, searchTerm, levelFilter]);
 
   const getLevelColor = (level: string) => {
     switch (level.toLowerCase()) {

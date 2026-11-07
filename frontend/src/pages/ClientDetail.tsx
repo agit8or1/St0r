@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -53,12 +53,7 @@ export function ClientDetail() {
   const [selectedBackupIds, setSelectedBackupIds] = useState<Set<number>>(new Set());
   const [deletingSelected, setDeletingSelected] = useState(false);
 
-  useEffect(() => {
-    loadClientData();
-    loadServerInfo();
-  }, [clientName]);
-
-  const loadClientData = async () => {
+  const loadClientData = useCallback(async () => {
     try {
       const clients = await api.getClients();
       const foundClient = clients.find(c => c.name === clientName);
@@ -91,7 +86,12 @@ export function ClientDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientName]);
+
+  useEffect(() => {
+    loadClientData();
+    loadServerInfo();
+  }, [loadClientData]);
 
   const reloadBackups = async (clientId: number) => {
     const backupData = await api.getBackups(clientId as any);

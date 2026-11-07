@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Logo } from '../components/Logo';
@@ -24,6 +24,17 @@ function compareVersions(version1: string, version2: string): boolean {
   return false; // Versions are equal
 }
 
+
+// Generate or retrieve installation ID
+const getInstallId = () => {
+  let installId = localStorage.getItem('installId');
+  if (!installId) {
+    // Generate a unique anonymous ID
+    installId = `stor-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    localStorage.setItem('installId', installId);
+  }
+  return installId;
+};
 
 export function About() {
   const [searchParams] = useSearchParams();
@@ -61,34 +72,15 @@ export function About() {
   const [ubConfirming, setUbConfirming] = useState(false);
   const hasSeenUbInProgressRef = useRef(false);
 
-  // Generate or retrieve installation ID
-  const getInstallId = () => {
-    let installId = localStorage.getItem('installId');
-    if (!installId) {
-      // Generate a unique anonymous ID
-      installId = `stor-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-      localStorage.setItem('installId', installId);
-    }
-    return installId;
-  };
-
+  // The latest values, for callbacks and effects that should not re-run when they change.
+  const currentVersionRef = useRef(currentVersion);
+  const showProgressModalRef = useRef(showProgressModal);
   useEffect(() => {
-    fetchCurrentVersion();
-    checkForUpdates();
-    checkUrBackupVersion();
-  }, []);
+    currentVersionRef.current = currentVersion;
+    showProgressModalRef.current = showProgressModal;
+  }, [currentVersion, showProgressModal]);
 
-  // Open progress modal whenever ?autoUpdate=true is in the URL — including
-  // when already on the About page (e.g. navigated from the update notification)
-  useEffect(() => {
-    if (searchParams.get('autoUpdate') === 'true' && !showProgressModal) {
-      setShowProgressModal(true);
-      setUpdateInProgress(true);
-      setUpdateLog('Starting update...\n');
-    }
-  }, [searchParams]);
-
-  const fetchCurrentVersion = async () => {
+  const fetchCurrentVersion = useCallback(async () => {
     try {
       const installId = getInstallId();
       const response = await fetch(`/api/version?installId=${encodeURIComponent(installId)}`);
@@ -100,7 +92,66 @@ export function About() {
       console.error('Failed to fetch current version:', error);
       setCurrentVersion('Unknown');
     }
-  };
+  }, []);
+
+  const checkForUpdates = useCallback(async () => {
+    setChecking(true);
+    setUpdateError('');
+    try {
+      const installId = getInstallId();
+
+      // Fetch both current and latest versions atomically to avoid race condition
+      const [currentResponse, latestResponse] = await Promise.all([
+        fetch(`/api/version?installId=${encodeURIComponent(installId)}`),
+        fetch(`/api/version/latest`),
+      ]);
+
+      const currentData = currentResponse.ok ? await currentResponse.json() : null;
+      if (currentData?.version) setCurrentVersion(currentData.version);
+      const installedVer = currentData?.version || currentVersionRef.current;
+
+      if (!latestResponse.ok) {
+        setUpdateAvailable(false);
+        if (latestResponse.status !== 404) throw new Error('Failed to check for updates');
+        return;
+      }
+
+      const data = await latestResponse.json();
+      setLatestVersion(data.version);
+      setLastChecked(new Date());
+
+      if (data.changelog && Array.isArray(data.changelog)) {
+        setChangelog(data.changelog);
+      }
+
+      if (data.version && installedVer && installedVer !== 'Loading...' && installedVer !== 'Unknown') {
+        setUpdateAvailable(compareVersions(data.version, installedVer));
+      } else {
+        setUpdateAvailable(false);
+      }
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      setUpdateError('Failed to check for updates');
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCurrentVersion();
+    checkForUpdates();
+    checkUrBackupVersion();
+  }, [fetchCurrentVersion, checkForUpdates]);
+
+  // Open progress modal whenever ?autoUpdate=true is in the URL — including
+  // when already on the About page (e.g. navigated from the update notification)
+  useEffect(() => {
+    if (searchParams.get('autoUpdate') === 'true' && !showProgressModalRef.current) {
+      setShowProgressModal(true);
+      setUpdateInProgress(true);
+      setUpdateLog('Starting update...\n');
+    }
+  }, [searchParams]);
 
   // Poll for update progress
   useEffect(() => {
@@ -190,49 +241,6 @@ export function About() {
     }, 1500);
     return () => clearInterval(iv);
   }, [ubShowLog]);
-
-  const checkForUpdates = async () => {
-    setChecking(true);
-    setUpdateError('');
-    try {
-      const installId = getInstallId();
-
-      // Fetch both current and latest versions atomically to avoid race condition
-      const [currentResponse, latestResponse] = await Promise.all([
-        fetch(`/api/version?installId=${encodeURIComponent(installId)}`),
-        fetch(`/api/version/latest`),
-      ]);
-
-      const currentData = currentResponse.ok ? await currentResponse.json() : null;
-      if (currentData?.version) setCurrentVersion(currentData.version);
-      const installedVer = currentData?.version || currentVersion;
-
-      if (!latestResponse.ok) {
-        setUpdateAvailable(false);
-        if (latestResponse.status !== 404) throw new Error('Failed to check for updates');
-        return;
-      }
-
-      const data = await latestResponse.json();
-      setLatestVersion(data.version);
-      setLastChecked(new Date());
-
-      if (data.changelog && Array.isArray(data.changelog)) {
-        setChangelog(data.changelog);
-      }
-
-      if (data.version && installedVer && installedVer !== 'Loading...' && installedVer !== 'Unknown') {
-        setUpdateAvailable(compareVersions(data.version, installedVer));
-      } else {
-        setUpdateAvailable(false);
-      }
-    } catch (error) {
-      console.error('Failed to check for updates:', error);
-      setUpdateError('Failed to check for updates');
-    } finally {
-      setChecking(false);
-    }
-  };
 
   const triggerUpdate = async (force = false) => {
     setUpdating(true);

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Effect dependencies are complete; `react-hooks/exhaustive-deps` is now an error.** The 15 warnings are
+  fixed without changing when anything loads: each loader is a `useCallback` keyed on the values it reads
+  (usually the client name or id), so its effect re-runs exactly when it did before. Pure helpers moved out
+  of the components. The Logs filter is a `useMemo` instead of state copied by an effect. On the About page,
+  the version fallback and the "modal already open" check read refs, so the mount checks still run once.
+  This also means the About page's fallback for the installed version reads the current value rather than
+  the one from the first render.
+
 ## [3.2.127] - 2026-11-07
 
 Maintenance: linting works again and runs in CI. No behaviour changes beyond one extra log line.

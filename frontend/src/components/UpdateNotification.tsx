@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, X, RefreshCw, AlertTriangle, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -7,6 +7,31 @@ interface VersionInfo {
   releaseDate: string;
   changelog: string[];
 }
+
+// Generate or retrieve installation ID
+const getInstallId = () => {
+  let installId = localStorage.getItem('installId');
+  if (!installId) {
+    installId = `stor-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    localStorage.setItem('installId', installId);
+  }
+  return installId;
+};
+
+const compareVersions = (latest: string, current: string): boolean => {
+  const latestParts = latest.split('.').map(Number);
+  const currentParts = current.split('.').map(Number);
+
+  for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
+    const latestPart = latestParts[i] || 0;
+    const currentPart = currentParts[i] || 0;
+
+    if (latestPart > currentPart) return true;
+    if (latestPart < currentPart) return false;
+  }
+
+  return false;
+};
 
 export function UpdateNotification() {
   const navigate = useNavigate();
@@ -18,40 +43,8 @@ export function UpdateNotification() {
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
 
-  // Generate or retrieve installation ID
-  const getInstallId = () => {
-    let installId = localStorage.getItem('installId');
-    if (!installId) {
-      installId = `stor-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-      localStorage.setItem('installId', installId);
-    }
-    return installId;
-  };
-
-  useEffect(() => {
-    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
-    let cancelled = false;
-
-    const run = async () => {
-      const success = await checkForUpdates();
-      if (!success && !cancelled) {
-        // Retry in 2 minutes if the check failed (e.g. service was restarting)
-        retryTimeout = setTimeout(run, 2 * 60 * 1000);
-      }
-    };
-
-    run();
-    // Re-check every 30 minutes regardless
-    const interval = setInterval(run, 30 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      if (retryTimeout) clearTimeout(retryTimeout);
-    };
-  }, []);
-
   // Returns true if the check succeeded (even if no update), false if it failed
-  const checkForUpdates = async (): Promise<boolean> => {
+  const checkForUpdates = useCallback(async (): Promise<boolean> => {
     try {
       const installId = getInstallId();
 
@@ -81,22 +74,29 @@ export function UpdateNotification() {
       console.debug('Could not check for updates:', error);
       return false;
     }
-  };
+  }, []);
 
-  const compareVersions = (latest: string, current: string): boolean => {
-    const latestParts = latest.split('.').map(Number);
-    const currentParts = current.split('.').map(Number);
+  useEffect(() => {
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
 
-    for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
-      const latestPart = latestParts[i] || 0;
-      const currentPart = currentParts[i] || 0;
+    const run = async () => {
+      const success = await checkForUpdates();
+      if (!success && !cancelled) {
+        // Retry in 2 minutes if the check failed (e.g. service was restarting)
+        retryTimeout = setTimeout(run, 2 * 60 * 1000);
+      }
+    };
 
-      if (latestPart > currentPart) return true;
-      if (latestPart < currentPart) return false;
-    }
-
-    return false;
-  };
+    run();
+    // Re-check every 30 minutes regardless
+    const interval = setInterval(run, 30 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
+  }, [checkForUpdates]);
 
   const handleDismiss = () => {
     setConfirming(false);

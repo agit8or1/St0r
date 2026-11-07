@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HardDrive, Search, Settings, Users, ChevronUp, ChevronDown, AlertTriangle, XCircle, Edit2, RefreshCw } from 'lucide-react';
 import { Layout } from '../components/Layout';
@@ -105,7 +105,6 @@ export function Clients() {
   const limitInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadData(); }, []);
-  useEffect(() => { if (clients.length > 0) loadStorageLimitStatuses(); }, [clients]);
 
   const loadData = async () => {
     setLoading(true);
@@ -135,7 +134,7 @@ export function Clients() {
     }
   };
 
-  const loadStorageLimitStatuses = async () => {
+  const loadStorageLimitStatuses = useCallback(async () => {
     try {
       const clientsPayload = clients.map(c => ({
         name: c.name,
@@ -146,7 +145,9 @@ export function Clients() {
       statuses.forEach(s => map.set(s.name, s));
       setStorageLimitStatuses(map);
     } catch {}
-  };
+  }, [clients]);
+
+  useEffect(() => { if (clients.length > 0) loadStorageLimitStatuses(); }, [clients, loadStorageLimitStatuses]);
 
   const openLimitModal = (client: Client, e: React.MouseEvent) => {
     e.stopPropagation();

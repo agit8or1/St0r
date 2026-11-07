@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Calendar, Clock, Save, Loader2, RefreshCw, FolderOpen, X, FolderSearch, HardDrive } from 'lucide-react';
 import { api } from '../services/api';
 import { PathSelector } from './PathSelector';
@@ -38,6 +38,72 @@ interface BackupPath {
   flags: string[];
 }
 
+// Parse backup paths from default_dirs setting
+const parseBackupPaths = (defaultDirs: string): BackupPath[] => {
+  // Handle corrupted/invalid values
+  if (!defaultDirs ||
+      typeof defaultDirs !== 'string' ||
+      defaultDirs.trim() === '' ||
+      defaultDirs === '[object Object]' ||
+      defaultDirs === 'NaN' ||
+      defaultDirs === 'undefined' ||
+      defaultDirs === 'null') {
+    return [];
+  }
+
+  const paths: BackupPath[] = [];
+  const entries = defaultDirs.split(';').filter(e => e.trim());
+
+  for (const entry of entries) {
+    // Skip corrupted entries
+    if (entry.includes('[object Object]') || entry === 'NaN' || entry === 'undefined') {
+      continue;
+    }
+
+    // Format: path|name/flag1,flag2
+    const parts = entry.split('|');
+    const pathPart = parts[0].trim();
+
+    // Skip empty or invalid paths
+    if (!pathPart || pathPart === '[object Object]') {
+      continue;
+    }
+
+    let name = '';
+    let flags: string[] = [];
+
+    if (parts.length > 1) {
+      const nameAndFlags = parts[1];
+      const flagIndex = nameAndFlags.indexOf('/');
+
+      if (flagIndex !== -1) {
+        name = nameAndFlags.substring(0, flagIndex).trim();
+        flags = nameAndFlags.substring(flagIndex + 1).split(',').map(f => f.trim()).filter(f => f);
+      } else {
+        name = nameAndFlags.trim();
+      }
+    }
+
+    paths.push({ path: pathPart, name: name || undefined, flags });
+  }
+
+  return paths;
+};
+
+// Serialize backup paths to default_dirs format
+const serializeBackupPaths = (paths: BackupPath[]): string => {
+  return paths.map(p => {
+    let result = p.path;
+    if (p.name || p.flags.length > 0) {
+      result += '|' + (p.name || '');
+      if (p.flags.length > 0) {
+        result += '/' + p.flags.join(',');
+      }
+    }
+    return result;
+  }).join(';');
+};
+
 export function BackupSchedule({ clientId }: BackupScheduleProps) {
   const [settings, setSettings] = useState<ScheduleSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,77 +121,7 @@ export function BackupSchedule({ clientId }: BackupScheduleProps) {
   const [showPathSelector, setShowPathSelector] = useState(false);
   const [showVolumeSelector, setShowVolumeSelector] = useState(false);
 
-  useEffect(() => {
-    loadSettings();
-  }, [clientId]);
-
-  // Parse backup paths from default_dirs setting
-  const parseBackupPaths = (defaultDirs: string): BackupPath[] => {
-    // Handle corrupted/invalid values
-    if (!defaultDirs ||
-        typeof defaultDirs !== 'string' ||
-        defaultDirs.trim() === '' ||
-        defaultDirs === '[object Object]' ||
-        defaultDirs === 'NaN' ||
-        defaultDirs === 'undefined' ||
-        defaultDirs === 'null') {
-      return [];
-    }
-
-    const paths: BackupPath[] = [];
-    const entries = defaultDirs.split(';').filter(e => e.trim());
-
-    for (const entry of entries) {
-      // Skip corrupted entries
-      if (entry.includes('[object Object]') || entry === 'NaN' || entry === 'undefined') {
-        continue;
-      }
-
-      // Format: path|name/flag1,flag2
-      const parts = entry.split('|');
-      const pathPart = parts[0].trim();
-
-      // Skip empty or invalid paths
-      if (!pathPart || pathPart === '[object Object]') {
-        continue;
-      }
-
-      let name = '';
-      let flags: string[] = [];
-
-      if (parts.length > 1) {
-        const nameAndFlags = parts[1];
-        const flagIndex = nameAndFlags.indexOf('/');
-
-        if (flagIndex !== -1) {
-          name = nameAndFlags.substring(0, flagIndex).trim();
-          flags = nameAndFlags.substring(flagIndex + 1).split(',').map(f => f.trim()).filter(f => f);
-        } else {
-          name = nameAndFlags.trim();
-        }
-      }
-
-      paths.push({ path: pathPart, name: name || undefined, flags });
-    }
-
-    return paths;
-  };
-
-  // Serialize backup paths to default_dirs format
-  const serializeBackupPaths = (paths: BackupPath[]): string => {
-    return paths.map(p => {
-      let result = p.path;
-      if (p.name || p.flags.length > 0) {
-        result += '|' + (p.name || '');
-        if (p.flags.length > 0) {
-          result += '/' + p.flags.join(',');
-        }
-      }
-      return result;
-    }).join(';');
-  };
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -194,7 +190,11 @@ export function BackupSchedule({ clientId }: BackupScheduleProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   const handleSave = async () => {
     if (!settings) return;

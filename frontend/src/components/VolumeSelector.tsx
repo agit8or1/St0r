@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { HardDrive, X, Check, Loader2, AlertCircle } from 'lucide-react';
 
 interface VolumeSelectorProps {
@@ -15,11 +15,7 @@ export function VolumeSelector({ clientId, onSelect, onClose, existingVolumes }:
   const [availableVolumes, setAvailableVolumes] = useState<string[]>([]);
   const [manualVolume, setManualVolume] = useState<string>('');
 
-  useEffect(() => {
-    loadVolumes();
-  }, [clientId]);
-
-  const loadVolumes = async () => {
+  const loadVolumes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -42,7 +38,11 @@ export function VolumeSelector({ clientId, onSelect, onClose, existingVolumes }:
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId]);
+
+  useEffect(() => {
+    loadVolumes();
+  }, [loadVolumes]);
 
   const toggleVolume = (volume: string) => {
     setSelectedVolumes(prev =>
