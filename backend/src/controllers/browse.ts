@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { logger } from '../utils/logger.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { assertClientAccess } from '../middleware/scope.js';
@@ -359,10 +359,8 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
 
     // Security check: use realpathSync to resolve symlinks before comparing
     const backupBasePath = pathModule.join(backupFolder, client.name, backup.path);
-    let resolvedDlBase: string;
-    let resolvedDlFull: string;
-    resolvedDlBase = resolveStoragePath(backupBasePath, 'Backup path not found');
-    resolvedDlFull = resolveStoragePath(fullPath, 'File not found');
+    const resolvedDlBase = resolveStoragePath(backupBasePath, 'Backup path not found');
+    const resolvedDlFull = resolveStoragePath(fullPath, 'File not found');
     if (!resolvedDlFull.startsWith(resolvedDlBase + '/') && resolvedDlFull !== resolvedDlBase) {
       logger.error(`Security check failed: ${resolvedDlFull} does not start with ${resolvedDlBase}`);
       res.status(403).json({ error: 'Invalid file path' });
@@ -372,7 +370,7 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
     // Check if file exists
     try {
       await fs.promises.access(fullPath, fs.constants.R_OK);
-    } catch (err) {
+    } catch {
       res.status(404).json({ error: 'File not found' });
       return;
     }
@@ -446,10 +444,8 @@ export async function downloadFolder(req: AuthRequest, res: Response): Promise<v
     const backupBasePath = pathModule.join(backupFolder, client.name, backup.path);
 
     // Resolve symlinks for security check
-    let resolvedBase: string;
-    let resolvedFull: string;
-    resolvedBase = resolveStoragePath(backupBasePath, 'Backup path not found');
-    resolvedFull = resolveStoragePath(fullPath, 'Folder not found');
+    const resolvedBase = resolveStoragePath(backupBasePath, 'Backup path not found');
+    const resolvedFull = resolveStoragePath(fullPath, 'Folder not found');
     if (!resolvedFull.startsWith(resolvedBase + '/') && resolvedFull !== resolvedBase) {
       res.status(403).json({ error: 'Invalid path' }); return;
     }

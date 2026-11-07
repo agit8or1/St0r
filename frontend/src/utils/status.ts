@@ -20,13 +20,14 @@ export function getClientStatusText(statusCode: string | number | undefined): st
         return 'Online';
       case 'unknown':
         return 'Unknown';
-      default:
+      default: {
         // Try to parse as number for legacy numeric codes
         const parsed = parseInt(statusCode);
         if (!isNaN(parsed)) {
           return getNumericStatusText(parsed);
         }
         return statusCode.charAt(0).toUpperCase() + statusCode.slice(1);
+      }
     }
   }
 
@@ -80,13 +81,14 @@ export function getClientStatusColor(statusCode: string | number): 'green' | 'bl
         return 'yellow';
       case 'offline':
         return 'gray';
-      default:
+      default: {
         // Try to parse as number
         const parsed = parseInt(statusCode);
         if (!isNaN(parsed)) {
           return getNumericStatusColor(parsed);
         }
         return 'gray';
+      }
     }
   }
 

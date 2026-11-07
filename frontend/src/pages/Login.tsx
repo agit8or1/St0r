@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -13,7 +13,8 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const { login } = useAuth();
+  // Called for its mount effect: it drops a stored user whose session is no longer valid.
+  useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {

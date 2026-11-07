@@ -95,7 +95,6 @@ export function Clients() {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-  const [savingCustomer, setSavingCustomer] = useState<Set<string>>(new Set());
   const [storageLimitStatuses, setStorageLimitStatuses] = useState<Map<string, StorageLimitStatus>>(new Map());
   const [limitModal, setLimitModal] = useState<{ client: Client } | null>(null);
   const [limitInput, setLimitInput] = useState('');
@@ -205,31 +204,6 @@ export function Clients() {
       console.error('Failed to remove storage limit:', err);
     } finally {
       setSavingLimit(false);
-    }
-  };
-
-  const handleAssignCustomer = async (client: Client, newCustomerId: number | null) => {
-    const existing = clientCustomers.get(client.name);
-    if (existing?.customer_id === newCustomerId) return;
-    setSavingCustomer(prev => new Set(prev).add(client.name));
-    try {
-      if (existing) await api.removeClientFromCustomer(existing.customer_id, existing.id);
-      if (newCustomerId !== null) {
-        const newMapping = await api.addClientToCustomer(newCustomerId, {
-          server_id: 1, client_name: client.name, client_id: client.id,
-        });
-        const customer = customers.find(c => c.id === newCustomerId);
-        setClientCustomers(prev => new Map(prev).set(client.name, {
-          ...newMapping, customer_id: newCustomerId,
-          customer_name: customer?.name, customer_company: customer?.company,
-        }));
-      } else {
-        setClientCustomers(prev => { const n = new Map(prev); n.delete(client.name); return n; });
-      }
-    } catch (err) {
-      console.error('Failed to assign customer:', err);
-    } finally {
-      setSavingCustomer(prev => { const n = new Set(prev); n.delete(client.name); return n; });
     }
   };
 

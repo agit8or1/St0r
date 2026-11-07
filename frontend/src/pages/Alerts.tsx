@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { Tooltip } from '../components/Tooltip';
-import { Bell, Plus, Edit, Trash2, Save, X, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Bell, Edit, Save, X, AlertTriangle, CheckCircle } from 'lucide-react';
 import { api } from '../services/api';
 
 interface AlertRule {

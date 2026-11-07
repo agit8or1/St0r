@@ -715,7 +715,7 @@ export function ClientDetail() {
                         onChange={e => {
                           setSelectedBackupIds(prev => {
                             const s = new Set(prev);
-                            e.target.checked ? s.add(backupId) : s.delete(backupId);
+                            if (e.target.checked) s.add(backupId); else s.delete(backupId);
                             return s;
                           });
                         }}

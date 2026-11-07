@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Lock, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface PasswordChangeModalProps {
   onPasswordChanged: () => void;

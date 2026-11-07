@@ -31,6 +31,7 @@ function parseLogLevel(message: string): string {
 
 // Strip ANSI color codes from message
 function stripAnsi(str: string): string {
+  // eslint-disable-next-line no-control-regex -- ESC starts the ANSI colour codes being stripped
   return str.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
@@ -90,7 +91,7 @@ export async function getLogs(req: AuthRequest, res: Response): Promise<void> {
           level,
           message: message.trim()
         });
-      } catch (err) {
+      } catch {
         // Skip malformed JSON lines
         continue;
       }
@@ -154,7 +155,7 @@ export async function getLiveLog(req: AuthRequest, res: Response): Promise<void>
           level,
           message: message.trim()
         });
-      } catch (err) {
+      } catch {
         continue;
       }
     }

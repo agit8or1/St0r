@@ -48,7 +48,7 @@ export function Reports() {
       let totalStorage = 0;
       let totalBackupSize = 0;
       let backupCount = 0;
-      let allBackupTimes: number[] = [];
+      const allBackupTimes: number[] = [];
 
       try {
         const storageData = await api.getTotalStorage();

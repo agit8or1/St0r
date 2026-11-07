@@ -4,7 +4,6 @@ import { UrBackupDbService } from '../services/urbackupDb.js';
 import { UrBackupService } from '../services/urbackup.js';
 import { logger } from '../utils/logger.js';
 import { readFile, writeFile } from 'fs/promises';
-import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 

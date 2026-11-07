@@ -154,7 +154,7 @@ export function Users() {
       setMessage({ type: 'success', text: 'User deleted successfully' });
       loadUsers();
       setTimeout(() => setMessage(null), 3000);
-    } catch (err) {
+    } catch {
       setMessage({ type: 'error', text: 'Failed to delete user' });
     }
   };

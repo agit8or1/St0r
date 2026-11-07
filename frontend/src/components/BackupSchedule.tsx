@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, Clock, Save, Loader2, RefreshCw, FolderOpen, Plus, X, FolderSearch, HardDrive } from 'lucide-react';
+import { Calendar, Clock, Save, Loader2, RefreshCw, FolderOpen, X, FolderSearch, HardDrive } from 'lucide-react';
 import { api } from '../services/api';
 import { PathSelector } from './PathSelector';
 import { VolumeSelector } from './VolumeSelector';
@@ -38,7 +38,7 @@ interface BackupPath {
   flags: string[];
 }
 
-export function BackupSchedule({ clientId, clientName }: BackupScheduleProps) {
+export function BackupSchedule({ clientId }: BackupScheduleProps) {
   const [settings, setSettings] = useState<ScheduleSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,13 +47,9 @@ export function BackupSchedule({ clientId, clientName }: BackupScheduleProps) {
 
   // Backup paths management
   const [backupPaths, setBackupPaths] = useState<BackupPath[]>([]);
-  const [newPath, setNewPath] = useState('');
-  const [newPathName, setNewPathName] = useState('');
-  const [selectedFlags, setSelectedFlags] = useState<string[]>([]);
 
   // Image volumes management
   const [imageVolumes, setImageVolumes] = useState<string[]>([]);
-  const [newVolume, setNewVolume] = useState('');
 
   // Modal states
   const [showPathSelector, setShowPathSelector] = useState(false);
@@ -240,31 +236,8 @@ export function BackupSchedule({ clientId, clientName }: BackupScheduleProps) {
   };
 
   // Backup path management functions
-  const addBackupPath = () => {
-    if (!newPath.trim()) return;
-
-    const newBackupPath: BackupPath = {
-      path: newPath.trim(),
-      name: newPathName.trim() || undefined,
-      flags: selectedFlags
-    };
-
-    setBackupPaths([...backupPaths, newBackupPath]);
-    setNewPath('');
-    setNewPathName('');
-    setSelectedFlags([]);
-  };
-
   const removeBackupPath = (index: number) => {
     setBackupPaths(backupPaths.filter((_, i) => i !== index));
-  };
-
-  const toggleFlag = (flag: string) => {
-    setSelectedFlags(prev =>
-      prev.includes(flag)
-        ? prev.filter(f => f !== flag)
-        : [...prev, flag]
-    );
   };
 
   const togglePathFlag = (pathIndex: number, flag: string) => {
@@ -280,13 +253,6 @@ export function BackupSchedule({ clientId, clientName }: BackupScheduleProps) {
   };
 
   // Image volume management functions
-  const addImageVolume = () => {
-    if (!newVolume.trim()) return;
-    if (imageVolumes.includes(newVolume.trim())) return;
-    setImageVolumes([...imageVolumes, newVolume.trim()]);
-    setNewVolume('');
-  };
-
   const removeImageVolume = (volume: string) => {
     setImageVolumes(imageVolumes.filter(v => v !== volume));
   };

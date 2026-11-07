@@ -34,7 +34,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 
 const storage = new Map([['user', '{"id":1}']]);
 globalThis.localStorage = { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) };
-globalThis.window = { location: { origin, pathname: '/clients', href: `${origin}/clients` } };
+const win = globalThis.window = { location: { origin, pathname: '/clients', href: `${origin}/clients` } };
 
 const dir = await mkdtemp(join(tmpdir(), 'stor-frontend-test-'));
 const source = await readFile(new URL('../src/services/api.ts', import.meta.url), 'utf8');
@@ -75,14 +75,14 @@ test('error responses keep the shape pages read: err.response.status / .data.err
 });
 
 test('401 clears the session and sends the user to /login, except from /login itself', async () => {
-  window.location.pathname = '/login';
-  window.location.href = `${origin}/login`;
+  win.location.pathname = '/login';
+  win.location.href = `${origin}/login`;
   assert.equal(await api.validateToken(), false);
   assert.equal(storage.has('user'), true);
-  window.location.pathname = '/clients';
+  win.location.pathname = '/clients';
   assert.equal(await api.validateToken(), false);
   assert.equal(storage.has('user'), false);
-  assert.equal(window.location.href, '/login');
+  assert.equal(win.location.href, '/login');
 });
 
 test('non-JSON bodies come back as text, network failures as an error', async () => {
@@ -92,9 +92,9 @@ test('non-JSON bodies come back as text, network failures as an error', async ()
   await once(down, 'listening');
   const port = down.address().port;
   await new Promise(resolve => down.close(resolve));
-  window.location.origin = `http://127.0.0.1:${port}`;
+  win.location.origin = `http://127.0.0.1:${port}`;
   const err = await api.getServers().catch(e => e);
-  window.location.origin = origin;
+  win.location.origin = origin;
   assert.ok(err instanceof HttpError);
   assert.equal(err.message, 'Network Error');
   assert.equal(err.response, undefined);

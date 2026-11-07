@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Linting works again: ESLint 9 with a config.** `npm run lint` in backend and frontend failed outright, since
+  there was never a config. Each now has an `eslint.config.js` (ESLint 9.39, typescript-eslint 8, plus the
+  React hooks and refresh plugins in the frontend), and CI runs lint; errors fail the build.
+  - `no-explicit-any` is off, matching the tsconfig. Empty `catch`, `_`-prefixed names and rest-sibling omits
+    are allowed. The frontend uses the classic hook rules, not the React Compiler ones.
+  - Cleanup to pass: unused imports, variables and catch bindings removed; never-called functions removed
+    (customer assignment on Clients, `downloadFile` on Documentation, three BackupSchedule helpers);
+    `prefer-const`; ternaries used as statements made `if`/`else`; braces around `case` declarations.
+    The stale-job cleanup now logs how many jobs it stopped through the progress API.
+  - Left as warnings: 15 `exhaustive-deps` (changing effect dependencies changes when they re-run) and 2
+    `react-refresh` (dev-only hot reload).
+
 ## [3.2.126] - 2026-11-07
 
 Housekeeping: the web interface drops axios for the browser's own `fetch`. No behaviour changes.

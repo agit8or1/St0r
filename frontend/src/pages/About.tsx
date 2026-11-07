@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Logo } from '../components/Logo';
 import { HelpUsGrowButton } from '../components/HelpUsGrowButton';
-import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText, X } from 'lucide-react';
+import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText } from 'lucide-react';
 
 /**
  * Compare two semantic version strings

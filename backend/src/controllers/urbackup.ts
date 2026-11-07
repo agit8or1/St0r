@@ -57,7 +57,6 @@ export async function getStatus(req: AuthRequest, res: Response): Promise<void> 
 export async function getClients(req: AuthRequest, res: Response): Promise<void> {
   try {
     const serverId = req.query.serverId as string;
-    const userId = req.user?.userId;
     const username = req.user?.username || 'unknown';
 
     logger.info(`[${username}] GET /api/urbackup/clients (serverId: ${serverId || 'default'})`);
@@ -324,7 +323,7 @@ export async function getUsage(req: AuthRequest, res: Response): Promise<void> {
 
 export async function addClient(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { clientName, serverId } = req.body;
+    const { clientName } = req.body;
 
     if (!clientName) {
       res.status(400).json({ error: 'Client name is required' });
@@ -349,7 +348,6 @@ export async function addClient(req: AuthRequest, res: Response): Promise<void> 
 export async function removeClient(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;
-    const { serverId } = req.body;
 
     if (!clientId) {
       res.status(400).json({ error: 'Client ID is required' });
@@ -374,7 +372,6 @@ export async function removeClient(req: AuthRequest, res: Response): Promise<voi
 export async function getClientAuthkey(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;
-    const serverId = req.query.serverId as string;
 
     if (!clientId) {
       res.status(400).json({ error: 'Client ID is required' });
@@ -399,7 +396,7 @@ export async function getClientAuthkey(req: AuthRequest, res: Response): Promise
 export async function updateClientName(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;
-    const { newName, serverId } = req.body;
+    const { newName } = req.body;
 
     if (!clientId || !newName) {
       res.status(400).json({ error: 'Client ID and new name are required' });
@@ -424,7 +421,6 @@ export async function updateClientName(req: AuthRequest, res: Response): Promise
 export async function regenerateClientKey(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;
-    const { serverId } = req.body;
 
     if (!clientId) {
       res.status(400).json({ error: 'Client ID is required' });
@@ -448,7 +444,7 @@ export async function regenerateClientKey(req: AuthRequest, res: Response): Prom
 
 export async function deleteBackup(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { clientId, backupId } = req.params;
+    const { backupId } = req.params;
     const isImage = req.query.image === '1' || req.query.image === 'true' || req.body?.isImage === true;
     if (!backupId) { res.status(400).json({ error: 'Backup ID is required' }); return; }
     const service = await getService();

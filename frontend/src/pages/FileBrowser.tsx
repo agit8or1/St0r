@@ -172,7 +172,7 @@ export function FileBrowser() {
 
   const toggleSelect = (path: string) => {
     const s = new Set(selectedFiles);
-    s.has(path) ? s.delete(path) : s.add(path);
+    if (s.has(path)) s.delete(path); else s.add(path);
     setSelectedFiles(s);
   };
 

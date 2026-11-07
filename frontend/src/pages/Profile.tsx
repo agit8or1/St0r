@@ -8,8 +8,7 @@ import {
   Key,
   Check,
   X,
-  Copy,
-  RefreshCw
+  Copy
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Tooltip } from '../components/Tooltip';

@@ -91,7 +91,6 @@ export function ClientSettings() {
   const [newIncludePath, setNewIncludePath] = useState('');
   const [newExcludePattern, setNewExcludePattern] = useState('');
   const [showFileBrowser, setShowFileBrowser] = useState(false);
-  const [showImageBrowser, setShowImageBrowser] = useState(false);
   const [failedPaths, setFailedPaths] = useState<{ path: string; count: number }[] | null>(null);
   const [failedPathsLoading, setFailedPathsLoading] = useState(false);
   const [editingExcludeIdx, setEditingExcludeIdx] = useState<number | null>(null);

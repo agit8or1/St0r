@@ -256,7 +256,7 @@ export class UrBackupDbService {
    * Get real-time backup progress from files database
    * Returns null until UrBackup populates the done/size fields
    */
-  async getBackupProgress(backupId: number, clientId: number) {
+  async getBackupProgress(_backupId: number, _clientId: number) {
     // UrBackup doesn't reliably update progress in the database during backup
     // The done and size_bytes fields remain 0 until backup completion
     // Progress tracking needs to be done via the UrBackup API progress endpoint

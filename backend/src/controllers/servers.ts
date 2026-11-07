@@ -490,7 +490,7 @@ export async function triggerOsUpdate(req: Request, res: Response) {
     const server = rows[0];
 
     if (server.is_local) {
-      const { truncateSync, existsSync: es } = await import('fs');
+      const { truncateSync } = await import('fs');
       const logFile = '/var/log/stor-os-update.log';
       try { await execFileAsync('systemctl', ['reset-failed', 'stor-local-os-update.service']); } catch { /* ok */ }
       try { truncateSync(logFile, 0); } catch { /* ok */ }
@@ -703,7 +703,9 @@ export async function serveInstallScript(req: Request, res: Response) {
   const baseUrl = getStorBaseUrl();
   const agentPort = server.agent_port || 7420;
 
-  // Build and serve the install script dynamically
+  // Build and serve the install script dynamically. \$ marks a shell variable,
+  // as opposed to a ${} interpolated here.
+  /* eslint-disable no-useless-escape */
   const script = `#!/usr/bin/env bash
 set -e
 
@@ -777,6 +779,7 @@ else
   echo "  Manually register in St0r > Servers using API key from /etc/stor-agent/config.json"
 fi
 `;
+  /* eslint-enable no-useless-escape */
 
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Content-Disposition', 'inline; filename="stor-agent-install.sh"');

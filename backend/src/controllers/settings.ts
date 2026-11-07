@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 import { readFile, writeFile } from 'fs/promises';
@@ -165,7 +165,7 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
         // Direct DB write as fallback
         // Validate FQDN: only allow hostname-safe characters (letters, digits, dots, hyphens)
         // This prevents SQL injection since the character set excludes quotes and semicolons
-        if (!/^[a-zA-Z0-9.\-]+$/.test(fqdnForUrBackup)) {
+        if (!/^[a-zA-Z0-9.-]+$/.test(fqdnForUrBackup)) {
           logger.warn(`FQDN contains invalid characters, skipping DB write: ${fqdnForUrBackup}`);
         } else {
           const dbPath = '/var/urbackup/backup_server_settings.db';

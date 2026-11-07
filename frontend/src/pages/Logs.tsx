@@ -3,7 +3,6 @@ import { FileText, Search, RefreshCw, Download } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Tooltip } from '../components/Tooltip';
 import { Loading } from '../components/Loading';
-import { api } from '../services/api';
 
 interface LogEntry {
   time: string;
@@ -55,7 +54,7 @@ export function Logs() {
   const parseLogData = (data: any): LogEntry[] => {
     // Handle different log formats from UrBackup
     if (Array.isArray(data)) {
-      return data.map((log: any, index) => ({
+      return data.map((log: any) => ({
         time: log.time || new Date().toISOString(),
         level: log.level || 'info',
         message: log.message || log.toString(),
@@ -68,7 +67,7 @@ export function Logs() {
 
     // If it's a plain string, split by lines
     if (typeof data === 'string') {
-      return data.split('\n').map((line, index) => ({
+      return data.split('\n').map((line) => ({
         time: new Date().toISOString(),
         level: 'info',
         message: line,

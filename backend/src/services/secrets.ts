@@ -1,9 +1,7 @@
 import crypto from 'crypto';
-import { logger } from '../utils/logger.js';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const TAG_LENGTH = 16;
 
 let secretKey: Buffer;
 

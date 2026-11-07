@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '../components/Layout';
-import { Tooltip } from '../components/Tooltip';
 import { Loading } from '../components/Loading';
 import {
   Users, Plus, Edit, Trash2, Save, X, HardDrive, Phone, Mail, Building,
@@ -143,7 +142,7 @@ export function Customers() {
       setConfirmDelete(null);
       if (expandedId === confirmDelete.id) setExpandedId(null);
       loadData();
-    } catch (err: any) {
+    } catch {
       setConfirmDelete(null);
     }
   };
@@ -153,7 +152,7 @@ export function Customers() {
   const toggleClientAdd = (name: string) => {
     setSelectedToAdd(prev => {
       const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
+      if (next.has(name)) next.delete(name); else next.add(name);
       return next;
     });
   };

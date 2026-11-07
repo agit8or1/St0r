@@ -1,6 +1,5 @@
 import { Response } from 'express';
 import { createReadStream } from 'fs';
-import { unlink } from 'fs/promises';
 import { AuthRequest } from '../middleware/auth.js';
 import { databaseBackupService } from '../services/databaseBackup.js';
 import { logger } from '../utils/logger.js';

@@ -1,7 +1,7 @@
 import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import { readdir, stat, unlink, mkdir, writeFile, copyFile } from 'fs/promises';
-import { existsSync, createWriteStream, createReadStream } from 'fs';
+import { existsSync, createWriteStream } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { logger } from '../utils/logger.js';
@@ -293,7 +293,6 @@ export class DatabaseBackupService {
       }
 
       let restorePath = uploadPath;
-      let savedPath: string | undefined;
 
       // If it's plain SQL, gzip it before storing
       if (isSql) {
@@ -319,7 +318,7 @@ export class DatabaseBackupService {
       // Save to backupDir with auto-name
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
       const savedFilename = `urbackup_gui_db_backup_${timestamp}_restored.sql.gz`;
-      savedPath = join(this.backupDir, savedFilename);
+      const savedPath = join(this.backupDir, savedFilename);
       await copyFile(restorePath, savedPath);
       await unlink(restorePath).catch(() => {});
 

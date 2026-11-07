@@ -49,6 +49,12 @@ jobs:
           npm ci --include=dev --no-audit --no-fund
           npm run build
 
+      # Errors fail the build; warnings (frontend exhaustive-deps) are reported only.
+      - name: Lint
+        run: |
+          (cd backend && npm run lint)
+          (cd frontend && npm run lint)
+
       # Runs every node:test file in backend/tests, agent/tests and frontend/tests, if any.
       - name: Test
         run: |

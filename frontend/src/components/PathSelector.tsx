@@ -8,15 +8,10 @@ interface PathSelectorProps {
   existingPaths: string[];
 }
 
-export function PathSelector({ clientId, onSelect, onClose, existingPaths }: PathSelectorProps) {
+export function PathSelector({ onSelect, onClose, existingPaths }: PathSelectorProps) {
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [customName, setCustomName] = useState('');
   const [manualPath, setManualPath] = useState<string>('');
-
-  const handleSelect = (path: string) => {
-    setSelectedPath(path);
-    setManualPath(''); // Clear manual entry when selecting from browser
-  };
 
   const handleManualPathChange = (value: string) => {
     setManualPath(value);

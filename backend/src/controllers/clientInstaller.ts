@@ -8,7 +8,6 @@ import { openUrBackupSettingsDbReadOnly } from '../config/urbackupDb.js';
 import { UrBackupService } from '../services/urbackup.js';
 import os from 'os';
 import { existsSync } from 'fs';
-import path from 'path';
 
 const router = Router();
 

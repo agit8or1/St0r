@@ -830,7 +830,7 @@ export function Servers() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingServer, setEditingServer] = useState<ManagedServer | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [, setDeletingId] = useState<string | null>(null);
 
   const loadServers = async () => {
     try {

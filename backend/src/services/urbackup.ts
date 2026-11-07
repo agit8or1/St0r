@@ -227,7 +227,7 @@ export class UrBackupService {
    * Parse UrBackup log for current file transfer progress
    * Returns the latest file being transferred with progress details
    */
-  private parseCurrentTransferProgress(clientId: number): any | null {
+  private parseCurrentTransferProgress(_clientId: number): any | null {
     try {
       // Read last 200 lines from urbackup log and find the latest progress line in JS
       const tailOutput = execFileSync('tail', ['-200', '/var/log/urbackup.log'], {
@@ -989,6 +989,7 @@ export class UrBackupService {
           } catch { /* ignore */ }
         }
       } catch { /* progress API unavailable */ }
+      logger.info(`[clearStaleJobs] Stopped ${progressStopped} jobs from the progress list`);
 
       // Force-complete all stuck DB records (stop signal may not be received by client)
       const cleared = await this.dbService.forceCompleteStuckBackups();
@@ -1089,7 +1090,7 @@ export class UrBackupService {
       // Iterative rollup: if >= 3 sibling dirs all have errors, collapse them into their parent.
       // Repeat until no more collapsing is possible. This surfaces "Nextcloud4" instead of
       // hundreds of individual Nextcloud4\subfolder entries.
-      let current = new Map<string, number>(dirCounts);
+      const current = new Map<string, number>(dirCounts);
       let changed = true;
       while (changed) {
         changed = false;

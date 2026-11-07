@@ -73,7 +73,7 @@ router.get('/proxy/progress', requireAdmin, async (req, res) => {
     const data = await response.text();
     res.setHeader('Content-Type', 'application/json');
     res.send(data);
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Failed to fetch progress from UrBackup' });
   }
 });

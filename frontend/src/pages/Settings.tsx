@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
-import { Save, Settings as SettingsIcon, Server as ServerIcon, Smartphone, Key, Check, X, Copy } from 'lucide-react';
+import { Save, Settings as SettingsIcon, Server as ServerIcon, Smartphone, Key, Check, Copy } from 'lucide-react';
 import { useTooltips } from '../contexts/TooltipContext';
 import { DiskGuardPanel } from '../components/DiskGuardPanel';
 

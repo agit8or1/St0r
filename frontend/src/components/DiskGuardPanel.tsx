@@ -108,7 +108,7 @@ export function DiskGuardPanel({ isAdmin }: { isAdmin: boolean }) {
         setMessage({ type: 'success', text: successText });
         await load();
       }
-    } catch (err) {
+    } catch {
       setMessage({ type: 'error', text: 'Request failed' });
     } finally {
       setBusy(null);

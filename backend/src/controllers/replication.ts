@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { randomUUID } from 'crypto';
 import { query } from '../config/database.js';
-import { encrypt, decrypt } from '../services/secrets.js';
+import { encrypt } from '../services/secrets.js';
 import { replicationScheduler } from '../services/replicationScheduler.js';
 import { replicationEngine } from '../services/replicationEngine.js';
 import type { AuthRequest } from '../middleware/auth.js';

@@ -23,7 +23,7 @@ export function useAuth() {
         }).finally(() => {
           setLoading(false);
         });
-      } catch (error) {
+      } catch {
         localStorage.removeItem('user');
         setLoading(false);
       }

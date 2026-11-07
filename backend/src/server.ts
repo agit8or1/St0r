@@ -177,7 +177,8 @@ app.get('*', (req, res) => {
 });
 
 // Error handler — only expose message for client errors (4xx), use generic for server errors
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+// Express recognises an error handler by its four parameters, so _next must stay.
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error('Unhandled error:', err);
   const status = err.status || err.statusCode || 500;
   const message = status < 500 ? (err.message || 'Bad request') : 'Internal server error';
