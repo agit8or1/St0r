@@ -1,4 +1,3 @@
-import axios, { AxiosInstance } from 'axios';
 import type {
   AuthResponse,
   UrBackupServer,
@@ -30,31 +29,70 @@ export function linuxInstallerFilename(clientId?: string, clientName?: string): 
   return `urbackup-client-${safeName || clientId || 'linux'}.sh`;
 }
 
-class ApiService {
-  private api: AxiosInstance;
+interface RequestConfig {
+  params?: Record<string, unknown>;
+  data?: unknown;
+}
 
-  constructor() {
-    this.api = axios.create({
-      baseURL: '/api',
-      withCredentials: true,
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Handle 401 errors
-    this.api.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401 && window.location.pathname !== '/login') {
-          localStorage.removeItem('user');
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
+// Shaped like the axios errors callers already read: err.response?.status / .data?.error
+export class HttpError extends Error {
+  constructor(message: string, public response?: { status: number; data: any }) {
+    super(message);
+    this.name = 'HttpError';
   }
+}
+
+const TIMEOUT_MS = 30000;
+
+// Small fetch client for the JSON API under /api; resolves to { data } like axios did.
+class HttpClient {
+  async request<T>(method: string, path: string, data?: unknown, config: RequestConfig = {}): Promise<{ data: T }> {
+    const url = new URL('/api' + path, window.location.origin);
+    for (const [key, value] of Object.entries(config.params || {})) {
+      if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+    }
+    const body = data !== undefined ? data : config.data;
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method,
+        credentials: 'include',
+        headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+    } catch (err) {
+      const timedOut = err instanceof DOMException && err.name === 'TimeoutError';
+      throw new HttpError(timedOut ? `timeout of ${TIMEOUT_MS}ms exceeded` : 'Network Error');
+    }
+
+    const text = await response.text();
+    let parsed: any = text;
+    if (text) {
+      try { parsed = JSON.parse(text); } catch { /* not JSON, keep the text */ }
+    }
+
+    if (!response.ok) {
+      if (response.status === 401 && window.location.pathname !== '/login') {
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+      throw new HttpError(`Request failed with status code ${response.status}`,
+                          { status: response.status, data: parsed });
+    }
+    return { data: parsed as T };
+  }
+
+  get<T = any>(path: string, config?: RequestConfig) { return this.request<T>('GET', path, undefined, config); }
+  delete<T = any>(path: string, config?: RequestConfig) { return this.request<T>('DELETE', path, undefined, config); }
+  post<T = any>(path: string, data?: unknown, config?: RequestConfig) { return this.request<T>('POST', path, data, config); }
+  put<T = any>(path: string, data?: unknown, config?: RequestConfig) { return this.request<T>('PUT', path, data, config); }
+  patch<T = any>(path: string, data?: unknown, config?: RequestConfig) { return this.request<T>('PATCH', path, data, config); }
+}
+
+class ApiService {
+  private api = new HttpClient();
 
   // Auth
   async login(username: string, password: string): Promise<AuthResponse> {

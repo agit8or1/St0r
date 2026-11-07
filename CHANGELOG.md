@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **axios from the frontend.** The API client in `frontend/src/services/api.ts` now uses `fetch`, with
+  the same 30-second timeout, sign-out on 401, and error shape (`err.response.status`,
+  `err.response.data.error`), so pages are unchanged. Removes 23 packages and 58 kB from the bundle.
+  `frontend/tests/api-client.test.mjs` covers the client and now runs in CI.
+
 ## [3.2.125] - 2026-11-07
 
 Housekeeping: a smaller backend install. Nothing else changed.
