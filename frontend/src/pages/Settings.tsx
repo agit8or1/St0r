@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
 import { Save, Settings as SettingsIcon, Server as ServerIcon, Smartphone, Key, Check, Copy } from 'lucide-react';
-import { useTooltips } from '../contexts/TooltipContext';
+import { useTooltips } from '../hooks/useTooltips';
 import { DiskGuardPanel } from '../components/DiskGuardPanel';
 
 interface ServerSettings {

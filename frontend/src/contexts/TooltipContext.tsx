@@ -1,11 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-
-interface TooltipContextType {
-  tooltipsEnabled: boolean;
-  toggleTooltips: () => void;
-}
-
-const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
+import { useState, ReactNode } from 'react';
+import { TooltipContext } from '../hooks/useTooltips';
 
 export function TooltipsProvider({ children }: { children: ReactNode }) {
   const [tooltipsEnabled, setTooltipsEnabled] = useState<boolean>(() => {
@@ -26,12 +20,4 @@ export function TooltipsProvider({ children }: { children: ReactNode }) {
       {children}
     </TooltipContext.Provider>
   );
-}
-
-export function useTooltips() {
-  const context = useContext(TooltipContext);
-  if (context === undefined) {
-    throw new Error('useTooltips must be used within a TooltipsProvider');
-  }
-  return context;
 }

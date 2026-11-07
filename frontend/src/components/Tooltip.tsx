@@ -1,6 +1,6 @@
 import { ReactNode, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useTooltips } from '../contexts/TooltipContext';
+import { useTooltips } from '../hooks/useTooltips';
 
 interface TooltipProps {
   text: string;

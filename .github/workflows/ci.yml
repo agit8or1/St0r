@@ -49,7 +49,7 @@ jobs:
           npm ci --include=dev --no-audit --no-fund
           npm run build
 
-      # Errors fail the build; warnings (frontend react-refresh, dev-only) are reported only.
+      # Errors fail the build; there are currently no warnings.
       - name: Lint
         run: |
           (cd backend && npm run lint)

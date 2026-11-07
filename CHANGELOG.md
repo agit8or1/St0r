@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Lint is warning-free; `react-refresh/only-export-components` is now an error.** `useTheme` and
+  `useTooltips`, with their context objects, moved from `contexts/` to `hooks/` (next to `useAuth`), so the
+  provider files export only components and hot reload in development keeps their state. No behaviour changes.
+
 ## [3.2.128] - 2026-11-07
 
 Maintenance: React effect dependencies are complete. Pages load exactly when they did before.

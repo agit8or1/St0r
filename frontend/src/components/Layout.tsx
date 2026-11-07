@@ -18,7 +18,7 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../hooks/useTheme';
 import { Logo } from './Logo';
 import { Tooltip } from './Tooltip';
 import { HelpUsGrowButton } from './HelpUsGrowButton';
