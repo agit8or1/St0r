@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.125] - 2026-11-07
+
+Housekeeping: a smaller backend install. Nothing else changed.
+
 ### Removed
 - **axios from the backend.** Nothing in the backend used it; removing it also drops
   follow-redirects and 10 other packages from the production install. The frontend still uses axios.

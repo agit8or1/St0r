@@ -1,7 +1,7 @@
 {
-  "version": "3.2.124",
+  "version": "3.2.125",
   "releaseDate": "2026-11-07",
   "changelog": [
-    "Database backup uploads report the real error. A file over 100 MB, a wrong form field or a malformed upload returned \"Internal server error\" (500); they now return 413 \"File too large\" or 400 with the reason, shown on the restore page. Disk errors while saving still return 500."
+    "Housekeeping: the backend no longer installs axios, which nothing in it used. That also drops follow-redirects and 10 other packages from the production install. No behaviour changes."
   ]
 }
