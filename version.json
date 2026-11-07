@@ -1,7 +1,7 @@
 {
-  "version": "3.2.127",
+  "version": "3.2.128",
   "releaseDate": "2026-11-07",
   "changelog": [
-    "Maintenance: the code is linted again (ESLint 9) and checked on every change. Unused code was removed along the way. The stale-job cleanup now logs how many jobs it stopped. No other behaviour changes."
+    "Maintenance: the web interface's data loading was tidied up so it follows React's rules, without changing when pages load. On the About page, if the version check fails, it now falls back to the current installed version."
   ]
 }

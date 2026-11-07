@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.128] - 2026-11-07
+
+Maintenance: React effect dependencies are complete. Pages load exactly when they did before.
+
 ### Changed
 - **Effect dependencies are complete; `react-hooks/exhaustive-deps` is now an error.** The 15 warnings are
   fixed without changing when anything loads: each loader is a `useCallback` keyed on the values it reads
