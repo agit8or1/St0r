@@ -1,7 +1,7 @@
 {
-  "version": "3.2.128",
+  "version": "3.2.129",
   "releaseDate": "2026-11-07",
   "changelog": [
-    "Maintenance: the web interface's data loading was tidied up so it follows React's rules, without changing when pages load. On the About page, if the version check fails, it now falls back to the current installed version."
+    "Maintenance: internal code tidy-up with no visible changes. The code now passes all lint checks with no warnings."
   ]
 }

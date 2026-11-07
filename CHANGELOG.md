@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.129] - 2026-11-07
+
+Maintenance: lint is warning-free. No behaviour changes.
+
 ### Changed
 - **Lint is warning-free; `react-refresh/only-export-components` is now an error.** `useTheme` and
   `useTooltips`, with their context objects, moved from `contexts/` to `hooks/` (next to `useAuth`), so the
