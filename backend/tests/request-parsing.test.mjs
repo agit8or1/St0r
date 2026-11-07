@@ -143,15 +143,24 @@ test('upload: unauthenticated requests are refused before multer writes anything
 test('upload: the 100 MB limit is enforced and the partial file removed', async t => {
   const server = await startServer(t);
   const res = await upload(server, multipart('backup', 'big.sql', Buffer.alloc(100 * 1024 * 1024 + 1)));
-  // Multer errors carry no HTTP status, so the global handler answers with its generic 500.
-  await assertControlledError(res, 500);
+  await assertControlledError(res, 413);
   assert.deepEqual(await tempFiles(server), []);
   await server.assertAlive();
 });
 
 test('upload: an unexpected field name is rejected without leaving a file', async t => {
   const server = await startServer(t);
-  await assertControlledError(await upload(server, multipart('other', 'dump.sql', Buffer.from('x'))), 500);
+  await assertControlledError(await upload(server, multipart('other', 'dump.sql', Buffer.from('x'))), 400);
+  assert.deepEqual(await tempFiles(server), []);
+  await server.assertAlive();
+});
+
+test('upload: a malformed multipart body is a 400', async t => {
+  const server = await startServer(t);
+  const form = multipart('backup', 'dump.sql', Buffer.from('x'));
+  // Cut before the closing boundary.
+  await assertControlledError(await upload(server, { ...form, body: form.body.subarray(0, form.body.length - 30) }), 400);
+  await assertControlledError(await upload(server, { body: Buffer.from('no boundary here'), type: 'multipart/form-data' }), 400);
   assert.deepEqual(await tempFiles(server), []);
   await server.assertAlive();
 });

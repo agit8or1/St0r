@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Database backup uploads report the real error.** A file over 100 MB, a wrong form field or a
+  malformed upload returned "Internal server error" (500). They now return 413 "File too large" or
+  400 with multer's message, which the restore page shows. Disk errors while saving still return 500.
+
 ## [3.2.123] - 2026-11-07
 
 Security release: dependency advisories fixed, most urgently a pre-authentication crash. **Re-run the
