@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.123] - 2026-11-07
+
+Security release: dependency advisories fixed, most urgently a pre-authentication crash. **Re-run the
+install command on each remote agent** after updating.
+
 ### Security
 - **A single unauthenticated request could stop the backend or a remote agent** (body-parser
   GHSA-27r3-jxmh-p828). A gzip or deflate body followed by trailing bytes was answered normally, then

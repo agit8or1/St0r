@@ -1,8 +1,9 @@
 {
-  "version": "3.2.122",
-  "releaseDate": "2026-10-21",
+  "version": "3.2.123",
+  "releaseDate": "2026-11-07",
   "changelog": [
-    "Updates prune their old backups. Each update copies the whole install, .env included, to /opt/urbackup-gui-backup-<timestamp> and never removed one. After a successful update the three newest are now kept and older ones deleted. A failure while pruning is logged and cannot roll back the update.",
-    "Pruning is done by the update script, and an update runs the previously installed one, so it starts with the update after this one."
+    "Security: a single unauthenticated request could stop the backend or a remote agent (body-parser GHSA-27r3-jxmh-p828). Fixed by body-parser 1.20.9. Remote agents keep the old copy until their install command is re-run from the Servers page.",
+    "Dependency updates: multer 2.5.0, nodemailer 10.3.1 (alert recipient parsing), follow-redirects 1.16.2, qs 6.16.2, axios 1.21.0, vite 7.3.7 and build-tool refreshes.",
+    "CI now audits all dependencies on every change and daily; regression tests cover each fixed advisory."
   ]
 }
