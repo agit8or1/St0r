@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.126] - 2026-11-07
+
+Housekeeping: the web interface drops axios for the browser's own `fetch`. No behaviour changes.
+
 ### Removed
 - **axios from the frontend.** The API client in `frontend/src/services/api.ts` now uses `fetch`, with
   the same 30-second timeout, sign-out on 401, and error shape (`err.response.status`,

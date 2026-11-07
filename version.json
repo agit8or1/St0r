@@ -1,7 +1,7 @@
 {
-  "version": "3.2.125",
+  "version": "3.2.126",
   "releaseDate": "2026-11-07",
   "changelog": [
-    "Housekeeping: the backend no longer installs axios, which nothing in it used. That also drops follow-redirects and 10 other packages from the production install. No behaviour changes."
+    "The web interface no longer uses axios: its API client now uses the browser's built-in fetch, with the same timeout, sign-out on an expired session and error messages. The page loads 58 kB less JavaScript. No behaviour changes."
   ]
 }
