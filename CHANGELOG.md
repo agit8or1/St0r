@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.124] - 2026-11-07
+
+One fix: rejected backup uploads say why.
+
 ### Fixed
 - **Database backup uploads report the real error.** A file over 100 MB, a wrong form field or a
   malformed upload returned "Internal server error" (500). They now return 413 "File too large" or

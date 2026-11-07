@@ -1,9 +1,7 @@
 {
-  "version": "3.2.123",
+  "version": "3.2.124",
   "releaseDate": "2026-11-07",
   "changelog": [
-    "Security: a single unauthenticated request could stop the backend or a remote agent (body-parser GHSA-27r3-jxmh-p828). Fixed by body-parser 1.20.9. Remote agents keep the old copy until their install command is re-run from the Servers page.",
-    "Dependency updates: multer 2.5.0, nodemailer 10.3.1 (alert recipient parsing), follow-redirects 1.16.2, qs 6.16.2, axios 1.21.0, vite 7.3.7 and build-tool refreshes.",
-    "CI now audits all dependencies on every change and daily; regression tests cover each fixed advisory."
+    "Database backup uploads report the real error. A file over 100 MB, a wrong form field or a malformed upload returned \"Internal server error\" (500); they now return 413 \"File too large\" or 400 with the reason, shown on the restore page. Disk errors while saving still return 500."
   ]
 }
