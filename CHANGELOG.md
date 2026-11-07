@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **axios from the backend.** Nothing in the backend used it; removing it also drops
+  follow-redirects and 10 other packages from the production install. The frontend still uses axios.
+
 ## [3.2.124] - 2026-11-07
 
 One fix: rejected backup uploads say why.
