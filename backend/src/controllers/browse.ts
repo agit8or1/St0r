@@ -8,6 +8,7 @@ import { userInfo } from 'os';
 import { openUrBackupSettingsDbReadOnly } from '../config/urbackupDb.js';
 import { audit } from '../utils/audit.js';
 import { isWithin } from '../utils/safePath.js';
+import { walkFilesWithin, WalkSkip } from '../utils/safeWalk.js';
 
 const dbService = new UrBackupDbService();
 
@@ -467,20 +468,52 @@ export async function downloadFolder(req: AuthRequest, res: Response): Promise<v
     const folderName = pathModule.basename(resolvedFull) || 'backup';
     const zipName = `${folderName}.zip`;
 
+    // Build the file list ourselves rather than `zip -r`, which follows every
+    // symlink: links that leave this client's storage folder are skipped, and
+    // junction loops are cut (see walkFilesWithin).
+    const clientRoot = pathModule.join(backupFolder, client.name);
+    const skipped: WalkSkip[] = [];
+    const files = walkFilesWithin(resolvedFull, clientRoot, (s) => skipped.push(s));
+    const first = await files.next();
+    if (first.done) {
+      res.status(404).json({ error: 'Folder contains no downloadable files' });
+      return;
+    }
+
     audit(req, 'download-folder', { client: client.name, clientId: Number(clientId), backupId: Number(backupId), path });
 
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(zipName)}`);
 
     const { spawn } = await import('child_process');
-    // zip -r - . streams a zip of the current directory to stdout
-    const zip = spawn('zip', ['-r', '-', '.'], { cwd: resolvedFull, stdio: ['ignore', 'pipe', 'ignore'] });
+    // `zip -q - -@`: names from stdin (one per line), archive to stdout. No -r,
+    // so zip reads exactly the vetted list and never walks on its own.
+    const zip = spawn('zip', ['-q', '-', '-@'], { cwd: resolvedFull, stdio: ['pipe', 'pipe', 'ignore'] });
     zip.stdout.pipe(res);
     zip.on('error', (e) => {
       logger.error('[browse] zip error:', e);
       if (!res.headersSent) res.status(500).json({ error: 'Failed to create zip' });
       else res.destroy();
     });
+    zip.stdin.on('error', () => { /* zip exited early; reported via 'error'/'close' */ });
+    res.on('close', () => { if (zip.exitCode === null) zip.kill(); });
+
+    const write = (line: string) =>
+      zip.stdin.write(line + '\n') ? Promise.resolve() : new Promise<void>((r) => zip.stdin.once('drain', () => r()));
+    try {
+      await write(first.value);
+      for await (const rel of files) {
+        if (zip.exitCode !== null || res.destroyed) break;
+        await write(rel);
+      }
+    } finally {
+      zip.stdin.end();
+    }
+    if (skipped.length) {
+      const outside = skipped.filter((s) => s.reason === 'outside-root').length;
+      logger.warn(`[browse] folder download ${client.name}:${path} skipped ${skipped.length} entr${skipped.length === 1 ? 'y' : 'ies'}` +
+        ` (${outside} link(s) leaving the client folder): ${skipped.slice(0, 5).map((s) => `${s.path} [${s.reason}]`).join(', ')}`);
+    }
   } catch (error) {
     if (sendStorageError(error, res)) return;
     logger.error('Failed to download folder:', error);

@@ -124,10 +124,60 @@ if [ -z "$VERSION" ]; then
   exit 1
 fi
 
-# Build direct archive URL — avoids API redirect chain
-TARBALL_URL="https://github.com/agit8or1/St0r/archive/refs/tags/${VERSION}.tar.gz"
-
 echo "$(timestamp) Latest version: $VERSION"
+
+# ── 1b. Download and verify the signed release tarball ────────────────────
+# Each release carries st0r-<tag>.tar.gz plus a detached SSH signature made with
+# the St0r release key, which never touches GitHub. The public key is the one
+# ALREADY INSTALLED here (setup/release-signers), not one from the download, so
+# whoever can publish a GitHub release still cannot ship code this accepts.
+# Unsigned or badly signed releases are refused — there is no override.
+# The update page only recognises a failure that prints FAILED.
+refuse() { echo "$(timestamp) ERROR: $*"; echo "FAILED"; exit 1; }
+
+SIGNERS_FILE="${INSTALL_DIR}/setup/release-signers"
+ASSET_NAME="st0r-${VERSION}.tar.gz"
+
+if [ ! -s "$SIGNERS_FILE" ]; then
+  refuse "${SIGNERS_FILE} is missing — cannot verify the release signature. Reinstall St0r with install.sh to restore it"
+fi
+command -v ssh-keygen >/dev/null || refuse "ssh-keygen not found (apt install openssh-client)"
+
+asset_url() {
+  echo "$RELEASE_JSON" | python3 -c "
+import json, sys
+name = sys.argv[1]
+for a in json.load(sys.stdin).get('assets', []):
+    if a.get('name') == name:
+        print(a['browser_download_url']); break" "$1"
+}
+TARBALL_URL=$(asset_url "$ASSET_NAME")
+SIG_URL=$(asset_url "${ASSET_NAME}.sig")
+if [ -z "$TARBALL_URL" ] || [ -z "$SIG_URL" ]; then
+  refuse "release ${VERSION} has no signed tarball (${ASSET_NAME} + .sig) — not updating"
+fi
+
+echo "$(timestamp) Downloading ${ASSET_NAME}..."
+curl -fsSL "$TARBALL_URL" -o "$TEMP_DIR/release.tar.gz"
+curl -fsSL "$SIG_URL" -o "$TEMP_DIR/release.tar.gz.sig"
+
+echo "$(timestamp) Verifying release signature..."
+if ! ssh-keygen -Y verify -f "$SIGNERS_FILE" -I st0r-release -n st0r-release \
+       -s "$TEMP_DIR/release.tar.gz.sig" < "$TEMP_DIR/release.tar.gz"; then
+  refuse "signature check failed for ${ASSET_NAME} — not installing it"
+fi
+
+echo "$(timestamp) Extracting update..."
+mkdir -p "$TEMP_DIR/src"
+tar xzf "$TEMP_DIR/release.tar.gz" -C "$TEMP_DIR/src" --strip-components=1
+
+# A validly signed OLD release re-published under a new tag would pass the
+# signature check, so the version inside must match the tag.
+INNER_VERSION=$(tr -d '[:space:]' < "$TEMP_DIR/src/VERSION" 2>/dev/null || true)
+if [ "v${INNER_VERSION}" != "${VERSION}" ] && [ "${INNER_VERSION}" != "${VERSION}" ]; then
+  refuse "tarball contains version '${INNER_VERSION}' but the release is ${VERSION} — not installing it"
+fi
+echo "$(timestamp) Signature OK, version ${INNER_VERSION}"
 
 # ── 2. Backup current installation ────────────────────────────────────────
 echo "$(timestamp) Creating backup at $BACKUP_DIR..."
@@ -138,14 +188,6 @@ rsync -a \
   --exclude='frontend/node_modules' \
   --exclude='frontend/dist' \
   "$INSTALL_DIR/" "$BACKUP_DIR/"
-
-# ── 3. Download & extract ──────────────────────────────────────────────────
-echo "$(timestamp) Downloading latest version..."
-curl -fsSL -L "$TARBALL_URL" -o "$TEMP_DIR/release.tar.gz"
-
-echo "$(timestamp) Extracting update..."
-mkdir -p "$TEMP_DIR/src"
-tar xzf "$TEMP_DIR/release.tar.gz" -C "$TEMP_DIR/src" --strip-components=1
 
 # ── 4. Stop service ────────────────────────────────────────────────────────
 echo "$(timestamp) Stopping urbackup-gui service..."

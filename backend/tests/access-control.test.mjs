@@ -8,6 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync, realpathSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Writable } from 'node:stream';
+import { execFileSync } from 'node:child_process';
 
 // ── Storage tree ────────────────────────────────────────────────────────────
 //   root/storage/clientA/b1/inside.txt
@@ -64,7 +65,7 @@ function call(handler, user, query) {
     res.setHeader = () => {};
     res.status = (c) => { res.code = c; return res; };
     res.json = (body) => { res.headersSent = true; resolve({ code: res.code, body }); return res; };
-    res.on('finish', () => resolve({ code: res.code, body: Buffer.concat(chunks).toString() }));
+    res.on('finish', () => { const raw = Buffer.concat(chunks); resolve({ code: res.code, body: raw.toString(), raw }); });
     const req = { user, query, ip: '127.0.0.1', headers: {}, cookies: {} };
     handler(req, res).catch(reject);
   });
@@ -136,4 +137,24 @@ test('a nested path inside the backup still works', async () => {
   const r = await call(downloadFile, admin, { clientId: '1', backupId: '7', path: 'sub/../sub/deep.txt' });
   assert.equal(r.code, 200);
   assert.equal(r.body, 'deep');
+});
+
+// ── Folder download: which symlinks zip may follow ─────────────────────────
+test('folder zip follows links inside the client folder, skips links out and loops', async () => {
+  const b1 = join(storage, 'clientA', 'b1');
+  mkdirSync(join(storage, 'clientA', '.directory_pool', 'p1'), { recursive: true });
+  writeFileSync(join(storage, 'clientA', '.directory_pool', 'p1', 'pooled.txt'), 'pooled');
+  symlinkSync('../.directory_pool/p1', join(b1, 'unchanged-dir'));          // allowed: own pool
+  symlinkSync('../../clientB/b1', join(b1, 'other-customer-dir'));         // refused: other customer
+  symlinkSync(root, join(b1, 'server-root'));                              // refused: outside storage
+  symlinkSync('..', join(b1, 'sub', 'loop'));                              // refused: loop
+  const r = await call(downloadFolder, admin, { clientId: '1', backupId: '7', path: '/' });
+  assert.equal(r.code, 200);
+  const zipPath = join(root, 'out.zip');
+  writeFileSync(zipPath, r.raw);
+  const names = execFileSync('unzip', ['-Z1', zipPath]).toString().trim().split('\n').sort();
+  assert.ok(names.includes('inside.txt'), names.join(','));
+  assert.ok(names.includes('unchanged-dir/pooled.txt'), names.join(','));
+  assert.ok(names.includes('sub/deep.txt'), names.join(','));
+  for (const n of names) assert.doesNotMatch(n, /other-customer|server-root|secret|escape|loop/, n);
 });
