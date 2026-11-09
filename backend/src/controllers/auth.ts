@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { findUserByUsername, updateLastLogin } from '../models/user.js';
-import { comparePassword, generateToken, credentialVersion } from '../utils/auth.js';
+import { comparePassword, generateToken, credentialVersion, cookieSecure } from '../utils/auth.js';
 import { logger } from '../utils/logger.js';
 import { pool } from '../config/database.js';
 import { createRequire } from 'module';
@@ -76,7 +76,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     res.cookie('auth_token', token, {
       httpOnly: true,
       sameSite: 'strict',
-      secure: process.env.COOKIE_SECURE === 'true',
+      secure: cookieSecure(req),
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
 

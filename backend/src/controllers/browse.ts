@@ -6,6 +6,8 @@ import { UrBackupDbService } from '../services/urbackupDb.js';
 import { realpathSync } from 'fs';
 import { userInfo } from 'os';
 import { openUrBackupSettingsDbReadOnly } from '../config/urbackupDb.js';
+import { audit } from '../utils/audit.js';
+import { isWithin } from '../utils/safePath.js';
 
 const dbService = new UrBackupDbService();
 
@@ -361,41 +363,48 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
     const backupBasePath = pathModule.join(backupFolder, client.name, backup.path);
     const resolvedDlBase = resolveStoragePath(backupBasePath, 'Backup path not found');
     const resolvedDlFull = resolveStoragePath(fullPath, 'File not found');
-    if (!resolvedDlFull.startsWith(resolvedDlBase + '/') && resolvedDlFull !== resolvedDlBase) {
-      logger.error(`Security check failed: ${resolvedDlFull} does not start with ${resolvedDlBase}`);
+    if (!isWithin(resolvedDlBase, resolvedDlFull)) {
+      logger.warn(`[${req.user?.username || 'unknown'}] path traversal rejected: ${resolvedDlFull} is outside ${resolvedDlBase}`);
       res.status(403).json({ error: 'Invalid file path' });
       return;
     }
 
-    // Check if file exists
+    // From here on use only the resolved path that was checked. Opening the
+    // unresolved one would let a symlink swapped in after the check point the
+    // read somewhere else. Open once and work from the handle, so the file that
+    // is stat'ed is the file that is streamed.
+    let handle: import('fs/promises').FileHandle;
     try {
-      await fs.promises.access(fullPath, fs.constants.R_OK);
+      handle = await fs.promises.open(resolvedDlFull, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
     } catch {
       res.status(404).json({ error: 'File not found' });
       return;
     }
 
-    // Get file stats
-    const stats = await fs.promises.stat(fullPath);
+    const stats = await handle.stat();
 
     if (stats.isDirectory()) {
+      await handle.close();
       res.status(400).json({ error: 'Cannot download a directory' });
       return;
     }
 
     // Reject files over 2 GB to prevent excessive memory/bandwidth usage
     if (stats.size > 2 * 1024 * 1024 * 1024) {
+      await handle.close();
       res.status(400).json({ error: 'File too large to download directly (> 2 GB)' });
       return;
     }
 
+    audit(req, 'download-file', { client: client.name, clientId: Number(clientId), backupId: Number(backupId), path, bytes: stats.size });
+
     // Send file
-    const fileName = pathModule.basename(fullPath);
+    const fileName = pathModule.basename(resolvedDlFull);
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`);
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', stats.size);
 
-    const readStream = fs.createReadStream(fullPath);
+    const readStream = handle.createReadStream();
     readStream.pipe(res);
 
     readStream.on('error', (error) => {
@@ -446,7 +455,8 @@ export async function downloadFolder(req: AuthRequest, res: Response): Promise<v
     // Resolve symlinks for security check
     const resolvedBase = resolveStoragePath(backupBasePath, 'Backup path not found');
     const resolvedFull = resolveStoragePath(fullPath, 'Folder not found');
-    if (!resolvedFull.startsWith(resolvedBase + '/') && resolvedFull !== resolvedBase) {
+    if (!isWithin(resolvedBase, resolvedFull)) {
+      logger.warn(`[${req.user?.username || 'unknown'}] path traversal rejected: ${resolvedFull} is outside ${resolvedBase}`);
       res.status(403).json({ error: 'Invalid path' }); return;
     }
 
@@ -456,6 +466,8 @@ export async function downloadFolder(req: AuthRequest, res: Response): Promise<v
 
     const folderName = pathModule.basename(resolvedFull) || 'backup';
     const zipName = `${folderName}.zip`;
+
+    audit(req, 'download-folder', { client: client.name, clientId: Number(clientId), backupId: Number(backupId), path });
 
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(zipName)}`);
@@ -487,6 +499,10 @@ export async function restoreFiles(req: AuthRequest, res: Response): Promise<voi
       res.status(400).json({ error: 'Client ID, backup ID, and file paths are required' });
       return;
     }
+
+    // Route is admin-only today, but check scope anyway so it stays correct
+    // if that ever changes — every other per-client endpoint does.
+    if (!(await assertClientAccess(req, res, { id: String(clientId) }))) return;
 
     // Get client info
     const clients = await dbService.getClients();
@@ -532,6 +548,11 @@ export async function restoreFiles(req: AuthRequest, res: Response): Promise<voi
       });
       return;
     }
+
+    audit(req, 'restore-files', {
+      client: client.name, clientId: Number(clientId), backupId: Number(backupId),
+      paths, restorePath: restorePath || undefined,
+    });
 
     res.json({
       success: true,

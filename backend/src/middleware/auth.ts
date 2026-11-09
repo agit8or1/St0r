@@ -17,7 +17,8 @@ export interface AuthRequest extends Request {
  * rather than one per request.
  */
 const USER_TTL_MS = 10_000;
-const userCache = new Map<number, { ts: number; isAdmin: boolean; passwordHash: string } | { ts: number; revoked: true }>();
+type Account = { isAdmin: boolean; passwordHash: string; mustChangePassword: boolean };
+const userCache = new Map<number, ({ ts: number } & Account) | { ts: number; revoked: true }>();
 
 /** Drop cached account state — call after changing or removing a user. */
 export function invalidateUserCache(userId?: number): void {
@@ -29,10 +30,12 @@ export function invalidateUserCache(userId?: number): void {
  * Returns the account's current admin flag, or null when the account no longer
  * exists or has been deactivated (findUserById filters on is_active).
  */
-async function currentUser(userId: number): Promise<{ isAdmin: boolean; passwordHash: string } | null> {
+async function currentUser(userId: number): Promise<Account | null> {
   const cached = userCache.get(userId);
   if (cached && Date.now() - cached.ts < USER_TTL_MS) {
-    return 'revoked' in cached ? null : { isAdmin: cached.isAdmin, passwordHash: cached.passwordHash };
+    if ('revoked' in cached) return null;
+    const { ts: _ts, ...account } = cached;
+    return account;
   }
 
   const user = await findUserById(userId);
@@ -41,10 +44,26 @@ async function currentUser(userId: number): Promise<{ isAdmin: boolean; password
     return null;
   }
 
-  const isAdmin = !!user.is_admin;
-  userCache.set(userId, { ts: Date.now(), isAdmin, passwordHash: user.password_hash });
-  return { isAdmin, passwordHash: user.password_hash };
+  const account: Account = {
+    isAdmin: !!user.is_admin,
+    passwordHash: user.password_hash,
+    mustChangePassword: !!user.must_change_password,
+  };
+  userCache.set(userId, { ts: Date.now(), ...account });
+  return account;
 }
+
+/**
+ * What an account that must change its password may still reach: the change
+ * itself, and signing out. Everything else is refused until the password is
+ * changed — the login page's modal was the only thing enforcing this before.
+ */
+const PASSWORD_CHANGE_ALLOWLIST: RegExp[] = [
+  /^\/api\/profile\/change-password$/,
+  /^\/api\/auth\/logout$/,
+];
+
+export const PASSWORD_CHANGE_REQUIRED = 'PASSWORD_CHANGE_REQUIRED';
 
 function getTokenFromRequest(req: AuthRequest): string | undefined {
   const authHeader = req.headers.authorization;
@@ -57,14 +76,8 @@ function getTokenFromRequest(req: AuthRequest): string | undefined {
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
-  // Fall back to query parameter — only permitted for file download endpoints
-  if (
-    req.query.token &&
-    typeof req.query.token === 'string' &&
-    req.path.startsWith('/download')
-  ) {
-    return req.query.token;
-  }
+  // Never from the query string: a token in the URL ends up in proxy and
+  // access logs, browser history and Referer headers. Downloads use the cookie.
   return undefined;
 }
 
@@ -106,6 +119,15 @@ export async function authenticate(
       res.clearCookie('auth_token');
       res.status(401).json({ error: 'Session expired — please sign in again' });
       return;
+    }
+
+    if (account.mustChangePassword) {
+      const path = req.originalUrl.split('?')[0];
+      if (!PASSWORD_CHANGE_ALLOWLIST.some((re) => re.test(path))) {
+        logger.warn(`[${decoded.username}] blocked ${req.method} ${path} — password change required`);
+        res.status(403).json({ error: 'You must change your password before continuing', code: PASSWORD_CHANGE_REQUIRED });
+        return;
+      }
     }
 
     // Trust the database over the token: a role change must take effect at once,

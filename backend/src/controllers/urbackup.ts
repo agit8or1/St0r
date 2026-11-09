@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import { UrBackupService } from '../services/urbackup.js';
 import { logger } from '../utils/logger.js';
+import { audit } from '../utils/audit.js';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
@@ -631,6 +632,10 @@ export async function convertAndDownloadImageBackup(req: AuthRequest, res: Respo
 
     const srcStat = fs.statSync(srcPath);
     const isCompressed = srcPath.endsWith('.vhdz');
+
+    audit(req, 'download-image', {
+      clientId: parseInt(clientId), backupId: parseInt(backupId), volume: backup.letter, bytes: srcStat.size,
+    });
 
     if (!isCompressed) {
       // Already a plain VHD — stream directly

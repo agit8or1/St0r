@@ -73,11 +73,14 @@ app.use(cors({
 }));
 if (process.env.CORS_LOCK !== 'true') logger.warn('[Security] CORS_LOCK not enabled — allowing all origins. Enable in Settings → Security.');
 
-// Rate limiting - only for auth endpoints to prevent brute force
+// Brute-force protection on login: 10 FAILED attempts per IP per 15 minutes.
+// Successful sign-ins are not counted, so people behind one NAT signing in
+// normally never trip it. Keep SECURITY.md in step with these numbers.
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit login attempts
-  message: 'Too many login attempts, please try again later.',
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: true,
+  message: 'Too many failed login attempts, please try again later.',
 });
 
 // Stricter rate limit for sensitive endpoints (password change, 2FA, user management)
@@ -95,7 +98,7 @@ const apiLimiter = rateLimit({
 });
 
 app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/change-password', sensitiveLimiter);
+app.use('/api/profile/change-password', sensitiveLimiter);
 app.use('/api/2fa', sensitiveLimiter);
 app.use('/api/', apiLimiter);
 

@@ -74,7 +74,11 @@ class HttpClient {
     }
 
     if (!response.ok) {
-      if (response.status === 401 && window.location.pathname !== '/login') {
+      // 401: session gone. 403 PASSWORD_CHANGE_REQUIRED: the server refuses
+      // everything until the forced password change is done, and the login page
+      // is where that prompt lives — signing in again brings it back up.
+      const mustChange = response.status === 403 && parsed?.code === 'PASSWORD_CHANGE_REQUIRED';
+      if ((response.status === 401 || mustChange) && window.location.pathname !== '/login') {
         localStorage.removeItem('user');
         window.location.href = '/login';
       }

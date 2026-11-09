@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'crypto';
 import { createServer as createHttpServer } from 'http';
 import { createServer as createHttpsServer } from 'https';
 
@@ -118,6 +118,17 @@ async function getDisk() {
 const app = express();
 app.use(express.json());
 
+/**
+ * Constant-time API key check. Both sides are hashed first so the comparison
+ * is over equal-length buffers and the key's length is not leaked either.
+ */
+function keyMatches(given: string | undefined, expected: string): boolean {
+  if (!given || !expected) return false;
+  const a = createHash('sha256').update(given).digest();
+  const b = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
 // API key auth middleware
 app.use((req, res, next) => {
   if (req.path === '/health') { next(); return; }
@@ -127,7 +138,7 @@ app.use((req, res, next) => {
     return;
   }
   const key = req.headers['x-stor-agent-key'] as string || req.headers['authorization']?.replace('Bearer ', '');
-  if (key !== config.api_key) {
+  if (!keyMatches(key, config.api_key)) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }

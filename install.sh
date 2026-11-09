@@ -589,8 +589,9 @@ URBACKUP_DB_PATH=/var/urbackup/backup_server.db
 URBACKUP_API_URL=http://localhost:55414/x
 URBACKUP_USERNAME=admin
 URBACKUP_PASSWORD=
-# Set to true only if St0r is served over HTTPS (enables Secure flag on session cookie)
-COOKIE_SECURE=false
+# Secure flag on the session cookie. auto = on whenever the request came in
+# over HTTPS (e.g. after Certbot), off on plain HTTP. true/false force it.
+COOKIE_SECURE=auto
 EOF
         chown $ACTUAL_USER:$ACTUAL_USER $INSTALL_DIR/backend/.env
         chmod 640 $INSTALL_DIR/backend/.env

@@ -28,14 +28,17 @@ You will receive a response within 5 business days. If confirmed, a fix will be 
 ### Authentication
 - Password hashing with **bcrypt** (cost factor 12)
 - JWT tokens stored in **HttpOnly cookies** — not accessible to JavaScript
-- Configurable JWT expiry (default: 7 days)
-- Rate limiting on `/api/auth/login` (5 attempts / 15 min)
+- Sessions expire after 24 hours, and are revoked at once when the password changes or the account is disabled
+- Rate limiting on `/api/auth/login`: 10 failed attempts per IP per 15 minutes (successful sign-ins are not counted)
+- Session token accepted only from the HttpOnly cookie or an `Authorization: Bearer` header — never from the URL
+- A forced first-login password change is enforced by the server: until it is done, every API call except the password change is refused
 - Optional **TOTP 2FA** per user (RFC 6238, Google Authenticator compatible)
 
 ### Transport
 - All API traffic proxied through **Nginx**
 - HTTPS strongly recommended for production (see README for Certbot setup)
 - HTTP → HTTPS redirect configurable in Nginx
+- Session cookie `Secure` flag: `COOKIE_SECURE=auto` (the default) sets it whenever the request arrived over HTTPS, so it turns on by itself once Certbot is set up; `true`/`false` force it
 
 ### Input Validation
 - FQDN/hostname inputs validated with strict regex before any SQL or shell use
@@ -56,6 +59,11 @@ You will receive a response within 5 business days. If confirmed, a fix will be 
 ### Access Control
 - Role-based: `admin` (full access) and standard users (read-only by default)
 - Admin-only endpoints checked server-side on every request
+- Non-admin users are limited to the endpoints of the customers they are assigned to; with no assignment they see nothing
+
+### Audit Logging
+- File and folder downloads, image exports, file restores and database backup downloads/restores are logged with the user, source IP and what was accessed
+- Lines are prefixed `[audit]`: `journalctl -u urbackup-gui | grep '\[audit\]'`
 - UrBackup-level operations proxied through the authenticated backend — never exposed directly
 
 ## Hardening Checklist

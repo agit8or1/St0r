@@ -3,6 +3,7 @@ import { createReadStream } from 'fs';
 import { AuthRequest } from '../middleware/auth.js';
 import { databaseBackupService } from '../services/databaseBackup.js';
 import { logger } from '../utils/logger.js';
+import { audit } from '../utils/audit.js';
 
 export async function createBackup(req: AuthRequest, res: Response): Promise<void> {
   try {
@@ -50,6 +51,7 @@ export async function downloadBackup(req: AuthRequest, res: Response): Promise<v
     const { filename } = req.params;
     const filePath = databaseBackupService.getBackupPath(filename);
     if (!filePath) { res.status(404).json({ error: 'Backup not found' }); return; }
+    audit(req, 'download-db-backup', { file: filename });
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/gzip');
     createReadStream(filePath).pipe(res);
@@ -64,7 +66,7 @@ export async function restoreBackup(req: AuthRequest, res: Response): Promise<vo
     const { filename } = req.params;
     const filePath = databaseBackupService.getBackupPath(filename);
     if (!filePath) { res.status(404).json({ error: 'Backup not found' }); return; }
-    logger.info(`Restore triggered by ${req.user?.username} from file: ${filename}`);
+    audit(req, 'restore-db-backup', { file: filename });
     const result = await databaseBackupService.restoreBackup(filePath);
     if (result.success) {
       res.json({ success: true, message: 'Database restored successfully' });
@@ -81,7 +83,7 @@ export async function uploadAndRestore(req: AuthRequest, res: Response): Promise
   try {
     const file = (req as any).file;
     if (!file) { res.status(400).json({ error: 'No file uploaded' }); return; }
-    logger.info(`Upload-restore triggered by ${req.user?.username}, file: ${file.originalname}`);
+    audit(req, 'restore-db-upload', { file: file.originalname, bytes: file.size });
     const result = await databaseBackupService.restoreFromUpload(file.path, file.originalname);
     if (result.success) {
       res.json({ success: true, message: 'Backup uploaded and restored successfully', savedAs: result.savedAs });
