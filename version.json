@@ -1,7 +1,12 @@
 {
-  "version": "3.2.129",
-  "releaseDate": "2026-11-07",
+  "version": "3.2.130",
+  "releaseDate": "2026-11-09",
   "changelog": [
-    "Maintenance: internal code tidy-up with no visible changes. The code now passes all lint checks with no warnings."
+    "Security release \u2014 please update. Fixes several access-control issues found in a security review (advisory GHSA-hmxr-c2q9-q929).",
+    "Folder downloads no longer follow links that point outside the endpoint's own backups.",
+    "The forced password change at first sign-in is now enforced by the server, not just the login page.",
+    "Updates are now cryptographically signed, and St0r refuses to install an update whose signature doesn't check out (from the next update onward).",
+    "Downloads and restores are now recorded in the log with who did them.",
+    "The session cookie is marked Secure automatically when St0r is served over HTTPS."
   ]
 }

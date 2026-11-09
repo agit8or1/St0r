@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.130] - 2026-11-09
+
+Security release. See advisory [GHSA-hmxr-c2q9-q929](https://github.com/agit8or1/St0r/security/advisories/GHSA-hmxr-c2q9-q929).
+
+### Security
+- **Folder downloads no longer follow symlinks out of the client's backup.** The ZIP is built from a vetted file list. A symlink or junction is followed only when its real target is inside that client's own storage folder (including its `.directory_pool`), and loops are cut. Before, `zip -r` followed every link.
+- **The forced first-login password change is enforced by the server.** Until it is done, every API call except the change itself returns `403 PASSWORD_CHANGE_REQUIRED`.
+- **The session token is no longer accepted in the URL** (`?token=` on `/download` paths).
+- **File downloads open the exact path that was checked**, once, with `O_NOFOLLOW`, and stream from that handle.
+- **Signed updates.** Releases carry `st0r-<tag>.tar.gz` plus an SSH signature from the St0r release key, which is not stored on GitHub. `auto-update.sh` verifies it against the installed `setup/release-signers`, refuses unsigned or mismatched releases, and checks that the tarball's VERSION matches the tag. This takes effect from the update *after* 3.2.130, because each update is run by the previously installed script. `scripts/sign-release.sh` builds, signs and uploads the assets.
+- **Agent API key compared in constant time.**
+- **Audit log.** File and folder downloads, image exports, file restores, and database backup downloads and restores are logged with user, IP and target, prefixed `[audit]`.
+- **Login rate limit: 10 failed attempts per 15 minutes per IP** (was 50, and successful sign-ins counted). The stricter password-change limit is now on the real route.
+- File restore checks customer scope like the other per-client endpoints.
+
+### Changed
+- `COOKIE_SECURE=auto` is the new default: the cookie's `Secure` flag is set whenever the request came in over HTTPS, so it turns on by itself after Certbot. `true`/`false` still force it.
+- SECURITY.md now matches the code (24-hour sessions, rate limits, audit log). Private vulnerability reporting is enabled on the repository.
+
+### Tests
+- New regression tests for customer scoping, path traversal, folder-zip symlink handling, the forced password change, URL tokens and the cookie flag.
+
 ## [3.2.129] - 2026-11-07
 
 Maintenance: lint is warning-free. No behaviour changes.
