@@ -1,10 +1,9 @@
 {
-  "version": "3.2.132",
+  "version": "3.2.133",
   "releaseDate": "2026-11-10",
   "changelog": [
-    "Security hardening — please update.",
-    "St0r now runs as its own service account (st0r); existing installs move over on update.",
-    "Folder downloads include symlinked files that point inside the client's backup again.",
-    "The agent install command names St0r's address when both are on the same private network."
+    "Recovery drills: scheduled restores of a canary file from the offsite copy, checked against a checksum St0r keeps separately.",
+    "Optional isolated boot drills: a Windows (UEFI) image booted as a disposable Proxmox clone with its application service checked.",
+    "Backup, replication and verified recovery shown as separate statuses, with a printable customer report."
   ]
 }

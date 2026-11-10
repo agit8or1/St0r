@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.133] - 2026-11-10
+
+### Added
+- **Recovery drills** (**Recovery Drills** page) — scheduled tests that backups can actually be restored. UrBackup stays the backup engine; drills use St0r's schedules, replication targets, alert channels and customer permissions. See [docs/recovery-verification.md](docs/recovery-verification.md).
+  - **File-restore drills** restore a canary file from the **offsite copy** (a replication target: the second UrBackup server St0r replicates to) into disposable scratch storage, and compare it with a SHA-256 St0r keeps in its own database. St0r can generate canaries, so their checksum is recorded before they are ever backed up.
+  - **Isolated boot drills** (optional) for one documented combination: Windows x64 booting UEFI from a GPT disk, imaged by UrBackup as C: plus the EFI system partition, with the QEMU guest agent, on Proxmox VE 8.4 or later (for example a node managed with Depl0y). St0r rebuilds the disk from the image chain, has Proxmox import it, boots a clone with no network device or only a verified isolated bridge, checks one Windows service and measures recovery time.
+  - Every run records the exact copy and restore point used, the recovery point's age, the elapsed time, the result and the stage and reason of a failure. Runs on the simulator hypervisor are recorded as **simulated** and never count as verified recovery.
+  - **Backup**, **offsite replication** and **verified recovery** are shown as three separate statuses per endpoint.
+  - A printable **customer report** per endpoint: what was actually restored, from which copy, how old the recovery point was, how long it took and which services passed, with simulations listed separately.
+  - Retries with backoff for transient failures, an overall time limit, quota and free-space checks before anything is created, and cleanup that removes only what the run recorded and checks it is still the run's. Failed cleanup is retried by a sweeper. Runs cut short by a restart are marked interrupted and cleaned up.
+  - Alerts through the replication alert channels: `drill_failed`, `drill_recovered`, `drill_rpo`, `drill_cleanup`.
+- Database migration `009_recovery_drills.sql` (applied by updates).
+- New setting `STOR_DRILL_SCRATCH` for the drills' scratch storage.
+
+### Fixed
+- Replication to a target on an SSH port other than 22 failed host-key checking when a host key was pinned.
+
+### Tests
+- Drill tests against disposable infrastructure: a throwaway `sshd` as the offsite standby, a fake Proxmox API over pinned TLS that downloads and verifies the disk, disk images made with `sgdisk` and cross-checked with `qemu-img`, and a throwaway MariaDB. They cover a corrupt copy, a missing standby, boot failure, service failure, interrupted and failed cleanup, timeouts, quotas, isolation and resources that are no longer the drill's.
+
 ## [3.2.132] - 2026-11-10
 
 Security release. Please update.
