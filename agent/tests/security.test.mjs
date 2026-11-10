@@ -3,15 +3,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
 import { gzipSync } from 'node:zlib';
 
+let lastDir = '';
 async function startAgent(t, allowed, env = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'stor-agent-test-'));
+  lastDir = dir;
   const allocator = createServer();
   allocator.listen(0, '127.0.0.1');
   await once(allocator, 'listening');
@@ -74,4 +77,59 @@ test('malformed compressed body gets a 400 without a stack trace', async t => {
     assert.equal((await res.text()).includes('node_modules'), false);
   }
   assert.equal((await fetch(url + '/health')).status, 200);
+});
+
+/** GET from a chosen loopback source address (Linux routes all of 127/8 to lo). */
+function getFrom(url, path, localAddress, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = httpRequest(url + path, { localAddress, headers }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
+    req.on('error', reject);
+    req.end();
+  });
+}
+const KEY = { 'x-stor-agent-key': 'synthetic-test-key' };
+
+test('authentication runs before the body is parsed', async t => {
+  const url = await startAgent(t, ['127.0.0.1']);
+  // Before: express.json() ran first and answered 400 to anyone who could connect.
+  const res = await fetch(url + '/no-management-action', { method: 'POST', body: '{not json',
+    headers: { 'Content-Type': 'application/json' } });
+  assert.equal(res.status, 401);
+});
+test('an empty allowlist is not open to everyone: it pins the first source with the key', async t => {
+  const url = await startAgent(t, []);
+  assert.equal(await getFrom(url, '/no-management-action', '127.0.0.2'), 401);          // no key: nothing pinned
+  assert.deepEqual(JSON.parse(await readFile(join(lastDir, 'config.json'), 'utf-8')).allowed_ips, []);
+  assert.equal(await getFrom(url, '/no-management-action', '127.0.0.1', KEY), 404);     // St0r's first call
+  const saved = JSON.parse(await readFile(join(lastDir, 'config.json'), 'utf-8'));
+  assert.deepEqual(saved.allowed_ips, ['127.0.0.1']);
+  assert.equal(saved.api_key, 'synthetic-test-key');
+  assert.equal(await getFrom(url, '/no-management-action', '127.0.0.2', KEY), 403);     // key alone no longer enough
+});
+test('"*" in the allowlist allows any source explicitly', async t => {
+  const url = await startAgent(t, ['*']);
+  assert.equal(await getFrom(url, '/no-management-action', '127.0.0.2', KEY), 404);
+});
+test('health reports the packaged agent version', async t => {
+  const url = await startAgent(t, ['127.0.0.1']);
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf-8'));
+  assert.deepEqual(await (await fetch(url + '/health')).json(), { ok: true, version: pkg.version });
+});
+
+// install.sh: the config it writes, run on its own (no root, no systemd).
+async function runInstallConfig(t, env, existing) {
+  const dir = await mkdtemp(join(tmpdir(), 'stor-agent-cfg-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  if (existing) await writeFile(join(dir, 'config.json'), JSON.stringify(existing));
+  const src = await readFile(new URL('../install.sh', import.meta.url), 'utf-8');
+  const block = src.slice(src.indexOf('# Generate config'), src.indexOf('# TLS. St0r'));
+  const { execFileSync } = await import('node:child_process');
+  execFileSync('bash', ['-c', 'set -e\n' + block], { env: { ...process.env, CONFIG_DIR: dir, PORT: '7420', ...env }, stdio: 'pipe' });
+  return JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8'));
+}
+test('install.sh writes the St0r address it is given into allowed_ips', async t => {
+  assert.deepEqual((await runInstallConfig(t, { STOR_AGENT_ALLOWED_IPS: '198.51.100.7' })).allowed_ips, ['198.51.100.7']);
+  const kept = await runInstallConfig(t, { STOR_AGENT_ALLOWED_IPS: '198.51.100.7' }, { api_key: 'k', port: 7420, allowed_ips: [] });
+  assert.deepEqual(kept, { api_key: 'k', port: 7420, allowed_ips: ['198.51.100.7'] });
+  await assert.rejects(runInstallConfig(t, { STOR_AGENT_ALLOWED_IPS: '1.2.3.4;id' }));
 });

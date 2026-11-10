@@ -4,6 +4,145 @@
 
 set -e
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/agit8or1/St0r/main/install.sh | sudo bash
+#   ... | sudo bash -s -- --domain backup.example.com [--email you@example.com]
+#   sudo ./install.sh [--domain backup.example.com] [--email you@example.com]   (from a checkout)
+#
+#   --domain  serve St0r over HTTPS: gets a Let's Encrypt certificate with Certbot
+#             (the name must already resolve to this server, port 80 reachable)
+#   --email   address for Let's Encrypt expiry notices (optional)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# The St0r release signing key. Downloaded releases are verified against THIS
+# copy, which travels inside install.sh itself — never against a key that came
+# with the download. Must match setup/release-signers (a test checks this).
+RELEASE_SIGNERS='st0r-release namespaces="st0r-release" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN1ko4rKhmr/4qNxgpu/whY1yZb2ICPeafA6Tw/sYhJH'
+RELEASE_DOWNLOAD_BASE="https://github.com/agit8or1/St0r/releases/download"
+
+# verify_release <tarball> <signature> [signers-file]
+# Succeeds only if <signature> is a valid st0r-release signature of <tarball>
+# by the key above (or by the given signers file — used by the tests).
+verify_release() {
+    local tarball="$1" sig="$2" signers="${3:-}" tmp="" rc=0
+    command -v ssh-keygen >/dev/null 2>&1 || { echo "ERROR: ssh-keygen not found (apt-get install openssh-client)"; return 1; }
+    if [ -z "$signers" ]; then
+        tmp=$(mktemp)
+        printf '%s\n' "$RELEASE_SIGNERS" > "$tmp"
+        signers="$tmp"
+    fi
+    ssh-keygen -Y verify -f "$signers" -I st0r-release -n st0r-release -s "$sig" < "$tarball" >/dev/null 2>&1 || rc=1
+    [ -n "$tmp" ] && rm -f "$tmp"
+    return $rc
+}
+
+# fetch_verified_release <version> <dest-dir>
+# Downloads the signed release asset st0r-v<version>.tar.gz and its .sig,
+# verifies the signature, and only then extracts it into <dest-dir>. Refuses
+# (returns 1, extracts nothing) on any failure. GitHub's auto-generated
+# source archives are not used: nothing vouches for them.
+fetch_verified_release() {
+    local version="$1" dest="$2" work name url inner
+    name="st0r-v${version}.tar.gz"
+    url="${RELEASE_DOWNLOAD_BASE}/v${version}/${name}"
+    work=$(mktemp -d)
+    if ! curl -fsSL "$url" -o "$work/$name" || ! curl -fsSL "${url}.sig" -o "$work/$name.sig"; then
+        echo "ERROR: could not download the signed release v${version}:"
+        echo "  $url (+ .sig)"
+        echo "  Releases before 3.2.130 are not signed; install those from a checkout."
+        rm -rf "$work"
+        return 1
+    fi
+    if ! verify_release "$work/$name" "$work/$name.sig"; then
+        echo "ERROR: signature check FAILED for ${name} — refusing to install it."
+        rm -rf "$work"
+        return 1
+    fi
+    mkdir -p "$dest"
+    tar -xzf "$work/$name" -C "$dest" --strip-components=1 --no-same-owner
+    rm -rf "$work"
+    # A validly signed OLD release re-published under a new tag would pass the
+    # signature check, so the version inside must match.
+    inner=$(tr -d '[:space:]' < "$dest/VERSION" 2>/dev/null || true)
+    if [ "$inner" != "$version" ]; then
+        echo "ERROR: release v${version} contains VERSION '${inner}' — refusing to install it."
+        rm -rf "$dest"
+        return 1
+    fi
+    echo "  ✓ Signature verified (St0r release key)"
+}
+
+# install_nginx_site <template> <site-file>
+# Writes the St0r site only if there is none yet. An existing one is kept as
+# it is: Certbot (or you) may have added the HTTPS server block to it.
+install_nginx_site() {
+    local template="$1" site="$2"
+    if [ -e "$site" ]; then
+        echo "  ✓ Keeping existing nginx site $site (not overwritten)"
+        echo "    Template for comparison: $template"
+        return 0
+    fi
+    cp "$template" "$site"
+    echo "  ✓ Installed nginx site $site"
+}
+
+valid_domain() {
+    [[ "$1" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$ ]]
+}
+
+ST0R_DOMAIN=""
+ST0R_EMAIL=""
+parse_args() {
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --domain|--email)
+                if [ $# -lt 2 ]; then echo "Error: $1 needs a value"; return 1; fi
+                if [ "$1" = --domain ]; then ST0R_DOMAIN="$2"; else ST0R_EMAIL="$2"; fi
+                shift 2 ;;
+            --domain=*) ST0R_DOMAIN="${1#*=}"; shift ;;
+            --email=*)  ST0R_EMAIL="${1#*=}"; shift ;;
+            -h|--help)  sed -n '/^# Usage:/,/^# ━/p' "${BASH_SOURCE[0]}" 2>/dev/null | sed 's/^# \{0,1\}//'; exit 0 ;;
+            *) echo "Error: unknown option '$1' (see --help)"; return 1 ;;
+        esac
+    done
+    if [ -n "$ST0R_DOMAIN" ] && ! valid_domain "$ST0R_DOMAIN"; then
+        echo "Error: --domain '$ST0R_DOMAIN' is not a valid DNS name"; return 1
+    fi
+    if [ -n "$ST0R_EMAIL" ] && ! [[ "$ST0R_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+        echo "Error: --email '$ST0R_EMAIL' is not an email address"; return 1
+    fi
+    if [ -n "$ST0R_EMAIL" ] && [ -z "$ST0R_DOMAIN" ]; then
+        echo "Error: --email is only used with --domain"; return 1
+    fi
+}
+
+# enable_https <domain> <email|"">: Certbot for the St0r nginx site.
+enable_https() {
+    local domain="$1" email="$2" site=/etc/nginx/sites-available/urbackup-gui
+    local mail_args=(--register-unsafely-without-email)
+    [ -n "$email" ] && mail_args=(--email "$email")
+    apt-get install -y -qq certbot python3-certbot-nginx
+    # Certbot picks the server block by server_name; the template has "_".
+    if grep -Eq '^[[:space:]]*server_name[[:space:]]+_;' "$site"; then
+        sed -i -E "s/^([[:space:]]*server_name[[:space:]]+)_;/\1${domain};/" "$site"
+    fi
+    nginx -t && systemctl reload nginx
+    certbot --nginx -d "$domain" --non-interactive --agree-tos --redirect "${mail_args[@]}"
+}
+
+# Hand directories (only) under $1 to user $2. Directories cannot be
+# hard-linked and -h changes a symlink rather than its target, so this cannot
+# be steered at files outside the tree.
+chown_dirs_to() {
+    find "$1" -xdev -type d ! -user "$2" -exec chown -h "$2:$(id -gn "$2")" {} +
+}
+
+# Tests source this file with ST0R_INSTALLER_LIB=1 to get the functions above.
+if [ "${ST0R_INSTALLER_LIB:-}" = 1 ]; then return 0 2>/dev/null || exit 0; fi
+
+parse_args "$@" || exit 1
+
 # Version
 #
 # Which St0r this run installs. It used to be a number typed in here, which
@@ -242,7 +381,10 @@ else
 fi
 
 # Check if anything to do
-if [ "$INSTALL_URBACKUP" = false ] && [ "$INSTALL_STOR" = false ]; then
+if [ "$INSTALL_URBACKUP" = false ] && [ "$INSTALL_STOR" = false ] && [ -n "$ST0R_DOMAIN" ] && [ "$STOR_INSTALLED" = true ]; then
+    echo "Only enabling HTTPS for $ST0R_DOMAIN."
+    echo ""
+elif [ "$INSTALL_URBACKUP" = false ] && [ "$INSTALL_STOR" = false ]; then
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "Nothing to install"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -264,6 +406,9 @@ if [ "$INSTALL_URBACKUP" = true ]; then
 fi
 if [ "$INSTALL_STOR" = true ]; then
     echo "  ✓ Install St0r GUI v$INSTALLER_VERSION"
+fi
+if [ -n "$ST0R_DOMAIN" ]; then
+    echo "  ✓ Enable HTTPS for $ST0R_DOMAIN (Let's Encrypt via Certbot)"
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
@@ -322,9 +467,10 @@ if [ "$INSTALL_URBACKUP" = true ]; then
         URBACKUP_DEB_URL="https://hndl.urbackup.org/Server/${URBACKUP_DEB_VER}/urbackup-server_${URBACKUP_DEB_VER}_${URBACKUP_ARCH}.deb"
         echo "  Downloading urbackup-server ${URBACKUP_DEB_VER} (${URBACKUP_ARCH})..."
 
-        if curl -fsSL "$URBACKUP_DEB_URL" -o /tmp/urbackup-server.deb; then
-            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq /tmp/urbackup-server.deb
-            rm -f /tmp/urbackup-server.deb
+        URBACKUP_DEB_DIR=$(mktemp -d)
+        if curl -fsSL "$URBACKUP_DEB_URL" -o "$URBACKUP_DEB_DIR/urbackup-server.deb"; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$URBACKUP_DEB_DIR/urbackup-server.deb"
+            rm -rf "$URBACKUP_DEB_DIR"
         else
             echo "  ✗ Download failed: $URBACKUP_DEB_URL"
             echo "  Please install UrBackup Server manually: https://www.urbackup.org/download.html"
@@ -376,7 +522,7 @@ if [ "$INSTALL_STOR" = true ]; then
 
     # Install dependencies
     echo "[2/9] Installing system dependencies..."
-    apt-get install -y -qq curl gnupg2 nginx mariadb-server rsync sqlite3
+    apt-get install -y -qq curl gnupg2 nginx mariadb-server rsync sqlite3 openssh-client
 
     # Install Node.js 20
     echo "[3/9] Installing Node.js 20..."
@@ -393,84 +539,70 @@ if [ "$INSTALL_STOR" = true ]; then
         echo "[4/9] Stopping services for upgrade..."
         systemctl stop urbackup-gui || true
 
-        # Backup existing .env file
-        if [ -f "$INSTALL_DIR/backend/.env" ]; then
-            cp "$INSTALL_DIR/backend/.env" "/tmp/urbackup-gui.env.backup"
-            echo "  ✓ Backed up .env file"
-        fi
+        # backend/.env is never copied over (see below), so it needs no backup.
 
-        # Backup database
+        # Backup database (root-only: it holds password hashes and secrets)
         echo "  Creating database backup..."
-        mysqldump -u root urbackup_gui > "/tmp/urbackup_gui_backup_$(date +%Y%m%d_%H%M%S).sql" 2>/dev/null || echo "  Warning: Could not backup database"
+        DB_DUMP="/root/urbackup_gui_backup_$(date +%Y%m%d_%H%M%S).sql"
+        ( umask 077; mysqldump -u root urbackup_gui > "$DB_DUMP" 2>/dev/null ) && echo "  ✓ Database backed up to $DB_DUMP" \
+            || echo "  Warning: Could not backup database"
     else
         echo "[4/9] Creating installation directory..."
     fi
 
-    # Copy/update application files
-    mkdir -p $INSTALL_DIR
-
-    # Determine installation method (SCRIPT_DIR is set at the top, where the
-    # version is chosen, so the two always agree)
-    DOWNLOAD_URL="https://github.com/agit8or1/St0r/archive/refs/tags/v${INSTALLER_VERSION}.tar.gz"
+    # Copy/update application files.
+    #
+    # The install directory belongs to the service user ($ACTUAL_USER), so root
+    # does not write into it or trust anything in it: the source is staged in a
+    # fresh root-owned directory and copied in AS the service user, and
+    # everything root itself uses (schema, migrations, service unit, nginx
+    # template, the updater) is taken from the staged source.
     IS_SOURCE_INSTALL=false
+    STAGE=$(mktemp -d /tmp/stor-install-XXXXXX)
+    trap 'rm -rf "$STAGE"' EXIT
+    SRC_DIR="$STAGE/src"
 
-    # Check if we're running from source directory (local install) or need to download
     if [ -d "$SCRIPT_DIR/backend" ] && [ -d "$SCRIPT_DIR/frontend" ]; then
         # Local installation from source directory
         echo "  Using local source files from: $SCRIPT_DIR"
-        cp -r $SCRIPT_DIR/* $INSTALL_DIR/
-        chown -R $ACTUAL_USER:$ACTUAL_USER $INSTALL_DIR
-
-        # Check if this is a source install (has src/ directories)
-        if [ -d "$INSTALL_DIR/backend/src" ]; then
-            IS_SOURCE_INSTALL=true
-        fi
+        rsync -a --exclude='.git' --exclude='node_modules' --exclude='backend/.env' \
+            "$SCRIPT_DIR/" "$SRC_DIR/"
     else
-        # Remote installation - download from GitHub
-        echo "  Downloading v${INSTALLER_VERSION} from GitHub..."
-        TEMP_PACKAGE="/tmp/stor-download-$$.tar.gz"
-        TEMP_DIR="/tmp/stor-extract-$$"
-
-        if ! curl -fSL "$DOWNLOAD_URL" -o "$TEMP_PACKAGE"; then
+        # Remote installation: the signed release asset, verified against the
+        # key in this script, or nothing.
+        echo "  Downloading signed release v${INSTALLER_VERSION} from GitHub..."
+        if ! fetch_verified_release "$INSTALLER_VERSION" "$SRC_DIR"; then
             echo ""
-            echo "ERROR: Failed to download package from GitHub"
-            echo "  URL: $DOWNLOAD_URL"
-            echo ""
-            echo "Alternative: clone and run locally:"
+            echo "Not installing. Alternative: clone, review and run locally:"
             echo "  git clone https://github.com/agit8or1/St0r.git"
             echo "  sudo ./St0r/install.sh"
             exit 1
         fi
+        echo "  ✓ Release downloaded and verified"
+    fi
+    if [ ! -d "$SRC_DIR/backend" ]; then
+        echo "ERROR: backend directory not found in the source"
+        exit 1
+    fi
+    chmod -R a+rX,go-w "$SRC_DIR"
+    chmod 0755 "$STAGE"
 
-        # Extract package
-        echo "  Extracting package..."
-        mkdir -p "$TEMP_DIR"
-        tar -xzf "$TEMP_PACKAGE" -C "$TEMP_DIR" --strip-components=1
+    # Fresh install: root creates the directory and hands it over. Upgrade:
+    # earlier root-run updates left root-owned directories; hand those back.
+    install -d -m 0755 "$INSTALL_DIR"
+    chown "$ACTUAL_USER:$(id -gn "$ACTUAL_USER")" "$INSTALL_DIR"
+    chown_dirs_to "$INSTALL_DIR" "$ACTUAL_USER"
+    sudo -u "$ACTUAL_USER" rsync -a "$SRC_DIR/" "$INSTALL_DIR/"
+    sudo -u "$ACTUAL_USER" rm -f "$INSTALL_DIR/auto-update.sh"   # old location, unused
 
-        if [ ! -d "$TEMP_DIR/backend" ]; then
-            echo "ERROR: Package extraction failed — backend directory not found"
-            rm -rf "$TEMP_PACKAGE" "$TEMP_DIR"
-            exit 1
-        fi
-
-        # Copy files to installation directory
-        cp -r "$TEMP_DIR"/. $INSTALL_DIR/
-        chown -R $ACTUAL_USER:$ACTUAL_USER $INSTALL_DIR
-
-        # Source install — will build below
+    # Check if this is a source install (has src/ directories)
+    if [ -d "$INSTALL_DIR/backend/src" ]; then
         IS_SOURCE_INSTALL=true
-
-        # Cleanup
-        rm -rf "$TEMP_DIR" "$TEMP_PACKAGE"
-        echo "  ✓ Source downloaded and extracted"
     fi
 
-    # Restore .env file if it was backed up
-    if [ -f "/tmp/urbackup-gui.env.backup" ]; then
-        cp "/tmp/urbackup-gui.env.backup" "$INSTALL_DIR/backend/.env"
-        rm "/tmp/urbackup-gui.env.backup"
-        echo "  ✓ Restored .env configuration"
-    fi
+    # Root-owned updater, its no-argument launcher, the release key and the
+    # sudoers rule for the launcher (see setup/install-root-files.sh).
+    bash "$SRC_DIR/setup/install-root-files.sh" "$SRC_DIR" "$ACTUAL_USER"
 
     # Configure MariaDB
     echo "[5/9] Configuring MariaDB..."
@@ -491,9 +623,9 @@ SQLEOF
 
         # Run database schema
         echo "[6/9] Setting up database schema..."
-        mysql -u root urbackup_gui < $INSTALL_DIR/database/init/01_schema.sql
+        mysql -u root urbackup_gui < "$SRC_DIR/database/init/01_schema.sql"
         # Also run all migrations on fresh install (adds replication, managed mode, etc.)
-        for mig in $INSTALL_DIR/database/migrations/*.sql; do
+        for mig in "$SRC_DIR"/database/migrations/*.sql; do
             echo "  Applying migration: $(basename $mig)..."
             mysql -u root urbackup_gui < "$mig" 2>/dev/null || true
         done
@@ -503,25 +635,31 @@ SQLEOF
     else
         echo "[6/9] Running database migrations (upgrade mode)..."
         # Run any new migration files that exist
-        for mig in $INSTALL_DIR/database/migrations/*.sql; do
+        for mig in "$SRC_DIR"/database/migrations/*.sql; do
             echo "  Applying migration: $(basename $mig)..."
             mysql -u root urbackup_gui < "$mig" 2>/dev/null || true
         done
     fi
 
-    # Install backend dependencies
+    # Install backend dependencies, as the service user, exactly as locked in
+    # package-lock.json (npm ci) and without dependency install scripts. Only
+    # sqlite3 needs its install step (it fetches its prebuilt binary), so it is
+    # rebuilt by name.
+    NPM_CI=(npm ci --ignore-scripts --no-audit --no-fund)
     echo "[7/9] Installing backend dependencies..."
     cd $INSTALL_DIR/backend
-    rm -rf node_modules
+    sudo -u "$ACTUAL_USER" rm -rf node_modules
     if [ "$IS_SOURCE_INSTALL" = true ]; then
         # Need devDependencies (typescript/tsc) to build from source
-        sudo -u $ACTUAL_USER npm install --silent
+        sudo -u "$ACTUAL_USER" "${NPM_CI[@]}" --include=dev --silent
+        sudo -u "$ACTUAL_USER" npm rebuild sqlite3 --silent
         echo "  Building backend from source..."
-        sudo -u $ACTUAL_USER npm run build
+        sudo -u "$ACTUAL_USER" npm run build
         # Remove dev deps from production install
-        sudo -u $ACTUAL_USER npm prune --omit=dev --silent
+        sudo -u "$ACTUAL_USER" npm prune --omit=dev --ignore-scripts --silent
     else
-        sudo -u $ACTUAL_USER npm install --omit=dev --silent
+        sudo -u "$ACTUAL_USER" "${NPM_CI[@]}" --omit=dev --silent
+        sudo -u "$ACTUAL_USER" npm rebuild sqlite3 --silent
         echo "  ✓ Using pre-built backend files"
     fi
 
@@ -529,10 +667,10 @@ SQLEOF
     if [ "$IS_SOURCE_INSTALL" = true ]; then
         echo "[8/9] Building frontend from source..."
         cd $INSTALL_DIR/frontend
-        rm -rf node_modules
-        sudo -u $ACTUAL_USER npm install --silent
-        sudo -u $ACTUAL_USER npm run build
-        sudo -u $ACTUAL_USER npm prune --omit=dev --silent
+        sudo -u "$ACTUAL_USER" rm -rf node_modules
+        sudo -u "$ACTUAL_USER" "${NPM_CI[@]}" --include=dev --silent
+        sudo -u "$ACTUAL_USER" npm run build
+        sudo -u "$ACTUAL_USER" npm prune --omit=dev --ignore-scripts --silent
     else
         echo "[8/9] Frontend setup..."
         echo "  ✓ Using pre-built frontend files"
@@ -540,9 +678,12 @@ SQLEOF
 
     # Configure nginx
     echo "[9/9] Configuring services..."
-    cp $INSTALL_DIR/setup/nginx-site.conf /etc/nginx/sites-available/urbackup-gui
+    if [ ! -e /etc/nginx/sites-available/urbackup-gui ]; then
+        # First install: St0r becomes the default site.
+        rm -f /etc/nginx/sites-enabled/default
+    fi
+    install_nginx_site "$SRC_DIR/setup/nginx-site.conf" /etc/nginx/sites-available/urbackup-gui
     ln -sf /etc/nginx/sites-available/urbackup-gui /etc/nginx/sites-enabled/urbackup-gui
-    rm -f /etc/nginx/sites-enabled/default
 
     # Ensure the service user is in the urbackup group (for SQLite write access)
     if id urbackup &>/dev/null; then
@@ -557,16 +698,12 @@ SQLEOF
                      /var/urbackup 2>/dev/null || true
     fi
 
-    # Install auto-update script
-    cp $INSTALL_DIR/setup/auto-update.sh $INSTALL_DIR/auto-update.sh
-    chmod +x $INSTALL_DIR/auto-update.sh
-
     # Create systemd service for backend
     # Substitute the actual runtime user and node path into the service file
     NODE_BIN=$(command -v node || echo /usr/bin/node)
     sed -e "s|User=administrator|User=${ACTUAL_USER}|g" \
         -e "s|ExecStart=/usr/bin/node|ExecStart=${NODE_BIN}|g" \
-        $INSTALL_DIR/setup/urbackup-gui.service > /etc/systemd/system/urbackup-gui.service
+        "$SRC_DIR/setup/urbackup-gui.service" > /etc/systemd/system/urbackup-gui.service
     systemctl daemon-reload
 
     # Create .env file if it doesn't exist
@@ -575,7 +712,7 @@ SQLEOF
         if [ -z "$GENERATED_DB_PASS" ]; then
             GENERATED_DB_PASS=$(openssl rand -hex 24)
         fi
-        cat > $INSTALL_DIR/backend/.env <<EOF
+        sudo -u "$ACTUAL_USER" bash -c 'umask 027; cat > "$1"' _ "$INSTALL_DIR/backend/.env" <<EOF
 NODE_ENV=production
 PORT=3000
 DB_HOST=localhost
@@ -593,8 +730,6 @@ URBACKUP_PASSWORD=
 # over HTTPS (e.g. after Certbot), off on plain HTTP. true/false force it.
 COOKIE_SECURE=auto
 EOF
-        chown $ACTUAL_USER:$ACTUAL_USER $INSTALL_DIR/backend/.env
-        chmod 640 $INSTALL_DIR/backend/.env
     fi
 
     # Start services
@@ -609,10 +744,34 @@ EOF
     # version.json for this exact version, which has the changelog the About
     # page shows. Overwriting it used to record 3.2.78 over newer code.
     if ! grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"$INSTALLER_VERSION\"" "$VERSION_FILE" 2>/dev/null; then
-        echo "{\"version\":\"$INSTALLER_VERSION\",\"date\":\"$INSTALLER_DATE\"}" > "$VERSION_FILE"
+        echo "{\"version\":\"$INSTALLER_VERSION\",\"date\":\"$INSTALLER_DATE\"}" \
+            | sudo -u "$ACTUAL_USER" bash -c 'cat > "$1.tmp" && mv -f "$1.tmp" "$1"' _ "$VERSION_FILE"
     fi
-    chown $ACTUAL_USER:$ACTUAL_USER "$VERSION_FILE"
 
+    echo ""
+fi
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STEP 5b: HTTPS (--domain)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HTTPS_RESULT=""
+if [ -n "$ST0R_DOMAIN" ]; then
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Enabling HTTPS for $ST0R_DOMAIN"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    if [ ! -e /etc/nginx/sites-available/urbackup-gui ]; then
+        echo "  ✗ No St0r nginx site found; install St0r first."
+        HTTPS_RESULT=failed
+    elif enable_https "$ST0R_DOMAIN" "$ST0R_EMAIL"; then
+        HTTPS_RESULT=ok
+        echo "  ✓ HTTPS enabled; HTTP now redirects to https://$ST0R_DOMAIN"
+    else
+        HTTPS_RESULT=failed
+        echo "  ✗ Certbot could not get a certificate. Check that $ST0R_DOMAIN resolves to this"
+        echo "    server and that port 80 is reachable from the Internet, then run:"
+        echo "      sudo certbot --nginx -d $ST0R_DOMAIN --redirect"
+    fi
     echo ""
 fi
 
@@ -638,7 +797,20 @@ fi
 
 if [ "$INSTALL_STOR" = true ]; then
     echo "✓ St0r GUI v$INSTALLER_VERSION"
-    echo "  Access at: http://$(hostname -I | awk '{print $1}')"
+    if [ "$HTTPS_RESULT" = ok ]; then
+        echo "  Access at: https://$ST0R_DOMAIN"
+    elif grep -Eq '^[[:space:]]*listen[[:space:]].*443' /etc/nginx/sites-available/urbackup-gui 2>/dev/null; then
+        echo "  Access at: https://<your domain> (the existing HTTPS configuration was kept)"
+    else
+        echo "  Access at: http://$(hostname -I | awk '{print $1}')"
+        echo ""
+        echo "  ⚠ St0r is being served over plain HTTP: passwords and backup downloads"
+        echo "    cross the network unencrypted. Next step — enable HTTPS with a DNS name"
+        echo "    that points at this server:"
+        echo "      curl -fsSL https://raw.githubusercontent.com/agit8or1/St0r/main/install.sh \\"
+        echo "        | sudo bash -s -- --domain backup.example.com"
+        echo "    (or from a checkout: sudo ./install.sh --domain backup.example.com)"
+    fi
     echo ""
     # The backend generates this on first start and writes it 0600. Wait briefly,
     # since the service may still be starting.
@@ -651,7 +823,7 @@ if [ "$INSTALL_STOR" = true ]; then
     echo "  Sign in with:"
     echo "    Username: admin"
     if [ -s "$PW_FILE" ]; then
-        echo "    Password: $(cat "$PW_FILE")"
+        echo "    Password: $(sudo -u "$ACTUAL_USER" cat "$PW_FILE")"
         echo ""
         echo "  This password was generated for this installation and saved to:"
         echo "    $PW_FILE"

@@ -4,11 +4,18 @@ import { isWithin } from './safePath.js';
 
 export interface WalkSkip {
   path: string;
-  reason: 'outside-root' | 'loop' | 'broken-link' | 'unlistable-name' | 'special-file';
+  reason: 'outside-root' | 'loop' | 'broken-link' | 'special-file' | 'unreadable';
+}
+
+export interface WalkEntry {
+  /** Path relative to the starting directory, '/'-separated: the name in the archive. */
+  rel: string;
+  /** Absolute path to open. Open it with openFileWithin — the walk is lazy and the tree may change. */
+  path: string;
 }
 
 /**
- * Yield every regular file under `dir`, as a path relative to `dir`, following
+ * Yield every regular file under `dir` (relative and absolute path), following
  * symlinks only while their real target stays inside `root`.
  *
  * UrBackup keeps client symlinks/junctions as real symlinks in the backup tree
@@ -18,14 +25,15 @@ export interface WalkSkip {
  * the server's own files, and a junction loop (`Application Data -> ..`) makes
  * it recurse forever. `root` should be the client's own storage folder.
  *
- * Names containing a newline are skipped: the list is fed to `zip -@`, which
- * reads one name per line.
+ * The walk is lazy, so what it checked can change before a file is read:
+ * consumers must open each entry with openFileWithin(entry.path, realRoot),
+ * which re-checks the file that was actually opened.
  */
 export async function* walkFilesWithin(
   dir: string,
   root: string,
   onSkip: (skip: WalkSkip) => void = () => {},
-): AsyncGenerator<string> {
+): AsyncGenerator<WalkEntry> {
   const realRoot = await realpath(root);
   const startReal = await realpath(dir);
   if (!isWithin(realRoot, startReal)) {
@@ -34,16 +42,12 @@ export async function* walkFilesWithin(
   }
 
   // Ancestors by real path: a link back up the current branch is a loop.
-  async function* walk(abs: string, rel: string, ancestors: Set<string>): AsyncGenerator<string> {
+  async function* walk(abs: string, rel: string, ancestors: Set<string>): AsyncGenerator<WalkEntry> {
     const entries = await readdir(abs);
     entries.sort();
     for (const name of entries) {
       const childAbs = join(abs, name);
       const childRel = rel ? `${rel}/${name}` : name;
-      if (childRel.includes('\n') || childRel.includes('\r')) {
-        onSkip({ path: childRel, reason: 'unlistable-name' });
-        continue;
-      }
 
       const l = await lstat(childAbs);
       let real = childAbs;
@@ -74,7 +78,7 @@ export async function* walkFilesWithin(
         next.add(l.isSymbolicLink() ? real : await realpath(childAbs));
         yield* walk(childAbs, childRel, next);
       } else if (isFile) {
-        yield childRel;
+        yield { rel: childRel, path: childAbs };
       } else {
         onSkip({ path: childRel, reason: 'special-file' });
       }

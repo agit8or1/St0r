@@ -146,11 +146,12 @@ export async function agentPost<T = any>(server: AgentServer, path: string, body
  * Ping the agent health endpoint.
  * Returns { ok, latencyMs } or { ok: false, error }.
  */
-export async function pingAgent(server: AgentServer): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
+export async function pingAgent(server: AgentServer): Promise<{ ok: boolean; latencyMs: number; version?: string; error?: string }> {
   const start = Date.now();
   try {
-    const data = await agentGet<{ ok: boolean }>(server, '/health', 5000);
-    return { ok: data.ok === true, latencyMs: Date.now() - start };
+    const data = await agentGet<{ ok: boolean; version?: unknown }>(server, '/health', 5000);
+    const version = typeof data.version === 'string' && /^[0-9A-Za-z.+-]{1,32}$/.test(data.version) ? data.version : undefined;
+    return { ok: data.ok === true, latencyMs: Date.now() - start, version };
   } catch (e: any) {
     logger.warn(`[agentClient] ping ${server.host}:${server.agent_port} failed: ${e.message}`);
     return { ok: false, latencyMs: Date.now() - start, error: e.message };

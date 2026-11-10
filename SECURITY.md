@@ -36,8 +36,8 @@ You will receive a response within 5 business days. If confirmed, a fix will be 
 
 ### Transport
 - All API traffic proxied through **Nginx**
-- HTTPS strongly recommended for production (see README for Certbot setup)
-- HTTP → HTTPS redirect configurable in Nginx
+- HTTPS strongly recommended for production: `install.sh --domain backup.example.com` gets a Let's Encrypt certificate with Certbot and redirects HTTP to HTTPS. Without it the installer serves plain HTTP and says so at the end
+- Re-running the installer never overwrites an existing nginx site, so Certbot's HTTPS configuration is kept
 - Session cookie `Secure` flag: `COOKIE_SECURE=auto` (the default) sets it whenever the request arrived over HTTPS, so it turns on by itself once Certbot is set up; `true`/`false` force it
 
 ### Input Validation
@@ -66,6 +66,24 @@ You will receive a response within 5 business days. If confirmed, a fix will be 
 - Lines are prefixed `[audit]`: `journalctl -u urbackup-gui | grep '\[audit\]'`
 - UrBackup-level operations proxied through the authenticated backend — never exposed directly
 
+### Installs and updates
+- Releases are signed with the St0r release key (an SSH signature on `st0r-<tag>.tar.gz`); the private key is not stored on GitHub
+- `install.sh` downloads only the signed release asset and verifies it against the public key **inside install.sh itself**, never one that came with the download; it refuses an unsigned or badly signed release, or one whose `VERSION` does not match
+- Updates (About → Update) are verified against `/etc/st0r/release-signers`, owned by root
+- The updater (`/usr/local/lib/st0r/auto-update.sh`) and its launcher (`/usr/local/lib/st0r/start-update`) are root-owned and not writable by the service user. The launcher takes no arguments; the sudo rule the installer adds (`/etc/sudoers.d/st0r-update`) allows only that command
+- `/opt/urbackup-gui` belongs to the service user, so the root-run updater executes nothing from it: database migrations come from the verified tarball, and copying files and every `npm` command run as the service user
+- Dependencies are installed with `npm ci` from the release's signed `package-lock.json`, with install scripts disabled (`--ignore-scripts`; only `sqlite3` is rebuilt by name). Updates never run `npm audit fix`: dependency changes ship in a signed release
+
+Note: other backend features (UrBackup database writes, service control, OS updates) still use `sudo`, so on most installs the service user has wider sudo rights than the update rule above. Treat code execution as the service user as close to root.
+
+### Remote agents
+- Authenticated by API key over TLS with a pinned certificate; the source address allowlist and the key are checked before the request body is read
+- The SSH installer sets `allowed_ips` to the address St0r connects from. An agent with an empty list pins the first source that presents the valid key (St0r, which polls straight after registration); `"*"` allows any source explicitly
+- `/health` reports the agent version, and the Servers page shows when an agent is older than the one St0r ships. Agents do not update themselves: use **Update agent via SSH** or run the install command again (the API key, certificate and settings are kept)
+
+### Backup file downloads
+- File downloads and folder ZIPs check, from the open file descriptor, that the file actually opened is still inside the client's backup folder, so a directory swapped for a symlink after the path check is refused. Folder ZIPs are built in-process from those descriptors
+
 ## Hardening Checklist
 
 After installation:
@@ -73,8 +91,9 @@ After installation:
 - [ ] Change the generated first-run `admin` password, and delete `initial-admin-password.txt`
 - [ ] Set a strong, random `JWT_SECRET` in `.env` (the installer generates one automatically)
 - [ ] Set `APP_SECRET_KEY` to a 32-byte random hex string (`openssl rand -hex 32`)
-- [ ] Enable HTTPS with a valid certificate (Certbot / Let's Encrypt)
+- [ ] Enable HTTPS with a valid certificate (`sudo ./install.sh --domain your.domain`, or Certbot by hand)
 - [ ] Restrict access to port 3000 (backend) — only Nginx should connect to it locally
 - [ ] Firewall: expose only ports 80, 443 (and 55415 for UrBackup internet clients) to the internet
 - [ ] Enable 2FA for the admin account (Profile → Enable 2FA)
-- [ ] Regularly update dependencies (`npm audit` in `backend/` and `frontend/`)
+- [ ] Keep St0r updated (About → Check for Updates); dependency updates arrive in signed releases
+- [ ] Give the service user only the sudo rights it needs; the updater needs only the rule in `/etc/sudoers.d/st0r-update`

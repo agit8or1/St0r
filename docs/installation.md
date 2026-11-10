@@ -48,22 +48,42 @@ sudo bash install.sh
 ```
 
 Run on its own like this, the installer installs the **latest published GitHub release**, the same
-one **About → Check for Updates** installs. Run from inside a clone (`git clone`, then
+one **About → Check for Updates** installs. It downloads the signed release asset
+(`st0r-v<version>.tar.gz` and `.sig`) and verifies the signature against the St0r release key built into
+`install.sh` itself; it refuses to install anything that does not verify. Only releases from 3.2.130 on are
+signed: install older ones from a checkout. Run from inside a clone (`git clone`, then
 `sudo ./install.sh` in it), it installs that checkout. To install a specific release, set
 `ST0R_INSTALL_VERSION`, for example `curl -fsSL …/install.sh | sudo ST0R_INSTALL_VERSION=3.2.118 bash`.
 The first line it prints says which version it chose and why.
 
+To serve St0r over HTTPS from the start, give it a DNS name that already points at the server (port 80 must
+be reachable for the Let's Encrypt challenge):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agit8or1/St0r/main/install.sh \
+  | sudo bash -s -- --domain backup.example.com --email you@example.com
+```
+
+`--email` is optional (expiry notices). Running `install.sh --domain …` on an existing install only enables
+HTTPS.
+
 The installer will:
 
-1. Install Node.js 20, MariaDB, Nginx, `rsync`, `sqlite3` — and UrBackup Server if absent.
+1. Install Node.js 20, MariaDB, Nginx, `rsync`, `sqlite3`, `openssh-client` — and UrBackup Server if absent.
 2. Create the `urbackup_gui` database and apply the schema and migrations.
-3. Build the backend and frontend into `/opt/urbackup-gui`.
-4. Write `/etc/nginx/sites-available/urbackup-gui`, enable it as the **default** site on port 80, and
-   remove `/etc/nginx/sites-enabled/default`.
-5. Add the service user to the `urbackup` group and make `/var/urbackup/backup_server*.db` group-writable.
-6. Install and start the `urbackup-gui` systemd service.
+3. Copy St0r into `/opt/urbackup-gui`, owned by the service user (the user who ran `sudo`), and build the
+   backend and frontend there as that user (`npm ci --ignore-scripts` from the lockfile).
+4. Install the root-owned updater: `/usr/local/lib/st0r/auto-update.sh`, its no-argument launcher
+   `/usr/local/lib/st0r/start-update`, the release key `/etc/st0r/release-signers`, and
+   `/etc/sudoers.d/st0r-update`, which lets the service user run the launcher and nothing else.
+5. On first install, write `/etc/nginx/sites-available/urbackup-gui`, enable it as the **default** site on
+   port 80, and remove `/etc/nginx/sites-enabled/default`. An existing St0r site is never overwritten, so
+   re-running the installer keeps Certbot's HTTPS configuration.
+6. Add the service user to the `urbackup` group and make `/var/urbackup/backup_server*.db` group-writable.
+7. Install and start the `urbackup-gui` systemd service.
+8. With `--domain`, get a certificate with Certbot and redirect HTTP to HTTPS.
 
-Then open `http://YOUR_SERVER_IP` and sign in as `admin`. The installer prints the generated password when
+Then open `http://YOUR_SERVER_IP` (or `https://` your domain) and sign in as `admin`. The installer prints the generated password when
 it finishes; it is also in `/opt/urbackup-gui/initial-admin-password.txt` and the service log. You must
 change it at first login. See [First login](../README.md#first-login).
 
@@ -105,7 +125,7 @@ sudo cp -r . /opt/urbackup-gui/
 sudo chown -R "$USER:$USER" /opt/urbackup-gui
 
 cd /opt/urbackup-gui/backend
-npm install && npm run build
+npm ci --ignore-scripts && npm rebuild sqlite3 && npm run build
 
 cat > .env <<EOF
 NODE_ENV=production
@@ -124,7 +144,7 @@ URBACKUP_PASSWORD=
 EOF
 
 cd /opt/urbackup-gui/frontend
-npm install && npm run build
+npm ci --ignore-scripts && npm run build
 ```
 
 `JWT_SECRET` and `APP_SECRET_KEY` are required — the backend refuses to start without a strong
@@ -143,7 +163,11 @@ sudo chmod g+w /var/urbackup/backup_server.db /var/urbackup/backup_server_settin
 ### 5. Services
 
 ```bash
-sudo cp /opt/urbackup-gui/setup/urbackup-gui.service /etc/systemd/system/
+# Root-owned updater, launcher, release key and its sudo rule — from the checkout,
+# not from /opt (which the service user can write to)
+sudo bash setup/install-root-files.sh "$PWD" "$USER"
+
+sudo cp setup/urbackup-gui.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now urbackup-gui
 
@@ -200,12 +224,22 @@ location / {
 
 ## Enabling HTTPS
 
-The installer configures plain HTTP only. With the bundled Nginx site in place:
+Without `--domain` the installer configures plain HTTP only, and says so when it finishes. To add HTTPS
+later, re-run it with your domain (this only enables HTTPS on an existing install):
+
+```bash
+sudo ./install.sh --domain backup.example.com          # from a checkout
+curl -fsSL https://raw.githubusercontent.com/agit8or1/St0r/main/install.sh | sudo bash -s -- --domain backup.example.com
+```
+
+or run Certbot by hand with the bundled Nginx site in place:
 
 ```bash
 sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d backup.example.com
+sudo certbot --nginx -d backup.example.com --redirect
 ```
+
+Re-running the installer later does not overwrite the Nginx site, so the HTTPS configuration stays.
 
 Do not expose St0r over plain HTTP to an untrusted network — session cookies and the login form travel in
 clear text.
@@ -228,10 +262,17 @@ sudo nginx -t && sudo systemctl restart nginx
 
 ### From the interface
 
-**About → Check for Updates → Update Now.** This runs `/opt/urbackup-gui/auto-update.sh`, which backs up
-the current installation, downloads the release package, preserves `.env` and the `downloads` directory,
-applies database migrations, reinstalls dependencies and restarts the service. It restores the backup
-automatically if the service fails to come back up.
+**About → Check for Updates → Update Now.** The panel runs `sudo /usr/local/lib/st0r/start-update` (no
+arguments), which starts the root-owned `/usr/local/lib/st0r/auto-update.sh`. The updater downloads the
+signed release, verifies it against `/etc/st0r/release-signers` and refuses it if the signature or version
+does not match. It then backs up the current installation, copies the new files in and installs dependencies
+with `npm ci --ignore-scripts` from the release's lockfile, builds — all as the service user — applies the
+database migrations from the verified release, refreshes the root-owned updater files and restarts the
+service. `.env` and the `downloads` directory are preserved. It restores the backup automatically if a step
+fails.
+
+Installs from before 3.2.131 have no launcher yet; their first update from the interface runs
+`/opt/urbackup-gui/setup/auto-update.sh` once, which installs it. Re-running `install.sh` does the same.
 
 ### From a checkout
 
@@ -274,6 +315,10 @@ build output.
 ├── backend/.env                Secrets — preserved across updates
 ├── frontend/dist/              Static files served by nginx
 └── version.json                Version manifest the update checker reads
+
+/usr/local/lib/st0r/            Root-owned updater (auto-update.sh) and its launcher (start-update)
+/etc/st0r/release-signers       Release key updates are verified against
+/etc/sudoers.d/st0r-update      Lets the service user run the launcher, nothing else
 ```
 
 ---
@@ -295,7 +340,7 @@ sudo systemctl daemon-reload
 sudo rm -f /etc/nginx/sites-enabled/urbackup-gui /etc/nginx/sites-available/urbackup-gui
 sudo systemctl restart nginx
 
-sudo rm -rf /opt/urbackup-gui
+sudo rm -rf /opt/urbackup-gui /usr/local/lib/st0r /etc/st0r /etc/sudoers.d/st0r-update
 sudo mysql -u root -e "DROP DATABASE urbackup_gui; DROP USER 'urbackup'@'localhost';"
 ```
 

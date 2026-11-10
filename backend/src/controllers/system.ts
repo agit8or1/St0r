@@ -137,6 +137,28 @@ export async function getSystemMetrics(req: Request, res: Response) {
 
 const execFileAsync = promisify(execFile);
 
+/** Root-owned, takes no arguments; the panel's sudo rule allows exactly this. */
+export const UPDATE_LAUNCHER = '/usr/local/lib/st0r/start-update';
+/**
+ * Installs from before the launcher existed. Their next update runs this copy
+ * of the updater once, which installs the launcher and the root-owned files.
+ */
+export const LEGACY_UPDATE_SCRIPT = '/opt/urbackup-gui/setup/auto-update.sh';
+
+/** The command that starts an update, or null when there is no updater at all. */
+export function updateLaunchCommand(launcherInstalled: boolean, legacyExists = existsSync(LEGACY_UPDATE_SCRIPT)): [string, string[]] | null {
+  if (launcherInstalled) return ['sudo', ['-n', UPDATE_LAUNCHER]];
+  if (!legacyExists) return null;
+  return ['sudo', [
+    'systemd-run',
+    '--unit=urbackup-gui-update',
+    '--description=UrBackup GUI Update',
+    '--property=StandardOutput=append:/var/log/urbackup-gui-update.log',
+    '--property=StandardError=append:/var/log/urbackup-gui-update.log',
+    LEGACY_UPDATE_SCRIPT,
+  ]];
+}
+
 export async function triggerUpdate(req: Request, res: Response) {
   try {
     const user = (req as any).user;
@@ -149,27 +171,15 @@ export async function triggerUpdate(req: Request, res: Response) {
 
     logger.info(`Update triggered by user: ${user.username}`);
 
-    // Execute the update script in the background
-    const updateScript = '/opt/urbackup-gui/auto-update.sh';
-
-    // Check if script exists (no shell needed — use existsSync)
-    if (!existsSync(updateScript)) {
-      logger.error('Update script not found');
+    const launch = updateLaunchCommand(existsSync(UPDATE_LAUNCHER));
+    if (!launch) {
+      logger.error('Update launcher not found');
       res.status(500).json({
         error: 'Update script not found',
-        message: 'The auto-update script is not installed'
+        message: 'The auto-update script is not installed. Re-run install.sh to restore it.'
       });
       return;
     }
-
-    // Start the update in the background
-    // The update script will:
-    // 1. Backup current installation
-    // 2. Download latest version
-    // 3. Stop service
-    // 4. Extract and install
-    // 5. Restart service
-    // 6. Restore backup if anything fails
 
     // If a previous update is still running, return success rather than failing
     try {
@@ -180,13 +190,6 @@ export async function triggerUpdate(req: Request, res: Response) {
       }
     } catch (_e) { /* non-zero exit = not active, continue */ }
 
-    // Reset any previous failed update unit to avoid conflicts
-    try {
-      await execFileAsync('sudo', ['systemctl', 'reset-failed', 'urbackup-gui-update.service']);
-    } catch (_e) {
-      // Ignore errors - unit may not exist
-    }
-
     // Clear the log NOW (synchronously) so the first poll from the frontend
     // never reads stale "SUCCESS" output from a previous run and false-completes.
     const updateLogPath = '/var/log/urbackup-gui-update.log';
@@ -196,16 +199,13 @@ export async function triggerUpdate(req: Request, res: Response) {
       // Log may not exist yet on first run — ignore
     }
 
-    // Run the script as root in the background via systemd-run.
-    // Use --property flags to redirect output instead of a shell pipeline.
-    execFile('sudo', [
-      'systemd-run',
-      '--unit=urbackup-gui-update',
-      '--description=UrBackup GUI Update',
-      '--property=StandardOutput=append:/var/log/urbackup-gui-update.log',
-      '--property=StandardError=append:/var/log/urbackup-gui-update.log',
-      updateScript,
-    ], (error) => {
+    // The launcher resets the previous unit and starts the root-owned updater
+    // in the background (systemd-run); it takes no arguments. The legacy path
+    // has to reset the unit itself.
+    if (launch[1][0] === 'systemd-run') {
+      try { await execFileAsync('sudo', ['systemctl', 'reset-failed', 'urbackup-gui-update.service']); } catch (_e) { /* unit may not exist */ }
+    }
+    execFile(launch[0], launch[1], (error) => {
       if (error) {
         logger.error('Failed to start update script:', error);
       }

@@ -1,35 +1,42 @@
 #!/bin/bash
 # St0r Auto-Update Script
-# Downloads the latest release from GitHub, builds, and installs it.
-# Runs as root via systemd-run. Output is captured to the log file
-# by the caller (systemd StandardOutput/StandardError properties).
+#
+# Installed root-owned as /usr/local/lib/st0r/auto-update.sh and started, as
+# root, by /usr/local/lib/st0r/start-update (via systemd-run). Output is
+# captured to the log file by the unit's StandardOutput/StandardError.
+#
+# The install directory (/opt/urbackup-gui) belongs to the panel's service
+# user, so as root this script trusts and executes nothing from it. As root it
+# only: downloads the release and verifies its signature against
+# /etc/st0r/release-signers; applies the database migrations from the verified
+# tarball; installs the root-owned updater files from the verified tarball; and
+# stops/starts the service. Copying files into /opt and every npm command run
+# as the service user, from the release's own lockfile (npm ci), with install
+# scripts disabled. Dependency changes ship in the signed release only.
 
-# ── Self-exec from /tmp so overwriting this file mid-run doesn't corrupt us ──
+# ── Self-exec from /tmp so replacing this file mid-run doesn't corrupt us ──
 if [[ "$0" != /tmp/st0r-update-* ]]; then
   _self=$(mktemp /tmp/st0r-update-XXXXXX.sh)
   cp "$0" "$_self"
-  chmod +x "$_self"
+  chmod 0700 "$_self"
   exec "$_self" "$@"
 fi
 
 set -euo pipefail
-
-# ── Locate Node.js / npm (systemd-run uses minimal PATH without user profiles) ──
-if ! command -v npm &>/dev/null; then
-  for _npm_bin in /usr/bin/npm \
-                  /usr/local/bin/npm \
-                  /root/.nvm/versions/node/*/bin/npm \
-                  /home/*/.nvm/versions/node/*/bin/npm; do
-    [ -x "$_npm_bin" ] || continue
-    export PATH="${_npm_bin%/npm}:$PATH"
-    break
-  done
-fi
-command -v npm &>/dev/null || { echo "ERROR: npm not found — install Node.js system-wide or ensure nvm is set up"; exit 1; }
-echo "Using npm $(npm --version) at $(command -v npm)"
+# Root's own PATH only — never a directory the service user can write to.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 022
 
 INSTALL_DIR="/opt/urbackup-gui"
+SIGNERS_FILE="/etc/st0r/release-signers"
+# Installs from before the root-owned updater existed reach this script once,
+# through the copy under /opt; that run verifies with the key there and then
+# installs /etc/st0r/release-signers from the verified release.
+LEGACY_SIGNERS_FILE="${INSTALL_DIR}/setup/release-signers"
 BACKUP_DIR="/opt/urbackup-gui-backup-$(date +%Y%m%d-%H%M%S)"
+# Written once the backup has finished; a partial backup is never restored
+# with --delete over the install.
+BACKUP_MARKER=".st0r-backup-complete"
 GITHUB_API="https://api.github.com/repos/agit8or1/St0r/releases/latest"
 TEMP_DIR=$(mktemp -d)
 
@@ -39,6 +46,35 @@ cleanup() {
 trap cleanup EXIT
 
 timestamp() { date '+%Y-%m-%d %H:%M:%S'; }
+# The update page only recognises a failure that prints FAILED.
+refuse() { echo "$(timestamp) ERROR: $*"; echo "FAILED"; exit 1; }
+
+# ── The service user, and the Node.js its service runs ───────────────────────
+SERVICE_USER=$(systemctl show urbackup-gui -p User --value 2>/dev/null || true)
+[ -n "$SERVICE_USER" ] || refuse "cannot read User= from the urbackup-gui service"
+id "$SERVICE_USER" >/dev/null 2>&1 || refuse "service user '${SERVICE_USER}' does not exist"
+SERVICE_GROUP=$(id -gn "$SERVICE_USER")
+SERVICE_HOME=$(getent passwd "$SERVICE_USER" | cut -d: -f6)
+[ -d "$SERVICE_HOME" ] || SERVICE_HOME="$INSTALL_DIR"
+
+# npm is run only as the service user (below), never as root, so it may live in
+# that user's own nvm directory.
+NODE_BIN=$(systemctl show urbackup-gui -p ExecStart --value 2>/dev/null \
+  | sed -n 's/^{ path=\([^ ;]*\).*/\1/p' | head -1)
+[ -x "${NODE_BIN:-}" ] || NODE_BIN=$(command -v node || true)
+[ -x "${NODE_BIN:-}" ] || refuse "node not found (looked at the urbackup-gui service's ExecStart and PATH)"
+NODE_DIR=$(dirname "$NODE_BIN")
+[ -x "$NODE_DIR/npm" ] || refuse "npm not found next to ${NODE_BIN}"
+
+# Run a command as the service user with a clean environment.
+as_service() {
+  runuser -u "$SERVICE_USER" -- env -i \
+    HOME="$SERVICE_HOME" LANG=C.UTF-8 \
+    PATH="$NODE_DIR:/usr/local/bin:/usr/bin:/bin" \
+    npm_config_update_notifier=false npm_config_fund=false npm_config_audit=false \
+    "$@"
+}
+echo "Using npm $(as_service npm --version) at ${NODE_DIR}/npm, as ${SERVICE_USER}"
 
 # ── Automatic rollback on any failure ─────────────────────────────────────────
 rollback() {
@@ -48,12 +84,13 @@ rollback() {
   echo "$(timestamp) ════════════════════════════════════════════════"
   echo "$(timestamp) UPDATE FAILED (exit code $err) — rolling back"
   echo "$(timestamp) ════════════════════════════════════════════════"
-  if [ -d "$BACKUP_DIR" ]; then
+  if [ -f "$BACKUP_DIR/$BACKUP_MARKER" ]; then
     echo "$(timestamp) Restoring from backup $BACKUP_DIR ..."
-    rsync -a --delete "$BACKUP_DIR/" "$INSTALL_DIR/"
+    as_service rsync -a --delete --exclude="$BACKUP_MARKER" "$BACKUP_DIR/" "$INSTALL_DIR/" || \
+      echo "$(timestamp) WARN: restore from $BACKUP_DIR did not complete"
     echo "$(timestamp) Restore complete"
   else
-    echo "$(timestamp) No backup found — cannot restore automatically"
+    echo "$(timestamp) No complete backup — cannot restore automatically"
   fi
   echo "$(timestamp) Restarting urbackup-gui service..."
   systemctl start urbackup-gui 2>/dev/null || true
@@ -67,7 +104,8 @@ truncate -s 0 /var/log/urbackup-gui-update.log 2>/dev/null || true
 echo "$(timestamp) Starting St0r update..."
 
 # ── Read optional GitHub token for higher API rate limits (5000/hr vs 60/hr) ──
-GITHUB_TOKEN=$(grep -E "^GITHUB_TOKEN=" "${INSTALL_DIR}/backend/.env" 2>/dev/null \
+# (.env belongs to the service user, so it is read as that user.)
+GITHUB_TOKEN=$(as_service grep -E "^GITHUB_TOKEN=" "${INSTALL_DIR}/backend/.env" 2>/dev/null \
   | cut -d= -f2- | tr -d '[:space:]') || true
 
 # ── 1. Fetch release info (retry up to 3 times) ───────────────────────────────
@@ -91,13 +129,13 @@ for _attempt in 1 2 3; do
   fi
 
   # Validate the response contains a tag_name field
-  if echo "${RELEASE_JSON}" | python3 -c \
+  if echo "${RELEASE_JSON}" | python3 -I -c \
       "import json,sys; d=json.load(sys.stdin); assert 'tag_name' in d" 2>/dev/null; then
     break
   fi
 
   # Extract GitHub's error message if available
-  _api_err=$(echo "${RELEASE_JSON}" | python3 -c \
+  _api_err=$(echo "${RELEASE_JSON}" | python3 -I -c \
     "import json,sys; print(json.load(sys.stdin).get('message','(no message)'))" \
     2>/dev/null || echo "invalid or empty response")
 
@@ -117,7 +155,7 @@ for _attempt in 1 2 3; do
 done
 
 # Parse version tag
-VERSION=$(echo "$RELEASE_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
+VERSION=$(echo "$RELEASE_JSON" | python3 -I -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
 
 if [ -z "$VERSION" ]; then
   echo "$(timestamp) ERROR: Could not parse version from GitHub response"
@@ -128,23 +166,27 @@ echo "$(timestamp) Latest version: $VERSION"
 
 # ── 1b. Download and verify the signed release tarball ────────────────────
 # Each release carries st0r-<tag>.tar.gz plus a detached SSH signature made with
-# the St0r release key, which never touches GitHub. The public key is the one
-# ALREADY INSTALLED here (setup/release-signers), not one from the download, so
-# whoever can publish a GitHub release still cannot ship code this accepts.
-# Unsigned or badly signed releases are refused — there is no override.
-# The update page only recognises a failure that prints FAILED.
-refuse() { echo "$(timestamp) ERROR: $*"; echo "FAILED"; exit 1; }
-
-SIGNERS_FILE="${INSTALL_DIR}/setup/release-signers"
+# the St0r release key, which never touches GitHub. The public key is the
+# root-owned one already installed here (/etc/st0r/release-signers), not one
+# from the download or from the service user's install directory, so neither
+# whoever can publish a GitHub release nor the panel itself can ship code this
+# accepts. Unsigned or badly signed releases are refused — there is no override.
 ASSET_NAME="st0r-${VERSION}.tar.gz"
 
 if [ ! -s "$SIGNERS_FILE" ]; then
-  refuse "${SIGNERS_FILE} is missing — cannot verify the release signature. Reinstall St0r with install.sh to restore it"
+  # Only before the launcher exists, i.e. when this run was started from /opt.
+  if [ -s "$LEGACY_SIGNERS_FILE" ] && [ ! -e /usr/local/lib/st0r/start-update ]; then
+    echo "$(timestamp) First update with the root-owned updater: verifying with ${LEGACY_SIGNERS_FILE};"
+    echo "$(timestamp) later updates use ${SIGNERS_FILE}, installed from this release."
+    SIGNERS_FILE="$LEGACY_SIGNERS_FILE"
+  else
+    refuse "${SIGNERS_FILE} is missing — cannot verify the release signature. Reinstall St0r with install.sh to restore it"
+  fi
 fi
 command -v ssh-keygen >/dev/null || refuse "ssh-keygen not found (apt install openssh-client)"
 
 asset_url() {
-  echo "$RELEASE_JSON" | python3 -c "
+  echo "$RELEASE_JSON" | python3 -I -c "
 import json, sys
 name = sys.argv[1]
 for a in json.load(sys.stdin).get('assets', []):
@@ -169,7 +211,11 @@ fi
 
 echo "$(timestamp) Extracting update..."
 mkdir -p "$TEMP_DIR/src"
-tar xzf "$TEMP_DIR/release.tar.gz" -C "$TEMP_DIR/src" --strip-components=1
+tar xzf "$TEMP_DIR/release.tar.gz" -C "$TEMP_DIR/src" --strip-components=1 \
+  --no-same-owner --no-same-permissions
+# Root-owned and read-only to everyone else: the service user copies from it.
+chmod -R a+rX,go-w "$TEMP_DIR/src"
+chmod 0755 "$TEMP_DIR"
 
 # A validly signed OLD release re-published under a new tag would pass the
 # signature check, so the version inside must match the tag.
@@ -180,81 +226,82 @@ fi
 echo "$(timestamp) Signature OK, version ${INNER_VERSION}"
 
 # ── 2. Backup current installation ────────────────────────────────────────
+# Updates by older versions of this script ran as root and left root-owned
+# directories in the install tree. Hand directories (only) back to the service
+# user so it can install into them: -h changes a symlink itself, never its
+# target, and directories cannot be hard-linked. Root-owned files inside are
+# replaced by rename, not written in place.
+find "$INSTALL_DIR" -xdev -type d ! -user "$SERVICE_USER" -exec chown -h "${SERVICE_USER}:${SERVICE_GROUP}" {} +
+
 echo "$(timestamp) Creating backup at $BACKUP_DIR..."
+install -d -o "$SERVICE_USER" -g "$SERVICE_GROUP" -m 0700 "$BACKUP_DIR"
 # Exclude node_modules and frontend/dist — they can be rebuilt; including them
 # makes the backup take many minutes and wastes several hundred MB of disk.
-rsync -a \
+as_service rsync -a \
   --exclude='backend/node_modules' \
   --exclude='frontend/node_modules' \
   --exclude='frontend/dist' \
   "$INSTALL_DIR/" "$BACKUP_DIR/"
+as_service touch "$BACKUP_DIR/$BACKUP_MARKER"
 
 # ── 4. Stop service ────────────────────────────────────────────────────────
 echo "$(timestamp) Stopping urbackup-gui service..."
 systemctl stop urbackup-gui 2>/dev/null || true
 
-# ── 5. Install new files (preserve .env) ──────────────────────────────────
+# ── 5. Install new files (preserve .env), as the service user ─────────────
 echo "$(timestamp) Installing new version..."
+SRC="$TEMP_DIR/src"
 # Backend source (compiled from TypeScript below)
-rsync -a --exclude='.env' --exclude='node_modules' --exclude='dist' \
-  "$TEMP_DIR/src/backend/"  "$INSTALL_DIR/backend/"
+as_service rsync -a --exclude='.env' --exclude='node_modules' --exclude='dist' \
+  "$SRC/backend/"  "$INSTALL_DIR/backend/"
 
 # Frontend source
-rsync -a --exclude='node_modules' --exclude='dist' \
-  "$TEMP_DIR/src/frontend/" "$INSTALL_DIR/frontend/"
+as_service rsync -a --exclude='node_modules' --exclude='dist' \
+  "$SRC/frontend/" "$INSTALL_DIR/frontend/"
 
 # Remote agent package. "Install agent" tars this directory as-is and ships it to
 # remote hosts, so --delete keeps files dropped upstream from going with it. Not
 # built here — the agent builds on the host it is installed on.
-rsync -a --delete --exclude='node_modules' --exclude='dist' \
-  "$TEMP_DIR/src/agent/" "$INSTALL_DIR/agent/"
+as_service rsync -a --delete --exclude='node_modules' --exclude='dist' \
+  "$SRC/agent/" "$INSTALL_DIR/agent/"
 
-# Database migrations
-rsync -a "$TEMP_DIR/src/database/" "$INSTALL_DIR/database/"
+# Database migrations (a copy for reference; they are applied from $SRC below)
+as_service rsync -a "$SRC/database/" "$INSTALL_DIR/database/"
 
-# Scripts
-rsync -a "$TEMP_DIR/src/setup/" "$INSTALL_DIR/setup/"
-chmod +x "$INSTALL_DIR/setup/auto-update.sh"
-cp -f "$INSTALL_DIR/setup/auto-update.sh" "$INSTALL_DIR/auto-update.sh"
-chmod +x "$INSTALL_DIR/auto-update.sh"
+# setup/ is kept for reference only: the updater, its launcher and the release
+# key that are actually used are the root-owned copies installed in step 7c.
+as_service rsync -a "$SRC/setup/" "$INSTALL_DIR/setup/"
+# The old root-level copy of the updater is no longer used by anything.
+as_service rm -f "$INSTALL_DIR/auto-update.sh"
 
-# Version manifest (used by /api/version to report the installed version)
-cp -f "$TEMP_DIR/src/version.json" "$INSTALL_DIR/version.json"
-cp -f "$TEMP_DIR/src/VERSION" "$INSTALL_DIR/VERSION"
+# Version manifest (used by /api/version to report the installed version).
+# rsync replaces the files rather than writing through them.
+as_service rsync -a "$SRC/version.json" "$SRC/VERSION" "$INSTALL_DIR/"
 
-# ── 6. Build backend ──────────────────────────────────────────────────────
-echo "$(timestamp) Installing backend dependencies..."
-cd "$INSTALL_DIR/backend"
-# Full install needed so devDependencies (TypeScript) are available for the build
-npm install 2>&1
+# ── 6. Build backend, as the service user ─────────────────────────────────
+# npm ci installs exactly the release's signed package-lock.json (integrity
+# hashes included) and nothing newer; there is no `npm audit fix` here, since
+# that could pull versions the release never shipped. --ignore-scripts keeps
+# dependency install scripts from running; the one native module that needs its
+# install step (sqlite3, which fetches its prebuilt binary) is rebuilt by name.
+# devDependencies (TypeScript, Vite) are needed because the release is source;
+# they come from the same lockfile and are pruned after the build.
+echo "$(timestamp) Installing backend dependencies (npm ci)..."
+as_service bash -c 'cd "$1" && npm ci --include=dev --ignore-scripts 2>&1 && npm rebuild sqlite3 2>&1' _ "$INSTALL_DIR/backend"
 echo "$(timestamp) Dependencies installed successfully"
-
-# Fix non-breaking npm vulnerabilities (no --force to avoid breaking changes)
-echo "$(timestamp) Running npm audit fix (backend)..."
-npm audit fix 2>&1 || true
-echo "$(timestamp) npm audit fix complete"
 
 echo "$(timestamp) Building backend..."
 # Clean previous compiled output to avoid stale files causing tsc errors
-rm -rf dist
-npm run build 2>&1
+as_service bash -c 'cd "$1" && rm -rf dist && npm run build 2>&1 && npm prune --omit=dev --ignore-scripts 2>&1' _ "$INSTALL_DIR/backend"
 echo "$(timestamp) Backend build successful"
 
-# Prune devDependencies after successful build
-npm prune --omit=dev 2>&1
-
-# ── 6b. Build frontend ────────────────────────────────────────────────────
-echo "$(timestamp) Installing frontend dependencies..."
-cd "$INSTALL_DIR/frontend"
-npm install 2>&1
+# ── 6b. Build frontend, as the service user ───────────────────────────────
+echo "$(timestamp) Installing frontend dependencies (npm ci)..."
+as_service bash -c 'cd "$1" && npm ci --include=dev --ignore-scripts 2>&1' _ "$INSTALL_DIR/frontend"
 echo "$(timestamp) Frontend dependencies installed"
 
-echo "$(timestamp) Running npm audit fix (frontend)..."
-npm audit fix 2>&1 || true
-echo "$(timestamp) npm audit fix complete"
-
 echo "$(timestamp) Building frontend..."
-npm run build 2>&1
+as_service bash -c 'cd "$1" && npm run build 2>&1' _ "$INSTALL_DIR/frontend"
 echo "$(timestamp) Frontend build successful"
 
 # ── 7. Run DB migrations ───────────────────────────────────────────────────
@@ -273,7 +320,8 @@ fi
 # no-op. Any error here is therefore a real failure, not the usual "already
 # applied" noise — let it trip the ERR trap and roll back rather than leave the
 # new code running against a half-migrated schema.
-for mig in "$INSTALL_DIR/database/migrations"/*.sql; do
+# Applied as root, so they come from the verified tarball, not from /opt.
+for mig in "$SRC/database/migrations"/*.sql; do
   [ -f "$mig" ] || continue
   echo "$(timestamp) Migration: $(basename "$mig")"
   mysql -u root urbackup_gui < "$mig"
@@ -287,18 +335,20 @@ echo "$(timestamp) Migrations applied successfully"
 # UrBackup Server, which leaves the file browser unable to read anything. Re-assert
 # it here so existing installs are repaired on update (issue #20).
 if id urbackup &>/dev/null; then
-  SERVICE_USER=$(systemctl show urbackup-gui -p User --value 2>/dev/null)
-  [ -z "$SERVICE_USER" ] && SERVICE_USER="administrator"
-  if id "$SERVICE_USER" &>/dev/null; then
-    if id -nG "$SERVICE_USER" 2>/dev/null | tr ' ' '\n' | grep -qx urbackup; then
-      echo "$(timestamp) Storage access OK ($SERVICE_USER is in the urbackup group)"
-    else
-      echo "$(timestamp) Adding $SERVICE_USER to the urbackup group (needed to browse backups)"
-      usermod -a -G urbackup "$SERVICE_USER" || \
-        echo "$(timestamp) WARN: could not add $SERVICE_USER to the urbackup group — the file browser may not be able to read backups"
-    fi
+  if id -nG "$SERVICE_USER" 2>/dev/null | tr ' ' '\n' | grep -qx urbackup; then
+    echo "$(timestamp) Storage access OK ($SERVICE_USER is in the urbackup group)"
+  else
+    echo "$(timestamp) Adding $SERVICE_USER to the urbackup group (needed to browse backups)"
+    usermod -a -G urbackup "$SERVICE_USER" || \
+      echo "$(timestamp) WARN: could not add $SERVICE_USER to the urbackup group — the file browser may not be able to read backups"
   fi
 fi
+
+# ── 7c. Root-owned updater files, from the verified release ───────────────
+# /usr/local/lib/st0r/{auto-update.sh,start-update}, /etc/st0r/release-signers
+# and the sudoers rule for the launcher. A new release key, if any, arrives
+# here — in a release signed by the old one.
+bash "$SRC/setup/install-root-files.sh" "$SRC" "$SERVICE_USER"
 
 # ── 8. Restart service ────────────────────────────────────────────────────
 echo "$(timestamp) Starting urbackup-gui service..."

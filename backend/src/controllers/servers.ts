@@ -7,7 +7,7 @@ import { logger } from '../utils/logger.js';
 import { randomUUID } from 'crypto';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 
 // Also import local system functions for the "local" server
 import { execFile } from 'child_process';
@@ -30,6 +30,26 @@ function getAgentDir(): string {
     if (existsSync(c + '/install.sh')) return c;
   }
   return resolve(__dirname, '../../../agent');
+}
+
+/** Version of the agent this St0r ships (agent/package.json), or null. */
+export function bundledAgentVersion(): string | null {
+  try {
+    const v = JSON.parse(readFileSync(getAgentDir() + '/package.json', 'utf-8')).version;
+    return typeof v === 'string' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when `running` is an older x.y.z than `bundled`. Agents before 1.1.0 report 1.0.0. */
+export function agentUpdateAvailable(running: string | undefined, bundled: string | null): boolean {
+  const parse = (v: string) => v.split(/[.+-]/).slice(0, 3).map((n) => parseInt(n, 10));
+  if (!running || !bundled) return false;
+  const a = parse(running), b = parse(bundled);
+  if ([...a, ...b].some((n) => Number.isNaN(n))) return false;
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] < b[i];
+  return false;
 }
 
 // ---- Ensure managed_servers table exists ----
@@ -384,7 +404,8 @@ export async function installAgent(req: Request, res: Response) {
       ssh_known_host_fingerprint: server.ssh_known_host_fingerprint,
     },
     agentDir,
-    server.agent_port || 7420
+    server.agent_port || 7420,
+    { update: req.body?.update === true || req.query.update === '1' }
   );
 
   if (result.ok && result.apiKey) {
@@ -454,7 +475,10 @@ export async function pingAgentEndpoint(req: Request, res: Response) {
   if (result.ok) {
     await query('UPDATE managed_servers SET last_seen = ? WHERE id = ?', [Date.now(), server.id]);
   }
-  res.json(result);
+  // Agents do not update themselves; tell the UI when this one is behind.
+  // Agents before 1.1.0 reported a fixed "1.0.0".
+  const latestVersion = bundledAgentVersion();
+  res.json({ ...result, latestVersion, updateAvailable: result.ok && agentUpdateAvailable(result.version ?? '1.0.0', latestVersion) });
 }
 
 // ---- OS Updates ----

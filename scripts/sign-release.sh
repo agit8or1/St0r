@@ -7,8 +7,10 @@
 # Run AFTER the tag is pushed and the GitHub release exists. The private key
 # stays on the release machine (default ~/.config/st0r-release/release_ed25519,
 # override with ST0R_RELEASE_KEY) — never commit it or put it in CI secrets.
-# Installs verify against setup/release-signers. To rotate the key, ship the
-# new public key in setup/release-signers in a release signed by the OLD key.
+# Updates verify against /etc/st0r/release-signers (installed from
+# setup/release-signers); fresh installs verify against the copy of the key in
+# install.sh (RELEASE_SIGNERS). To rotate the key, ship the new public key in
+# setup/release-signers AND install.sh in a release signed by the OLD key.
 set -euo pipefail
 
 TAG="${1:?usage: $0 <tag> [--no-upload]}"

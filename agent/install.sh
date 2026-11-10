@@ -48,7 +48,9 @@ cd "$INSTALL_DIR"
 echo "--- Installing npm dependencies ---"
 # TypeScript is a dev dependency: --omit=dev left nothing to compile with.
 # Install from the lockfile, build, then drop the build-only packages.
-npm ci --include=dev 2>&1
+# --ignore-scripts: none of the agent's packages needs an install script, and
+# this runs as root.
+npm ci --include=dev --ignore-scripts --no-audit --no-fund 2>&1
 echo "--- Building agent ---"
 npm run build 2>&1
 npm prune --omit=dev 2>&1
@@ -57,19 +59,52 @@ npm prune --omit=dev 2>&1
 mkdir -p "$CONFIG_DIR"
 chmod 700 "$CONFIG_DIR"
 
+# Source allowlist: the address(es) St0r connects from. St0r passes its own
+# address in STOR_AGENT_ALLOWED_IPS (comma or space separated; "*" = any).
+# Left empty, the agent pins the first source that presents the API key —
+# St0r, which polls right after registration — and saves it. It is never open
+# to every address by default.
+ALLOWED_JSON=""
+if [ -n "${STOR_AGENT_ALLOWED_IPS:-}" ]; then
+  IFS=', ' read -r -a _ips <<< "$STOR_AGENT_ALLOWED_IPS"
+  for ip in "${_ips[@]}"; do
+    [ -n "$ip" ] || continue
+    if ! printf '%s' "$ip" | grep -Eq '^(\*|[0-9A-Fa-f:.]{2,45})$'; then
+      echo "ERROR: STOR_AGENT_ALLOWED_IPS: '$ip' is not an IP address" >&2
+      exit 1
+    fi
+    ALLOWED_JSON="${ALLOWED_JSON:+$ALLOWED_JSON, }\"$ip\""
+  done
+fi
+
 if [ ! -f "$CONFIG_DIR/config.json" ]; then
   API_KEY=$(node -e "const c=require('crypto');console.log(c.randomBytes(32).toString('hex'))")
+  ( umask 077
   cat > "$CONFIG_DIR/config.json" <<CONF
 {
   "api_key": "$API_KEY",
   "port": $PORT,
-  "allowed_ips": []
+  "allowed_ips": [${ALLOWED_JSON}]
 }
 CONF
+  )
   chmod 600 "$CONFIG_DIR/config.json"
   echo "--- Generated API key ---"
 else
   echo "--- Using existing API key ---"
+  if [ -n "$ALLOWED_JSON" ]; then
+    STOR_ALLOWED="[${ALLOWED_JSON}]" node -e '
+      const fs = require("fs"), f = process.argv[1];
+      const c = JSON.parse(fs.readFileSync(f, "utf-8"));
+      c.allowed_ips = JSON.parse(process.env.STOR_ALLOWED);
+      fs.writeFileSync(f + ".tmp", JSON.stringify(c, null, 2), { mode: 0o600 });
+      fs.renameSync(f + ".tmp", f);' "$CONFIG_DIR/config.json"
+  fi
+fi
+if [ -n "$ALLOWED_JSON" ]; then
+  echo "--- Accepting St0r connections from: $ALLOWED_JSON ---"
+else
+  echo "--- allowed_ips not set: the first source to present the API key will be pinned ---"
 fi
 
 # TLS. St0r reaches remote agents over HTTPS only. Unless tls.env already

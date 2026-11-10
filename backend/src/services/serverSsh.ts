@@ -152,10 +152,20 @@ async function readAgentTlsFingerprint(client: SshClient): Promise<string | null
  * API key and, when the agent uses its self-signed certificate, that
  * certificate's fingerprint for the backend to pin.
  */
+/**
+ * Environment for agent/install.sh over SSH. SSH_CLIENT is expanded by the
+ * remote shell: it is the address this St0r server connects from, as the agent
+ * host sees it, and becomes the agent's source allowlist.
+ */
+export function agentInstallEnv(agentPort: number): string {
+  return `STOR_AGENT_ALLOWED_IPS="\${SSH_CLIENT%% *}" STOR_AGENT_PORT=${Number(agentPort) || 7420}`;
+}
+
 export async function installAgentViaSsh(
   target: SshTarget,
   agentDir: string,
-  agentPort: number
+  agentPort: number,
+  { update = false }: { update?: boolean } = {}
 ): Promise<{ ok: boolean; apiKey?: string; tlsFingerprint?: string | null; error?: string }> {
   let client: SshClient | null = null;
   try {
@@ -170,7 +180,9 @@ export async function installAgentViaSsh(
     // to get a certificate; the installer keeps its API key.
     const hasTlsSettings = (await execSsh(client, 'test -e /etc/stor-agent/tls.env && echo yes || echo no')).stdout.trim() === 'yes';
 
-    if (isInstalled && hasTlsSettings) {
+    // update: install the bundled agent over the running one (config, API key
+    // and certificate are kept by install.sh).
+    if (isInstalled && hasTlsSettings && !update) {
       // Just retrieve the existing API key
       const keyResult = await execSsh(client, 'cat /etc/stor-agent/config.json 2>/dev/null || echo {}');
       try {
@@ -201,7 +213,7 @@ export async function installAgentViaSsh(
       'mkdir -p /tmp/stor-agent-install',
       `echo "${agentTarB64}" | base64 -d | tar xzf - -C /tmp/stor-agent-install`,
       `chmod +x /tmp/stor-agent-install/install.sh`,
-      `STOR_AGENT_PORT=${agentPort} bash /tmp/stor-agent-install/install.sh`,
+      `${agentInstallEnv(agentPort)} bash /tmp/stor-agent-install/install.sh`,
       'rm -rf /tmp/stor-agent-install',
     ].join(' && ');
 

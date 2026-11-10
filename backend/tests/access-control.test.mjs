@@ -158,3 +158,106 @@ test('folder zip follows links inside the client folder, skips links out and loo
   assert.ok(names.includes('sub/deep.txt'), names.join(','));
   for (const n of names) assert.doesNotMatch(n, /other-customer|server-root|secret|escape|loop/, n);
 });
+
+// ── Download TOCTOU: the file actually opened must still be inside the folder ──
+// A directory on the vetted path is swapped for a symlink after the realpath
+// check. O_NOFOLLOW alone only covers the last component, so it opens the file.
+const { openFileWithin, OutsideRootError } = await import('../dist/utils/safeOpen.js');
+const { zipVettedFiles } = await import('../dist/controllers/browse.js');
+const { ZipWriter } = await import('../dist/utils/zipStream.js');
+const { open: openFile } = await import('node:fs/promises');
+const { constants: fsc } = await import('node:fs');
+
+function swappedTree() {
+  const t = realpathSync(mkdtempSync(join(tmpdir(), 'stor-toctou-')));
+  mkdirSync(join(t, 'client', 'real'), { recursive: true });
+  mkdirSync(join(t, 'outside'));
+  writeFileSync(join(t, 'client', 'real', 'ok.txt'), 'ok-data');
+  writeFileSync(join(t, 'outside', 'ok.txt'), 'OUTSIDE');
+  // "dir" passed the check as a real directory; it is now a link out.
+  symlinkSync(join(t, 'outside'), join(t, 'client', 'dir'));
+  symlinkSync(join(t, 'outside', 'ok.txt'), join(t, 'client', 'leaf'));
+  after(() => rmSync(t, { recursive: true, force: true }));
+  return { t, client: join(t, 'client') };
+}
+
+test('openFileWithin refuses a path whose directory was swapped for a link out', async () => {
+  const { client } = swappedTree();
+  const swapped = join(client, 'dir', 'ok.txt');
+  // The protection this replaces: O_NOFOLLOW on the last component lets it through.
+  const h = await openFile(swapped, fsc.O_RDONLY | fsc.O_NOFOLLOW);
+  assert.equal((await h.readFile()).toString(), 'OUTSIDE');
+  await h.close();
+  await assert.rejects(openFileWithin(swapped, client), OutsideRootError);
+  await assert.rejects(openFileWithin(join(client, 'leaf'), client), /ELOOP|symbolic/);
+  const ok = await openFileWithin(join(client, 'real', 'ok.txt'), client);
+  assert.equal((await ok.handle.readFile()).toString(), 'ok-data');
+  await ok.handle.close();
+});
+
+/** Collect what a writer receives into a Buffer. */
+function sinkToBuffer() {
+  const chunks = [];
+  const w = new Writable({ write(c, _e, cb) { chunks.push(c); cb(); } });
+  const done = new Promise((resolve) => w.on('finish', () => resolve(Buffer.concat(chunks))));
+  return { w, done };
+}
+
+test('folder zip skips an entry that left the client folder after the walk', async () => {
+  const { t, client } = swappedTree();
+  async function* entries() {
+    yield { rel: 'real/ok.txt', path: join(client, 'real', 'ok.txt') };
+    yield { rel: 'dir/ok.txt', path: join(client, 'dir', 'ok.txt') }; // vetted, then swapped
+  }
+  const { w, done } = sinkToBuffer();
+  const skipped = [];
+  await zipVettedFiles(entries(), client, w, (s) => skipped.push(s));
+  const zipPath = join(t, 'out.zip');
+  writeFileSync(zipPath, await done);
+  assert.deepEqual(execFileSync('unzip', ['-Z1', zipPath]).toString().trim().split('\n'), ['real/ok.txt']);
+  assert.equal(execFileSync('unzip', ['-p', zipPath, 'real/ok.txt']).toString(), 'ok-data');
+  assert.doesNotMatch((await done).toString('latin1'), /OUTSIDE/);
+  assert.deepEqual(skipped, [{ path: 'dir/ok.txt', reason: 'outside-root' }]);
+});
+
+test('folder zip is built in-process, without the zip command', async () => {
+  const savedPath = process.env.PATH;
+  process.env.PATH = '/nonexistent';
+  let r;
+  try {
+    r = await call(downloadFolder, admin, { clientId: '1', backupId: '7', path: 'sub' });
+  } finally {
+    process.env.PATH = savedPath;
+  }
+  assert.equal(r.code, 200);
+  const zipPath = join(root, 'sub.zip');
+  writeFileSync(zipPath, r.raw);
+  execFileSync('unzip', ['-tq', zipPath]);
+  assert.equal(execFileSync('unzip', ['-p', zipPath, 'deep.txt']).toString(), 'deep');
+});
+
+for (const zip64 of [false, true]) {
+  test(`zip writer output is a valid archive${zip64 ? ' (ZIP64 entries)' : ''}`, async () => {
+    const t = realpathSync(mkdtempSync(join(tmpdir(), 'stor-zip-')));
+    after(() => rmSync(t, { recursive: true, force: true }));
+    const files = { 'empty.txt': Buffer.alloc(0), 'ünïcode/naïve.txt': Buffer.from('héllo'),
+                    'random.bin': (await import('node:crypto')).randomBytes(300_000) };
+    const { w, done } = sinkToBuffer();
+    const zip = new ZipWriter(w, zip64 ? 0 : undefined);
+    for (const [name, data] of Object.entries(files)) {
+      const p = join(t, name.replace(/\//g, '_'));
+      writeFileSync(p, data);
+      const h = await openFile(p);
+      await zip.addFile(name, h, await h.stat());
+      await h.close();
+    }
+    await zip.finish();
+    const zipPath = join(t, 'out.zip');
+    writeFileSync(zipPath, await done);
+    execFileSync('unzip', ['-tq', zipPath]);
+    const py = `import sys, zipfile, json\nz = zipfile.ZipFile(sys.argv[1])\nassert z.testzip() is None\nprint(json.dumps({i.filename: z.read(i).hex() for i in z.infolist()}))`;
+    const got = JSON.parse(execFileSync('python3', ['-I', '-c', py, zipPath]).toString());
+    assert.deepEqual(Object.keys(got).sort(), Object.keys(files).sort());
+    for (const [name, data] of Object.entries(files)) assert.equal(got[name], data.toString('hex'), name);
+  });
+}

@@ -9,6 +9,8 @@ import { openUrBackupSettingsDbReadOnly } from '../config/urbackupDb.js';
 import { audit } from '../utils/audit.js';
 import { isWithin } from '../utils/safePath.js';
 import { walkFilesWithin, WalkSkip } from '../utils/safeWalk.js';
+import { openFileWithin, OutsideRootError } from '../utils/safeOpen.js';
+import { ZipWriter } from '../utils/zipStream.js';
 
 const dbService = new UrBackupDbService();
 
@@ -344,7 +346,6 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
 
     // Construct the full file path
     const pathModule = await import('path');
-    const fs = await import('fs');
 
     // Read backup folder location
     const backupFolder = await resolveBackupFolder();
@@ -370,23 +371,33 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    // From here on use only the resolved path that was checked. Opening the
-    // unresolved one would let a symlink swapped in after the check point the
-    // read somewhere else. Open once and work from the handle, so the file that
-    // is stat'ed is the file that is streamed.
+    // The realpath check above can go stale: any directory on the way may be
+    // swapped for a symlink before the open. openFileWithin re-checks the file
+    // that was actually opened, from its descriptor. Work from that handle
+    // only, so the file that is stat'ed is the file that is streamed.
     let handle: import('fs/promises').FileHandle;
+    let stats: import('fs').Stats;
     try {
-      handle = await fs.promises.open(resolvedDlFull, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
-    } catch {
+      ({ handle, stats } = await openFileWithin(resolvedDlFull, resolvedDlBase));
+    } catch (err) {
+      if (err instanceof OutsideRootError) {
+        logger.warn(`[${req.user?.username || 'unknown'}] download refused: ${resolvedDlFull} changed to leave ${resolvedDlBase}`);
+        res.status(403).json({ error: 'Invalid file path' });
+        return;
+      }
       res.status(404).json({ error: 'File not found' });
       return;
     }
 
-    const stats = await handle.stat();
-
     if (stats.isDirectory()) {
       await handle.close();
       res.status(400).json({ error: 'Cannot download a directory' });
+      return;
+    }
+
+    if (!stats.isFile()) {
+      await handle.close();
+      res.status(400).json({ error: 'Not a regular file' });
       return;
     }
 
@@ -405,7 +416,13 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', stats.size);
 
-    const readStream = handle.createReadStream();
+    if (stats.size === 0) {
+      await handle.close();
+      res.end();
+      return;
+    }
+    // At most the size that was sent as Content-Length.
+    const readStream = handle.createReadStream({ start: 0, end: stats.size - 1 });
     readStream.pipe(res);
 
     readStream.on('error', (error) => {
@@ -421,6 +438,46 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
       res.status(500).json({ error: 'Failed to download file' });
     }
   }
+}
+
+async function* prepend<T>(head: T, rest: AsyncIterable<T>): AsyncGenerator<T> {
+  yield head;
+  yield* rest;
+}
+
+/**
+ * Write a ZIP of `files` to `out`. Every file is opened with openFileWithin
+ * against `realRoot` and archived from that handle; one that has moved out of
+ * `realRoot`, or is no longer a regular file, is skipped. Ends `out`.
+ * Exported for tests.
+ */
+export async function zipVettedFiles(
+  files: AsyncIterable<{ rel: string; path: string }>,
+  realRoot: string,
+  out: import('stream').Writable,
+  onSkip: (skip: WalkSkip) => void = () => {},
+): Promise<void> {
+  const zip = new ZipWriter(out);
+  for await (const entry of files) {
+    if (out.destroyed) return;
+    let opened;
+    try {
+      opened = await openFileWithin(entry.path, realRoot);
+    } catch (err) {
+      onSkip({ path: entry.rel, reason: err instanceof OutsideRootError ? 'outside-root' : 'unreadable' });
+      continue;
+    }
+    try {
+      if (!opened.stats.isFile()) {
+        onSkip({ path: entry.rel, reason: 'special-file' });
+        continue;
+      }
+      await zip.addFile(entry.rel, opened.handle, opened.stats);
+    } finally {
+      await opened.handle.close().catch(() => undefined);
+    }
+  }
+  if (!out.destroyed) await zip.finish();
 }
 
 /**
@@ -468,10 +525,13 @@ export async function downloadFolder(req: AuthRequest, res: Response): Promise<v
     const folderName = pathModule.basename(resolvedFull) || 'backup';
     const zipName = `${folderName}.zip`;
 
-    // Build the file list ourselves rather than `zip -r`, which follows every
+    // Walk the folder ourselves rather than `zip -r`, which follows every
     // symlink: links that leave this client's storage folder are skipped, and
-    // junction loops are cut (see walkFilesWithin).
-    const clientRoot = pathModule.join(backupFolder, client.name);
+    // junction loops are cut (see walkFilesWithin). Each file is then opened
+    // with openFileWithin, which checks the file actually opened is still in
+    // the client's folder, and archived from that handle — nothing is
+    // re-opened by name after the check.
+    const clientRoot = resolveStoragePath(pathModule.join(backupFolder, client.name), 'Client folder not found');
     const skipped: WalkSkip[] = [];
     const files = walkFilesWithin(resolvedFull, clientRoot, (s) => skipped.push(s));
     const first = await files.next();
@@ -485,29 +545,12 @@ export async function downloadFolder(req: AuthRequest, res: Response): Promise<v
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(zipName)}`);
 
-    const { spawn } = await import('child_process');
-    // `zip -q - -@`: names from stdin (one per line), archive to stdout. No -r,
-    // so zip reads exactly the vetted list and never walks on its own.
-    const zip = spawn('zip', ['-q', '-', '-@'], { cwd: resolvedFull, stdio: ['pipe', 'pipe', 'ignore'] });
-    zip.stdout.pipe(res);
-    zip.on('error', (e) => {
-      logger.error('[browse] zip error:', e);
-      if (!res.headersSent) res.status(500).json({ error: 'Failed to create zip' });
-      else res.destroy();
-    });
-    zip.stdin.on('error', () => { /* zip exited early; reported via 'error'/'close' */ });
-    res.on('close', () => { if (zip.exitCode === null) zip.kill(); });
-
-    const write = (line: string) =>
-      zip.stdin.write(line + '\n') ? Promise.resolve() : new Promise<void>((r) => zip.stdin.once('drain', () => r()));
     try {
-      await write(first.value);
-      for await (const rel of files) {
-        if (zip.exitCode !== null || res.destroyed) break;
-        await write(rel);
-      }
-    } finally {
-      zip.stdin.end();
+      await zipVettedFiles(prepend(first.value, files), clientRoot, res, (s) => skipped.push(s));
+    } catch (e) {
+      // Headers and part of the archive are out; all that is left is to cut it off.
+      logger.error('[browse] zip error:', e);
+      res.destroy();
     }
     if (skipped.length) {
       const outside = skipped.filter((s) => s.reason === 'outside-root').length;

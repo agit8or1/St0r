@@ -151,13 +151,19 @@ Then open `http://YOUR_SERVER_IP`.
 
 Read this before running it on a server that already serves web content:
 
-- **Installs packages:** Node.js 20, MariaDB, Nginx, `rsync`, `sqlite3`, `curl`, `gnupg2`. If UrBackup
+- **Installs packages:** Node.js 20, MariaDB, Nginx, `rsync`, `sqlite3`, `curl`, `gnupg2`, `openssh-client`. If UrBackup
   Server is absent, it installs that too.
 - **Takes over Nginx's default site.** It enables its own site as `listen 80 default_server` and **removes
   `/etc/nginx/sites-enabled/default`**. If something else already serves port 80, put St0r behind your
   existing proxy instead — the backend listens on `127.0.0.1:3000`.
-- **Serves plain HTTP on port 80.** No TLS is configured. Terminate TLS at your own proxy before exposing
-  St0r to anything untrusted.
+- **Serves plain HTTP on port 80 unless you pass `--domain`.** With
+  `curl … | sudo bash -s -- --domain backup.example.com` it gets a Let's Encrypt certificate with Certbot
+  and redirects to HTTPS. Otherwise terminate TLS at your own proxy before exposing St0r to anything
+  untrusted. Re-running the installer never overwrites an existing St0r Nginx site.
+- **Verifies what it installs.** It downloads the signed release asset and checks the signature against
+  the release key inside `install.sh`, refusing anything that does not verify.
+- **Installs a root-owned updater** in `/usr/local/lib/st0r` with the release key in `/etc/st0r`, and a
+  sudo rule (`/etc/sudoers.d/st0r-update`) that lets the service user start an update and nothing else.
 - **Adjusts UrBackup database permissions** — adds the service user to the `urbackup` group and makes
   `/var/urbackup/backup_server*.db` group-writable.
 - **Creates a systemd service** `urbackup-gui` and a MariaDB database `urbackup_gui`.

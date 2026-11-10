@@ -480,6 +480,18 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
   // OS upgradable count
   const [upgradableCount, setUpgradableCount] = useState<number | null>(null);
 
+  // Agent version: agents do not update themselves, so say when one is behind.
+  const [agentVersion, setAgentVersion] = useState<{ version?: string; latestVersion?: string | null; updateAvailable?: boolean } | null>(null);
+  const [updatingAgent, setUpdatingAgent] = useState(false);
+  const checkAgentVersion = useCallback(async () => {
+    if (server.is_local || !server.agent_installed) return;
+    try {
+      const resp = await fetch(`/api/servers/${server.id}/ping`, { credentials: 'include' });
+      if (resp.ok) setAgentVersion(await resp.json());
+    } catch { /* shown as offline by the metrics poll */ }
+  }, [server.id, server.is_local, server.agent_installed]);
+  useEffect(() => { checkAgentVersion(); }, [checkAgentVersion]);
+
   const fetchMetrics = useCallback(async () => {
     setLoadingMetrics(true);
     try {
@@ -565,6 +577,25 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
       setInstallError(e.message);
     } finally {
       setInstallingAgent(false);
+    }
+  };
+
+  const updateAgent = async () => {
+    setUpdatingAgent(true);
+    setInstallError('');
+    try {
+      const resp = await fetch(`/api/servers/${server.id}/install-agent`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ update: true }),
+      });
+      const d = await resp.json();
+      if (!resp.ok || !d.success) throw new Error(d.error || 'Agent update failed');
+      await checkAgentVersion();
+    } catch (e: any) {
+      setInstallError(e.message);
+    } finally {
+      setUpdatingAgent(false);
     }
   };
 
@@ -711,6 +742,36 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
                   <code className="text-xs text-green-400 font-mono break-all leading-relaxed">{installCmd}</code>
                   <p className="text-xs text-gray-500 mt-2">Expires in 24 hours. The agent registers automatically after install.</p>
                 </div>
+              )}
+              {installError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{installError}</p>}
+            </div>
+          )}
+
+          {/* Agent older than the one this St0r ships */}
+          {!server.is_local && server.agent_installed && agentVersion?.updateAvailable && (
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Agent update available: {agentVersion.version || 'unknown'} → {agentVersion.latestVersion}
+              </p>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                Agents do not update themselves. Installing again keeps the agent's API key, certificate and settings.
+              </p>
+              {user?.isAdmin && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {(server.has_ssh_key || server.has_ssh_password) && (
+                    <button onClick={updateAgent} disabled={updatingAgent} className="btn btn-primary text-sm flex items-center gap-2">
+                      {updatingAgent ? <Loader className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      {updatingAgent ? 'Updating...' : 'Update agent via SSH'}
+                    </button>
+                  )}
+                  <button onClick={getInstallCommand} disabled={installCmdLoading} className="btn btn-secondary text-sm flex items-center gap-2">
+                    {installCmdLoading ? <Loader className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+                    Get Install Command
+                  </button>
+                </div>
+              )}
+              {showInstallCmd && installCmd && server.agent_installed && server.agent_tls_fingerprint && (
+                <code className="block mt-2 text-xs bg-gray-950 text-green-400 font-mono break-all rounded p-2">{installCmd}</code>
               )}
               {installError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{installError}</p>}
             </div>

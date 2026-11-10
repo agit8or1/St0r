@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
@@ -20,6 +20,22 @@ interface AgentConfig {
   allowed_ips: string[];
 }
 
+// Reported by /health so St0r can tell when this agent is older than the one
+// it ships (agent/package.json is in the installed package, one level up).
+const AGENT_VERSION: string = (() => {
+  try {
+    return JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8')).version || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+})();
+
+function saveConfig(config: AgentConfig): void {
+  const tmp = `${CONFIG_FILE}.tmp-${process.pid}`;
+  writeFileSync(tmp, JSON.stringify(config, null, 2), { mode: 0o600 });
+  renameSync(tmp, CONFIG_FILE);
+}
+
 function loadOrCreateConfig(): AgentConfig {
   if (!existsSync(CONFIG_DIR)) {
     mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
@@ -31,12 +47,14 @@ function loadOrCreateConfig(): AgentConfig {
       // fall through to create new
     }
   }
+  // An empty allowlist is pinned to the first source that presents the key
+  // (see below); install.sh normally fills it with St0r's address.
   const config: AgentConfig = {
     api_key: randomBytes(32).toString('hex'),
     port: parseInt(process.env.STOR_AGENT_PORT || '7420', 10),
     allowed_ips: [],
   };
-  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
+  saveConfig(config);
   console.log(`[stor-agent] New API key generated. Config saved to ${CONFIG_FILE}`);
   // The API key is only in the root-readable config file: printing it put it
   // in the journal, readable by anyone in the adm or systemd-journal group.
@@ -116,7 +134,6 @@ async function getDisk() {
 // ---------- Express app ----------
 
 const app = express();
-app.use(express.json());
 
 /**
  * Constant-time API key check. Both sides are hashed first so the comparison
@@ -129,11 +146,28 @@ function keyMatches(given: string | undefined, expected: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-// API key auth middleware
+const normalizeIp = (ip: string) => ip.trim().replace(/^::ffff:/, '');
+const refusedLogged = new Set<string>();
+
+// Health — no auth required. Carries the agent version so St0r can offer an update.
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, version: AGENT_VERSION });
+});
+
+// Source allowlist and API key, BEFORE anything reads the request body.
+//  - allowed_ips lists the addresses St0r connects from; "*" allows any.
+//  - Empty (agents installed without one): the first source that presents the
+//    valid key — St0r, which polls right after registration — is pinned and
+//    saved. Nothing is open to every address.
 app.use((req, res, next) => {
-  if (req.path === '/health') { next(); return; }
-  const peer = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
-  if (config.allowed_ips.length && !config.allowed_ips.some(ip => ip.replace(/^::ffff:/, '') === peer)) {
+  const peer = normalizeIp(req.socket.remoteAddress || '');
+  const allowed = Array.isArray(config.allowed_ips) ? config.allowed_ips.filter((ip) => typeof ip === 'string').map(normalizeIp).filter(Boolean) : [];
+  const pinNow = allowed.length === 0;
+  if (!pinNow && !allowed.includes('*') && !allowed.includes(peer)) {
+    if (refusedLogged.size < 100 && !refusedLogged.has(peer)) {
+      refusedLogged.add(peer);
+      console.warn(`[stor-agent] Refused ${peer}: not in allowed_ips in ${CONFIG_FILE}`);
+    }
     res.status(403).json({ error: 'Source address not permitted' });
     return;
   }
@@ -142,13 +176,20 @@ app.use((req, res, next) => {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
+  if (pinNow && peer) {
+    config.allowed_ips = [peer];
+    try {
+      saveConfig(config);
+      console.log(`[stor-agent] allowed_ips was empty; pinned to ${peer}, the first source with the valid API key`);
+    } catch (e) {
+      console.error('[stor-agent] could not save the pinned allowlist:', e);
+    }
+  }
   next();
 });
 
-// Health — no auth required
-app.get('/health', (_req, res) => {
-  res.json({ ok: true, version: '1.0.0' });
-});
+// Only authenticated requests get this far.
+app.use(express.json());
 
 // Metrics
 app.get('/metrics', async (_req, res) => {
@@ -238,23 +279,30 @@ app.get('/stor-version', async (_req, res) => {
   }
 });
 
-// Trigger St0r update (if installed)
+// Trigger St0r update (if installed). St0r installs a root-owned launcher that
+// takes no arguments; installs from before it existed still have only the
+// updater under /opt, which (when run once) installs the launcher.
+const STOR_START_UPDATE = '/usr/local/lib/st0r/start-update';
+const STOR_LEGACY_UPDATER = '/opt/urbackup-gui/setup/auto-update.sh';
 app.post('/stor-update', async (_req, res) => {
-  const updateScript = '/opt/urbackup-gui/auto-update.sh';
   const logFile = '/var/log/urbackup-gui-update.log';
-  if (!existsSync(updateScript)) {
+  const useLauncher = existsSync(STOR_START_UPDATE);
+  if (!useLauncher && !existsSync(STOR_LEGACY_UPDATER)) {
     res.status(404).json({ error: 'St0r not installed at /opt/urbackup-gui' });
     return;
   }
   try {
-    try { await execFileAsync('systemctl', ['reset-failed', 'urbackup-gui-update.service']); } catch { /* ok */ }
     writeFileSync(logFile, '');
-    execFile('systemd-run', [
-      '--unit=urbackup-gui-update',
-      `--property=StandardOutput=append:${logFile}`,
-      `--property=StandardError=append:${logFile}`,
-      updateScript,
-    ], (err) => { if (err) console.error('[stor-agent] stor-update error:', err); });
+    const [cmd, args] = useLauncher
+      ? [STOR_START_UPDATE, [] as string[]]
+      : ['systemd-run', ['--unit=urbackup-gui-update',
+          `--property=StandardOutput=append:${logFile}`,
+          `--property=StandardError=append:${logFile}`,
+          STOR_LEGACY_UPDATER]];
+    if (!useLauncher) {
+      try { await execFileAsync('systemctl', ['reset-failed', 'urbackup-gui-update.service']); } catch { /* ok */ }
+    }
+    execFile(cmd, args, (err) => { if (err) console.error('[stor-agent] stor-update error:', err); });
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: String(e.message) });
