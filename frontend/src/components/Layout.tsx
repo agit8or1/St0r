@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
+  ShieldCheck,
   Server,
   Activity,
   Settings,
@@ -52,6 +53,7 @@ export function Layout({ children }: LayoutProps) {
     { path: '/customers', label: 'Customers', icon: Users, tip: 'Manage customer accounts and endpoint assignments' },
     { path: '/alerts', label: 'Alerts', icon: Bell, tip: 'View and manage backup alerts' },
     { path: '/reports', label: 'Reports', icon: FileText, tip: 'Generate and view backup reports' },
+    { path: '/recovery', label: 'Recovery Drills', icon: ShieldCheck, tip: 'Scheduled restore drills that prove backups can be recovered' },
     { path: '/replication', label: 'Replication', icon: GitBranch, tip: 'Configure offsite backup replication targets', adminOnly: true },
     { path: '/servers', label: 'Servers', icon: Server, tip: 'Manage this server and remote servers', adminOnly: true },
     { path: '/users', label: 'Users', icon: Users, tip: 'Manage St0r user accounts and permissions', adminOnly: true },

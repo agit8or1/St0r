@@ -1,4 +1,7 @@
 import type {
+  ClientRecoveryStatus, RecoveryReport, Drill, DrillRun, Canary, GeneratedCanary, Hypervisor,
+} from '../types/recovery';
+import type {
   AuthResponse,
   UrBackupServer,
   CreateServerRequest,
@@ -555,3 +558,29 @@ class ApiService {
 }
 
 export const api = new ApiService();
+
+/** Recovery verification (scheduled restore drills). */
+class RecoveryApi {
+  private api = new HttpClient();
+  async status() { return (await this.api.get<ClientRecoveryStatus[]>('/recovery/status')).data; }
+  async report(client: string, days = 30) { return (await this.api.get<RecoveryReport>('/recovery/report', { params: { client, days } })).data; }
+  async drills() { return (await this.api.get<Drill[]>('/recovery/drills')).data; }
+  async createDrill(d: Partial<Drill>) { return (await this.api.post<{ id: string }>('/recovery/drills', d)).data; }
+  async updateDrill(id: string, d: Partial<Drill>) { await this.api.put(`/recovery/drills/${id}`, d); }
+  async deleteDrill(id: string) { await this.api.delete(`/recovery/drills/${id}`); }
+  async runDrill(id: string) { return (await this.api.post<{ run_id: string }>(`/recovery/drills/${id}/run`)).data; }
+  async runs(params: { drill_id?: string; client?: string; limit?: number } = {}) { return (await this.api.get<DrillRun[]>('/recovery/runs', { params })).data; }
+  async run(id: string) { return (await this.api.get<DrillRun>(`/recovery/runs/${id}`)).data; }
+  async canaries() { return (await this.api.get<Canary[]>('/recovery/canaries')).data; }
+  async createCanary(c: { client_name: string; path: string; sha256: string; size_bytes?: number | null; note?: string }) { return (await this.api.post<{ id: string }>('/recovery/canaries', c)).data; }
+  async generateCanary(c: { client_name: string; path: string; size_bytes?: number; note?: string }) { return (await this.api.post<GeneratedCanary>('/recovery/canaries/generate', c)).data; }
+  async deleteCanary(id: string) { await this.api.delete(`/recovery/canaries/${id}`); }
+  async hypervisors() { return (await this.api.get<Hypervisor[]>('/recovery/hypervisors')).data; }
+  async createHypervisor(h: Record<string, unknown>) { return (await this.api.post<{ id: string }>('/recovery/hypervisors', h)).data; }
+  async updateHypervisor(id: string, h: Record<string, unknown>) { await this.api.put(`/recovery/hypervisors/${id}`, h); }
+  async deleteHypervisor(id: string) { await this.api.delete(`/recovery/hypervisors/${id}`); }
+  async testHypervisor(id: string) { return (await this.api.post<{ ok: boolean; evidence?: string; checks: Array<{ check: string; ok: boolean; detail: string }> }>(`/recovery/hypervisors/${id}/test`)).data; }
+  async options() { return (await this.api.get<{ replication_targets: Array<{ id: string; name: string; host: string; enabled: number }>; clients: string[] }>('/recovery/options')).data; }
+}
+
+export const recoveryApi = new RecoveryApi();

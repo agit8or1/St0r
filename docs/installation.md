@@ -204,6 +204,7 @@ Backend settings live in `/opt/urbackup-gui/backend/.env`. The full annotated li
 | `URBACKUP_API_URL` | UrBackup HTTP API (default `http://localhost:55414/x`) |
 | `URBACKUP_PASSWORD` | Leave empty if the UrBackup admin account has no password |
 | `ST0R_DISK_*` | Disk guard thresholds — see `.env.example` |
+| `STOR_DRILL_SCRATCH` | Scratch storage for recovery drills (default `/tmp/st0r-drills`) — see [recovery-verification.md](recovery-verification.md) |
 
 `.env` is preserved across updates.
 
@@ -400,8 +401,9 @@ touches `/var/urbackup`.
 
 SSH credentials are encrypted with AES-256-GCM using a key derived from `APP_SECRET_KEY`.
 
-Replication copies the backup store to another machine. It is not an independent verified restore, and it
-does not make backups immutable — a deletion or corruption on the source replicates to the target.
+Replication copies the backup store to another machine. It does not make backups immutable — a deletion
+or corruption on the source replicates to the target. To check that the copy can actually be restored, set
+up a [recovery drill](recovery-verification.md) against the target.
 
 ---
 

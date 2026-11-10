@@ -23,6 +23,8 @@ import ServerSettings from './pages/ServerSettings';
 import { Replication } from './pages/Replication';
 import { ReplicationTargetDetail } from './pages/ReplicationTargetDetail';
 import { Servers } from './pages/Servers';
+import { RecoveryVerification } from './pages/RecoveryVerification';
+import { RecoveryReport } from './pages/RecoveryReport';
 import { Loading } from './components/Loading';
 import { UpdateNotification } from './components/UpdateNotification';
 
@@ -215,6 +217,22 @@ function App() {
               <AdminRoute>
                 <ReplicationTargetDetail />
               </AdminRoute>
+            }
+          />
+          <Route
+            path="/recovery"
+            element={
+              <ProtectedRoute>
+                <RecoveryVerification />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recovery/report/:clientName"
+            element={
+              <ProtectedRoute>
+                <RecoveryReport />
+              </ProtectedRoute>
             }
           />
           <Route

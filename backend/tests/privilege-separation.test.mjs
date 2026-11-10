@@ -92,6 +92,8 @@ test('helper: argument checks', () => {
     ['vhd-cleanup', '/etc/st0r-vhd-ABCDEFGHIJ'],
     ['vhd-decompress', `${storage}/clientA/261107-2000`],           // not a .vhdz
     ['vhd-decompress', join(work, 'elsewhere', 'x')],
+    ['vhd-decompress', `${storage}/clientA/261107-2000_Image_C/Image_C.vhdz`, '../../etc/x'],  // bad tag
+    ['vhd-decompress', `${storage}/clientA/261107-2000_Image_C/Image_C.vhdz`, 'short'],
     ['delete-backup', `${storage}/clientA/261107-2000\nx`],          // control characters
   ];
   for (const args of refused) {

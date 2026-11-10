@@ -39,9 +39,15 @@ field.
 **Offsite replication you can actually see.** Push the backup store to a standby server over SSH/rsync,
 with run history, bytes transferred, replication lag and alerting on failure.
 
-> Replication copies your backup store to another machine. It is not a substitute for periodically
-> performing a **test restore**, and it does not make backups immutable — deletions and corruption
-> replicate too.
+**Restores that are actually tested.** Scheduled recovery drills restore a known canary file from the
+offsite copy and check it against a checksum St0r keeps separately, and can optionally boot a Windows image
+as an isolated, disposable Proxmox clone and check an application service. Backup, replication and
+verified recovery are shown as three separate statuses, with a customer-facing report.
+See [docs/recovery-verification.md](docs/recovery-verification.md).
+
+> Replication copies your backup store to another machine. It does not make backups immutable:
+> deletions and corruption replicate too. Recovery drills show whether what reached the copy can
+> actually be restored.
 
 ---
 
@@ -193,6 +199,7 @@ Manual, step-by-step installation is in [docs/installation.md](docs/installation
 |---|---|
 | Manual installation, configuration reference | [docs/installation.md](docs/installation.md) |
 | Updating and uninstalling | [docs/installation.md](docs/installation.md#updating) |
+| Recovery drills (scheduled restore tests) | [docs/recovery-verification.md](docs/recovery-verification.md) |
 | Backing up St0r's own database | [docs/installation.md](docs/installation.md#backing-up-st0rs-own-database) |
 | Backing up UrBackup's databases | [docs/URBACKUP_DATABASE_BACKUP.md](docs/URBACKUP_DATABASE_BACKUP.md) |
 | Full screenshot gallery | [docs/screenshots.md](docs/screenshots.md) |
@@ -215,7 +222,8 @@ Manual, step-by-step installation is in [docs/installation.md](docs/installation
 - **The installer disables Nginx's default site**, which can disrupt an existing web server.
 - **St0r writes to UrBackup's databases** for some operations. Keep your own backup of `/var/urbackup`.
 - **Replication is push-only over SSH/rsync** to a standby server, and it is a copy, not an independent
-  verified restore.
+  verified restore. File-restore drills check the copy; boot drills support one image/firmware
+  combination (Windows, UEFI/GPT, on Proxmox VE 8.4+).
 
 ---
 

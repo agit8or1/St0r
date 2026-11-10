@@ -55,6 +55,14 @@ jobs:
           (cd backend && npm run lint)
           (cd frontend && npm run lint)
 
+      # Disposable infrastructure for the recovery-drill tests: sgdisk and qemu-img
+      # build and cross-check disk images, sshd plays the offsite standby. (The
+      # MariaDB-backed test skips here: the runner image ships MySQL.)
+      - name: Install test tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends gdisk qemu-utils openssh-server
+
       # Runs every node:test file in backend/tests, agent/tests and frontend/tests, if any.
       - name: Test
         run: |

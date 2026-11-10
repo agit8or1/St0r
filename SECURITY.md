@@ -83,6 +83,13 @@ Note: code execution as `st0r` still means control of St0r and read access to ev
 - The SSH installer sets `allowed_ips` to the address St0r connects from, and the install command does the same when St0r and the agent's host are on the same private network. Otherwise (St0r's address as the agent sees it cannot be known, e.g. behind NAT) an agent with an empty list pins the first source that presents the valid key (St0r, which polls straight after registration); `"*"` allows any source explicitly
 - `/health` reports the agent version, and the Servers page shows when an agent is older than the one St0r ships. Agents do not update themselves: use **Update agent via SSH** or run the install command again (the API key, certificate and settings are kept)
 
+### Recovery drills
+- Drills restore only into disposable storage: a per-run scratch directory, the helper's own decompression directories, and, for boot drills, one VM and one imported volume on the configured Proxmox node. Each is recorded before it is created, and is deleted only after checking it still carries the run's marker (VM name and tags, file name, directory name and location); anything else is left alone
+- Boot-drill clones get no network device, or one NIC on a bridge St0r has checked has no uplink ports and no host address or gateway. The run stops before creating anything if the check fails
+- The Proxmox API token is stored AES-256-GCM encrypted like replication credentials, is never returned by the API, and is only sent after the node's certificate matches the pinned SHA-256 fingerprint (or passes normal CA verification when none is pinned)
+- Proxmox downloads drill disks from `/api/recovery/artifacts/<token>/<file>`, which needs no session: each URL carries a random 256-bit token that exists only while that one import runs, and Proxmox checks the file's SHA-256
+- Canary checksums are kept in St0r's database, never taken from a backup. Customer accounts see their own endpoints' drill results and reports, read-only, without St0r's hosts, paths or VM ids
+
 ### Backup file downloads
 - File downloads and folder ZIPs check, from the open file descriptor, that the file actually opened is still inside the client's backup folder, so a directory swapped for a symlink after the path check is refused. Folder ZIPs are built in-process from those descriptors; a symlinked file is included when its target is inside the client's folder
 

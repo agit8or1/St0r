@@ -32,6 +32,8 @@ import replicationRoutes from './routes/replication.js';
 import storageLimitsRoutes from './routes/storageLimits.js';
 import diskGuardRoutes from './routes/diskGuard.js';
 import serversRoutes from './routes/servers.js';
+import recoveryRoutes from './routes/recovery.js';
+import { serveArtifact } from './services/drills/artifacts.js';
 import { serveInstallScript, serveAgentPackage, agentRegister } from './controllers/servers.js';
 
 const app = express();
@@ -120,6 +122,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Drill disk images, fetched by the drill hypervisor. No session: each URL
+// carries a random token that exists only while one import runs.
+app.get('/api/recovery/artifacts/:token/:filename', serveArtifact);
+app.head('/api/recovery/artifacts/:token/:filename', serveArtifact);
+
 // Read-only enforcement for non-admin accounts (defence in depth — individual
 // routes carry `requireAdmin` as well).
 app.use('/api/', requireWriteAccess);
@@ -143,6 +150,7 @@ app.use('/api/client-installer', clientInstallerRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/browse', browseRoutes);
 app.use('/api/replication', replicationRoutes);
+app.use('/api/recovery', recoveryRoutes);
 app.use('/api/storage-limits', storageLimitsRoutes);
 app.use('/api/disk-guard', diskGuardRoutes);
 // Public agent install endpoints (no auth — token-protected)
@@ -325,6 +333,10 @@ async function startServer() {
     const { replicationTrigger } = await import('./services/replicationTrigger.js');
     await replicationScheduler.start();
     replicationTrigger.start();
+
+    // Scheduled recovery drills, and cleanup of anything an interrupted drill left behind
+    const { startRecoveryDrills } = await import('./services/drills/index.js');
+    await startRecoveryDrills();
 
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);

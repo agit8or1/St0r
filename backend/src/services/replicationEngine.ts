@@ -6,6 +6,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { query } from '../config/database.js';
 import { decrypt } from './secrets.js';
+import { buildSshArgs, knownHostsLine } from './sshTarget.js';
 import { logger } from '../utils/logger.js';
 
 const execFileAsync = promisify(execFile);
@@ -172,7 +173,7 @@ class ReplicationEngine {
         knownHostsFile = path.join(os.tmpdir(), `repl_known_hosts_${runId}`);
         await fs.writeFile(
           knownHostsFile,
-          `${target.host} ${target.ssh_known_host_fingerprint}\n`,
+          knownHostsLine(target, target.ssh_known_host_fingerprint),
           { mode: 0o600 }
         );
       }
@@ -621,17 +622,7 @@ class ReplicationEngine {
   // ── SSH / rsync helpers ──────────────────────────────────────────────────
 
   private buildSshArgs(target: ReplicationTarget, keyFile: string | null, knownHostsFile: string | null): string[] {
-    const args = ['-p', String(target.port), '-o', 'BatchMode=yes'];
-    if (keyFile) {
-      args.push('-i', keyFile);
-    }
-    if (knownHostsFile) {
-      args.push('-o', `UserKnownHostsFile=${knownHostsFile}`);
-      args.push('-o', 'StrictHostKeyChecking=yes');
-    } else {
-      args.push('-o', 'StrictHostKeyChecking=accept-new');
-    }
-    return args;
+    return buildSshArgs(target, keyFile, knownHostsFile);
   }
 
   private sshExec(target: ReplicationTarget, sshArgs: string[], cmd: string, timeout: number): Promise<string> {

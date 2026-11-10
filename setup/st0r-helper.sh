@@ -13,8 +13,11 @@
 #   st0r-helper urbackup-cleanup <n>     urbackupsrv cleanup -a <n>   (n: 5% / 500M / 20G / 1T)
 #   st0r-helper urbackup-remove-unknown  urbackupsrv remove-unknown
 #   st0r-helper delete-backup <dir>      remove one backup's directory, as the urbackup user
-#   st0r-helper vhd-decompress <file>    decompress an image backup into a private
-#                                        directory; prints the path of the result
+#   st0r-helper vhd-decompress <file> [tag]
+#                                        decompress an image backup into a private
+#                                        directory (/tmp/st0r-vhd-<tag> when a 10-character
+#                                        tag is given, so the caller can record it first);
+#                                        prints the path of the result
 #   st0r-helper vhd-cleanup <dir>        remove a directory made by vhd-decompress
 #   st0r-helper journal <lines>          the St0r service's own journal, as JSON lines
 set -euo pipefail
@@ -131,7 +134,8 @@ case "$ACTION" in
     ;;
 
   vhd-decompress)
-    EXPECT=1 nargs "$@"
+    [ "$#" -eq 1 ] || [ "$#" -eq 2 ] || die "$ACTION takes 1 or 2 arguments"
+    [ "$#" -eq 1 ] || [[ "$2" =~ ^[A-Za-z0-9]{10}$ ]] || die "tag must be 10 letters or digits"
     src=$(inside_storage "$1")
     [[ "$src" = *.vhdz ]] || die "not a compressed image: $src"
     [ -f "$src" ] || die "not a file: $src"
@@ -139,7 +143,13 @@ case "$ACTION" in
     [[ "$caller_gid" =~ ^[0-9]+$ ]] && [ "$caller_gid" -ne 0 ] || die "must be called through sudo by the service user"
     # Private to urbackup while it is written: the service user (which is in the
     # urbackup group) cannot swap anything in it. Then read-only to the caller.
-    work=$(mktemp -d /tmp/st0r-vhd-XXXXXXXXXX)
+    if [ "$#" -eq 2 ]; then
+      work="/tmp/st0r-vhd-$2"
+      # mkdir never follows or reuses an existing entry: a taken name fails here.
+      mkdir -m 0700 -- "$work" || die "$work already exists"
+    else
+      work=$(mktemp -d /tmp/st0r-vhd-XXXXXXXXXX)
+    fi
     chown urbackup:urbackup "$work"
     chmod 0700 "$work"
     name=$(basename -- "$src")
