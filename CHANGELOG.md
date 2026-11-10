@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.2.131] - 2026-11-10
 
-Security release. Please update.
+Security release. See advisory [GHSA-6f2v-5f8c-2jjj](https://github.com/agit8or1/St0r/security/advisories/GHSA-6f2v-5f8c-2jjj).
 
 ### Security
 - Security hardening.
