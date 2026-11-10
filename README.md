@@ -162,9 +162,12 @@ Read this before running it on a server that already serves web content:
   untrusted. Re-running the installer never overwrites an existing St0r Nginx site.
 - **Verifies what it installs.** It downloads the signed release asset and checks the signature against
   the release key inside `install.sh`, refusing anything that does not verify.
-- **Installs a root-owned updater** in `/usr/local/lib/st0r` with the release key in `/etc/st0r`, and a
-  sudo rule (`/etc/sudoers.d/st0r-update`) that lets the service user start an update and nothing else.
-- **Adjusts UrBackup database permissions** — adds the service user to the `urbackup` group and makes
+- **Creates a `st0r` system account** (no login shell, home `/var/lib/st0r`) that St0r runs as. An existing
+  install that runs as the account that installed it is moved over.
+- **Installs root-owned files** in `/usr/local/lib/st0r` (the updater, its launcher and a helper for the
+  panel's few root actions) with the release key in `/etc/st0r`, and a sudo rule
+  (`/etc/sudoers.d/st0r-update`) that lets `st0r` run the launcher and the helper and nothing else.
+- **Adjusts UrBackup database permissions** — adds `st0r` to the `urbackup` group and makes
   `/var/urbackup/backup_server*.db` group-writable.
 - **Creates a systemd service** `urbackup-gui` and a MariaDB database `urbackup_gui`.
 

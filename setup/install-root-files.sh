@@ -7,8 +7,10 @@
 # Installs, all owned by root and not writable by the service user:
 #   /usr/local/lib/st0r/auto-update.sh   the updater (runs as root)
 #   /usr/local/lib/st0r/start-update     launcher: takes no arguments, starts the updater
+#   /usr/local/lib/st0r/st0r-helper      the panel's other root actions, each one fixed and
+#                                        validated (see setup/st0r-helper.sh)
 #   /etc/st0r/release-signers            public key updates are verified against
-#   /etc/sudoers.d/st0r-update           lets the service user run the launcher, nothing else
+#   /etc/sudoers.d/st0r-update           lets the service user run those two, nothing else
 #
 # The St0r install directory (/opt/urbackup-gui) belongs to the service user, so
 # nothing the root-run updater trusts may live there.
@@ -29,7 +31,7 @@ if ! [[ "$SERVICE_USER" =~ ^[a-z_][a-z0-9_.-]{0,31}$ ]]; then
   echo "invalid service user name: $SERVICE_USER" >&2
   exit 1
 fi
-for f in setup/auto-update.sh setup/start-update.sh setup/release-signers; do
+for f in setup/auto-update.sh setup/start-update.sh setup/st0r-helper.sh setup/release-signers; do
   [ -s "$SRC/$f" ] || { echo "missing $SRC/$f" >&2; exit 1; }
 done
 
@@ -44,14 +46,18 @@ install -d "${OWN[@]}" -m 0755 "$LIB" "$ETC"
 # keeps reading the old one.
 install "${OWN[@]}" -m 0755 "$SRC/setup/auto-update.sh" "$LIB/auto-update.sh"
 install "${OWN[@]}" -m 0755 "$SRC/setup/start-update.sh" "$LIB/start-update"
+install "${OWN[@]}" -m 0755 "$SRC/setup/st0r-helper.sh" "$LIB/st0r-helper"
 install "${OWN[@]}" -m 0644 "$SRC/setup/release-signers" "$ETC/release-signers"
 
 if [ "$SERVICE_USER" != root ]; then
   install -d "${OWN[@]}" -m 0750 "$SUDOERS_DIR"
   tmp=$(mktemp)
-  # The empty "" argument list means: this command, with no arguments.
-  printf '# Installed by St0r. Lets the panel start an update and nothing else.\n%s ALL=(root) NOPASSWD: /usr/local/lib/st0r/start-update ""\n' \
-    "$SERVICE_USER" > "$tmp"
+  # start-update: the empty "" argument list means this command with no
+  # arguments. st0r-helper validates its own arguments (one fixed action each).
+  printf '%s\n' \
+    '# Installed by St0r. The panel may start an update and run the St0r helper; nothing else.' \
+    "${SERVICE_USER} ALL=(root) NOPASSWD: /usr/local/lib/st0r/start-update \"\"" \
+    "${SERVICE_USER} ALL=(root) NOPASSWD: /usr/local/lib/st0r/st0r-helper" > "$tmp"
   if visudo -cqf "$tmp"; then
     install "${OWN[@]}" -m 0440 "$tmp" "$SUDOERS_DIR/st0r-update"
   else
@@ -60,4 +66,4 @@ if [ "$SERVICE_USER" != root ]; then
   rm -f "$tmp"
 fi
 
-echo "Installed root-owned updater files (${LIB}, ${ETC}/release-signers)"
+echo "Installed root-owned St0r files (${LIB}, ${ETC}/release-signers)"

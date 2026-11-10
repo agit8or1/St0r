@@ -174,7 +174,7 @@ test('updater: root trusts nothing from the install directory', () => {
 });
 
 // ── 2. Root-owned updater files and the no-argument launcher ────────────────
-test('install-root-files.sh installs the updater, launcher, key and a no-argument sudo rule', () => {
+test('install-root-files.sh installs the updater, launcher, helper, key and a sudo rule for those two only', () => {
   const dest = mkdtempSync(join(work, 'root-'));
   const r = spawnSync('bash', [join(repo, 'setup/install-root-files.sh'), repo, 'stor-svc'],
     { env: { ...process.env, ST0R_DESTDIR: dest }, encoding: 'utf-8' });
@@ -186,7 +186,12 @@ test('install-root-files.sh installs the updater, launcher, key and a no-argumen
   assert.equal(mode('etc/sudoers.d/st0r-update'), '440');
   assert.equal(readFileSync(join(dest, 'etc/st0r/release-signers'), 'utf-8'), readFileSync(join(repo, 'setup/release-signers'), 'utf-8'));
   const rule = readFileSync(join(dest, 'etc/sudoers.d/st0r-update'), 'utf-8').split('\n').filter((l) => l && !l.startsWith('#'));
-  assert.deepEqual(rule, ['stor-svc ALL=(root) NOPASSWD: /usr/local/lib/st0r/start-update ""']);
+  assert.deepEqual(rule, [
+    'stor-svc ALL=(root) NOPASSWD: /usr/local/lib/st0r/start-update ""',
+    'stor-svc ALL=(root) NOPASSWD: /usr/local/lib/st0r/st0r-helper',
+  ]);
+  assert.equal(mode('usr/local/lib/st0r/st0r-helper'), '755');
+  assert.equal(readFileSync(join(dest, 'usr/local/lib/st0r/st0r-helper'), 'utf-8'), readFileSync(join(repo, 'setup/st0r-helper.sh'), 'utf-8'));
   for (const bad of ['root ALL', 'a;b', '../x', '']) {
     const b = spawnSync('bash', [join(repo, 'setup/install-root-files.sh'), repo, bad], { env: { ...process.env, ST0R_DESTDIR: dest } });
     assert.notEqual(b.status, 0, bad);
@@ -216,7 +221,7 @@ test('install.sh: root reads the unit, nginx template, schema and updater from t
   const src = readFileSync(installSh, 'utf-8');
   assert.match(src, /"\$SRC_DIR\/setup\/urbackup-gui\.service" > \/etc\/systemd\/system\/urbackup-gui\.service/);
   assert.match(src, /install_nginx_site "\$SRC_DIR\/setup\/nginx-site\.conf"/);
-  assert.match(src, /bash "\$SRC_DIR\/setup\/install-root-files\.sh" "\$SRC_DIR" "\$ACTUAL_USER"/);
+  assert.match(src, /bash "\$SRC_DIR\/setup\/install-root-files\.sh" "\$SRC_DIR" "\$SERVICE_USER"/);
   assert.doesNotMatch(src, /chown -R/);
   assert.doesNotMatch(src, /\$INSTALL_DIR\/(database|setup)\//);
   assert.doesNotMatch(src, /npm install|audit fix/);

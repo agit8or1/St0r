@@ -220,6 +220,31 @@ test('folder zip skips an entry that left the client folder after the walk', asy
   assert.deepEqual(skipped, [{ path: 'dir/ok.txt', reason: 'outside-root' }]);
 });
 
+test('folder zip includes a symlinked file whose target is inside the client folder', async () => {
+  const { walkFilesWithin } = await import('../dist/utils/safeWalk.js');
+  const t = realpathSync(mkdtempSync(join(tmpdir(), 'stor-zlink-')));
+  after(() => rmSync(t, { recursive: true, force: true }));
+  const client = join(t, 'client');
+  mkdirSync(join(client, '.directory_pool', 'ab'), { recursive: true });
+  mkdirSync(join(client, 'backup1', 'docs'), { recursive: true });
+  mkdirSync(join(t, 'other'));
+  writeFileSync(join(client, '.directory_pool', 'ab', 'pooled.txt'), 'pooled-data');
+  writeFileSync(join(client, 'backup1', 'docs', 'plain.txt'), 'plain-data');
+  writeFileSync(join(t, 'other', 'secret.txt'), 'OTHER-CLIENT');
+  symlinkSync(join(client, '.directory_pool', 'ab', 'pooled.txt'), join(client, 'backup1', 'docs', 'link-in.txt'));
+  symlinkSync(join(t, 'other', 'secret.txt'), join(client, 'backup1', 'docs', 'link-out.txt'));
+  const skipped = [];
+  const { w, done } = sinkToBuffer();
+  await zipVettedFiles(walkFilesWithin(join(client, 'backup1'), client, (s) => skipped.push(s)), client, w, (s) => skipped.push(s));
+  const zipPath = join(t, 'out.zip');
+  writeFileSync(zipPath, await done);
+  assert.deepEqual(execFileSync('unzip', ['-Z1', zipPath]).toString().trim().split('\n').sort(),
+    ['docs/link-in.txt', 'docs/plain.txt']);
+  assert.equal(execFileSync('unzip', ['-p', zipPath, 'docs/link-in.txt']).toString(), 'pooled-data');
+  assert.doesNotMatch((await done).toString('latin1'), /OTHER-CLIENT/);
+  assert.deepEqual(skipped, [{ path: 'docs/link-out.txt', reason: 'outside-root' }]);
+});
+
 test('folder zip is built in-process, without the zip command', async () => {
   const savedPath = process.env.PATH;
   process.env.PATH = '/nonexistent';

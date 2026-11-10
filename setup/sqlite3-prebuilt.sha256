@@ -1,0 +1,8 @@
+# SHA-256 of the sqlite3 prebuilt binaries St0r installs (setup/install-sqlite3.sh),
+# from https://github.com/TryGhost/node-sqlite3/releases. When package-lock.json
+# moves to a new sqlite3 version, add that version's napi-v6 Linux builds here
+# (a test fails until you do).
+57b036cc4fd1664be6995d8c3d0ed740a89d8eedfa7c07b7198d1551327f6bb9  sqlite3-v6.0.1-napi-v6-linux-arm64.tar.gz
+3b2aba05ec737aeed4d686b7309df57b1c93a217c8d7f3a09aa952a87db071b6  sqlite3-v6.0.1-napi-v6-linux-x64.tar.gz
+9d57c6e3dc06815dab05ade1b2ae4f47325b4f81315ca06c59259ae7d7f0dfd7  sqlite3-v6.0.1-napi-v6-linuxmusl-arm64.tar.gz
+04f9ab67fec37ecc9330f423438c121231785e768a36ae7b85d17226018523b7  sqlite3-v6.0.1-napi-v6-linuxmusl-x64.tar.gz

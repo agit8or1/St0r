@@ -70,19 +70,21 @@ You will receive a response within 5 business days. If confirmed, a fix will be 
 - Releases are signed with the St0r release key (an SSH signature on `st0r-<tag>.tar.gz`); the private key is not stored on GitHub
 - `install.sh` downloads only the signed release asset and verifies it against the public key **inside install.sh itself**, never one that came with the download; it refuses an unsigned or badly signed release, or one whose `VERSION` does not match
 - Updates (About → Update) are verified against `/etc/st0r/release-signers`, owned by root
-- The updater (`/usr/local/lib/st0r/auto-update.sh`) and its launcher (`/usr/local/lib/st0r/start-update`) are root-owned and not writable by the service user. The launcher takes no arguments; the sudo rule the installer adds (`/etc/sudoers.d/st0r-update`) allows only that command
+- St0r runs as its own system account, `st0r`: no login shell, member of the `urbackup` group for read access to the backups, and no sudo beyond the two commands below. Installs that ran as the user who installed them are moved to it by the next update or by re-running `install.sh`
+- The updater (`/usr/local/lib/st0r/auto-update.sh`), its launcher (`/usr/local/lib/st0r/start-update`) and the helper (`/usr/local/lib/st0r/st0r-helper`) are root-owned and not writable by `st0r`. The sudo rule the installer adds (`/etc/sudoers.d/st0r-update`) allows only the launcher, with no arguments, and the helper
+- The helper is the panel's only other root access: a fixed set of actions (UrBackup and OS package updates, reboot, UrBackup cleanup, deleting one backup, decompressing an image backup for export, reading St0r's own journal), each of which validates its arguments itself. Backup deletion accepts only a directory at least two levels inside UrBackup's storage folder and runs as the `urbackup` user
 - `/opt/urbackup-gui` belongs to the service user, so the root-run updater executes nothing from it: database migrations come from the verified tarball, and copying files and every `npm` command run as the service user
-- Dependencies are installed with `npm ci` from the release's signed `package-lock.json`, with install scripts disabled (`--ignore-scripts`; only `sqlite3` is rebuilt by name). Updates never run `npm audit fix`: dependency changes ship in a signed release
+- Dependencies are installed with `npm ci` from the release's signed `package-lock.json`, with install scripts disabled (`--ignore-scripts`). The one native binary, `sqlite3`, is the official prebuilt checked against the SHA-256 pinned in the release (`setup/sqlite3-prebuilt.sha256`); without a pinned build for the platform it is compiled from its lockfile-pinned source. Updates never run `npm audit fix`: dependency changes ship in a signed release
 
-Note: other backend features (UrBackup database writes, service control, OS updates) still use `sudo`, so on most installs the service user has wider sudo rights than the update rule above. Treat code execution as the service user as close to root.
+Note: code execution as `st0r` still means control of St0r and read access to every backup (and write access to UrBackup's databases), but not root. An install that still runs as an administrator account (the move to `st0r` was skipped; the update log says why) keeps that account's sudo rights.
 
 ### Remote agents
 - Authenticated by API key over TLS with a pinned certificate; the source address allowlist and the key are checked before the request body is read
-- The SSH installer sets `allowed_ips` to the address St0r connects from. An agent with an empty list pins the first source that presents the valid key (St0r, which polls straight after registration); `"*"` allows any source explicitly
+- The SSH installer sets `allowed_ips` to the address St0r connects from, and the install command does the same when St0r and the agent's host are on the same private network. Otherwise (St0r's address as the agent sees it cannot be known, e.g. behind NAT) an agent with an empty list pins the first source that presents the valid key (St0r, which polls straight after registration); `"*"` allows any source explicitly
 - `/health` reports the agent version, and the Servers page shows when an agent is older than the one St0r ships. Agents do not update themselves: use **Update agent via SSH** or run the install command again (the API key, certificate and settings are kept)
 
 ### Backup file downloads
-- File downloads and folder ZIPs check, from the open file descriptor, that the file actually opened is still inside the client's backup folder, so a directory swapped for a symlink after the path check is refused. Folder ZIPs are built in-process from those descriptors
+- File downloads and folder ZIPs check, from the open file descriptor, that the file actually opened is still inside the client's backup folder, so a directory swapped for a symlink after the path check is refused. Folder ZIPs are built in-process from those descriptors; a symlinked file is included when its target is inside the client's folder
 
 ## Hardening Checklist
 
@@ -96,4 +98,4 @@ After installation:
 - [ ] Firewall: expose only ports 80, 443 (and 55415 for UrBackup internet clients) to the internet
 - [ ] Enable 2FA for the admin account (Profile → Enable 2FA)
 - [ ] Keep St0r updated (About → Check for Updates); dependency updates arrive in signed releases
-- [ ] Give the service user only the sudo rights it needs; the updater needs only the rule in `/etc/sudoers.d/st0r-update`
+- [ ] Check that St0r runs as `st0r` (`systemctl show urbackup-gui -p User`) and that `st0r` has no sudo rights beyond `/etc/sudoers.d/st0r-update` (`sudo -l -U st0r`)

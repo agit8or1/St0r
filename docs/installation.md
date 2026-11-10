@@ -71,17 +71,22 @@ The installer will:
 
 1. Install Node.js 20, MariaDB, Nginx, `rsync`, `sqlite3`, `openssh-client` — and UrBackup Server if absent.
 2. Create the `urbackup_gui` database and apply the schema and migrations.
-3. Copy St0r into `/opt/urbackup-gui`, owned by the service user (the user who ran `sudo`), and build the
-   backend and frontend there as that user (`npm ci --ignore-scripts` from the lockfile).
-4. Install the root-owned updater: `/usr/local/lib/st0r/auto-update.sh`, its no-argument launcher
-   `/usr/local/lib/st0r/start-update`, the release key `/etc/st0r/release-signers`, and
-   `/etc/sudoers.d/st0r-update`, which lets the service user run the launcher and nothing else.
-5. On first install, write `/etc/nginx/sites-available/urbackup-gui`, enable it as the **default** site on
+3. Create the `st0r` system account (no login shell, home `/var/lib/st0r`), which St0r runs as. An
+   existing install that ran as the user who installed it is moved to this account.
+4. Copy St0r into `/opt/urbackup-gui`, owned by `st0r`, and build the backend and frontend there as
+   `st0r` (`npm ci --ignore-scripts` from the lockfile; the `sqlite3` binary is the official prebuilt,
+   checked against the SHA-256 in `setup/sqlite3-prebuilt.sha256`).
+5. Install the root-owned files: the updater `/usr/local/lib/st0r/auto-update.sh`, its no-argument
+   launcher `/usr/local/lib/st0r/start-update`, the helper `/usr/local/lib/st0r/st0r-helper` (the
+   panel's other root actions, each one fixed and validated), the release key
+   `/etc/st0r/release-signers`, and `/etc/sudoers.d/st0r-update`, which lets `st0r` run the launcher
+   and the helper and nothing else.
+6. On first install, write `/etc/nginx/sites-available/urbackup-gui`, enable it as the **default** site on
    port 80, and remove `/etc/nginx/sites-enabled/default`. An existing St0r site is never overwritten, so
    re-running the installer keeps Certbot's HTTPS configuration.
-6. Add the service user to the `urbackup` group and make `/var/urbackup/backup_server*.db` group-writable.
-7. Install and start the `urbackup-gui` systemd service.
-8. With `--domain`, get a certificate with Certbot and redirect HTTP to HTTPS.
+7. Add `st0r` to the `urbackup` group and make `/var/urbackup/backup_server*.db` group-writable.
+8. Install and start the `urbackup-gui` systemd service.
+9. With `--domain`, get a certificate with Certbot and redirect HTTP to HTTPS.
 
 Then open `http://YOUR_SERVER_IP` (or `https://` your domain) and sign in as `admin`. The installer prints the generated password when
 it finishes; it is also in `/opt/urbackup-gui/initial-admin-password.txt` and the service log. You must
@@ -120,14 +125,20 @@ for m in database/migrations/*.sql; do sudo mysql -u root urbackup_gui < "$m"; d
 ### 3. Application
 
 ```bash
+# St0r's own account: no login, no sudo of its own
+sudo useradd --system --user-group --home-dir /var/lib/st0r --shell /usr/sbin/nologin st0r
+sudo install -d -o st0r -g st0r -m 0750 /var/lib/st0r
+
 sudo mkdir -p /opt/urbackup-gui
 sudo cp -r . /opt/urbackup-gui/
-sudo chown -R "$USER:$USER" /opt/urbackup-gui
+sudo chown -R st0r:st0r /opt/urbackup-gui
 
 cd /opt/urbackup-gui/backend
-npm ci --ignore-scripts && npm rebuild sqlite3 && npm run build
+sudo -u st0r -H npm ci --ignore-scripts
+sudo -u st0r -H bash ../setup/install-sqlite3.sh "$PWD"    # pinned, checksummed sqlite3 binary
+sudo -u st0r -H npm run build
 
-cat > .env <<EOF
+sudo -u st0r tee .env >/dev/null <<EOF
 NODE_ENV=production
 PORT=3000
 DB_HOST=localhost
@@ -144,7 +155,7 @@ URBACKUP_PASSWORD=
 EOF
 
 cd /opt/urbackup-gui/frontend
-npm ci --ignore-scripts && npm run build
+sudo -u st0r -H npm ci --ignore-scripts && sudo -u st0r -H npm run build
 ```
 
 `JWT_SECRET` and `APP_SECRET_KEY` are required — the backend refuses to start without a strong
@@ -156,16 +167,16 @@ makes stored replication credentials unreadable.
 St0r reads UrBackup's SQLite databases directly, and writes to them for a few operations:
 
 ```bash
-sudo usermod -a -G urbackup "$USER"
+sudo usermod -a -G urbackup st0r
 sudo chmod g+w /var/urbackup/backup_server.db /var/urbackup/backup_server_settings.db
 ```
 
 ### 5. Services
 
 ```bash
-# Root-owned updater, launcher, release key and its sudo rule — from the checkout,
-# not from /opt (which the service user can write to)
-sudo bash setup/install-root-files.sh "$PWD" "$USER"
+# Root-owned updater, launcher, helper, release key and their sudo rule — from the
+# checkout, not from /opt (which the service user can write to)
+sudo bash setup/install-root-files.sh "$PWD" st0r
 
 sudo cp setup/urbackup-gui.service /etc/systemd/system/
 sudo systemctl daemon-reload
@@ -266,13 +277,22 @@ sudo nginx -t && sudo systemctl restart nginx
 arguments), which starts the root-owned `/usr/local/lib/st0r/auto-update.sh`. The updater downloads the
 signed release, verifies it against `/etc/st0r/release-signers` and refuses it if the signature or version
 does not match. It then backs up the current installation, copies the new files in and installs dependencies
-with `npm ci --ignore-scripts` from the release's lockfile, builds — all as the service user — applies the
+with `npm ci --ignore-scripts` from the release's lockfile (and the checksum-pinned `sqlite3` binary),
+builds — all as the service user — applies the
 database migrations from the verified release, refreshes the root-owned updater files and restarts the
 service. `.env` and the `downloads` directory are preserved. It restores the backup automatically if a step
 fails.
 
 Installs from before 3.2.131 have no launcher yet; their first update from the interface runs
 `/opt/urbackup-gui/setup/auto-update.sh` once, which installs it. Re-running `install.sh` does the same.
+
+Since 3.2.132 St0r runs as its own `st0r` account. An update moves an install that still runs as the
+user who installed it over to `st0r`, after checking that `st0r` can run its Node.js (and cannot
+modify it) and read the backup storage; if a check fails, or the panel does not start as `st0r`, it
+stays on the old account and the update log says why. Re-running `install.sh` makes the move too.
+Features that need root (UrBackup and OS updates, reboot, deleting backups, cleanup, image export,
+the log page) go through `/usr/local/lib/st0r/st0r-helper`; until an update has installed it, they
+report that the update should be run once more.
 
 ### From a checkout
 
@@ -289,12 +309,12 @@ The backend and the frontend can be deployed independently:
 ```bash
 # Backend — needs a service restart
 cd backend && npm run build
-sudo rsync -a --delete dist/ /opt/urbackup-gui/backend/dist/
+sudo rsync -a --delete --chown=st0r:st0r dist/ /opt/urbackup-gui/backend/dist/
 sudo systemctl restart urbackup-gui
 
 # Frontend — nginx serves the files directly, so no restart
 cd frontend && npm run build
-sudo rsync -a --delete --exclude downloads dist/ /opt/urbackup-gui/frontend/dist/
+sudo rsync -a --delete --chown=st0r:st0r --exclude downloads dist/ /opt/urbackup-gui/frontend/dist/
 ```
 
 `--exclude downloads` matters: `frontend/dist/downloads/` holds published installers and is not
@@ -316,9 +336,11 @@ build output.
 ├── frontend/dist/              Static files served by nginx
 └── version.json                Version manifest the update checker reads
 
-/usr/local/lib/st0r/            Root-owned updater (auto-update.sh) and its launcher (start-update)
+/usr/local/lib/st0r/            Root-owned updater (auto-update.sh), its launcher (start-update)
+                                and the helper for the panel's other root actions (st0r-helper)
 /etc/st0r/release-signers       Release key updates are verified against
-/etc/sudoers.d/st0r-update      Lets the service user run the launcher, nothing else
+/etc/sudoers.d/st0r-update      Lets st0r run the launcher and the helper, nothing else
+/var/lib/st0r/                  Home of the st0r service account (npm cache)
 ```
 
 ---
@@ -341,6 +363,7 @@ sudo rm -f /etc/nginx/sites-enabled/urbackup-gui /etc/nginx/sites-available/urba
 sudo systemctl restart nginx
 
 sudo rm -rf /opt/urbackup-gui /usr/local/lib/st0r /etc/st0r /etc/sudoers.d/st0r-update
+sudo userdel st0r && sudo rm -rf /var/lib/st0r
 sudo mysql -u root -e "DROP DATABASE urbackup_gui; DROP USER 'urbackup'@'localhost';"
 ```
 

@@ -3,8 +3,24 @@ import { AuthRequest } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { helperInstalled, runHelper } from '../utils/privileged.js';
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * The St0r service's own journal (JSON lines). The service account is not in
+ * the adm/systemd-journal groups, so the root-owned helper reads it — only this
+ * unit, at most 1000 lines. Before the helper is installed, read it directly.
+ */
+async function readServiceJournal(limit: number): Promise<string> {
+  if (helperInstalled()) {
+    return (await runHelper('journal', [String(limit)], { timeout: 30_000 })).stdout;
+  }
+  const { stdout } = await execFileAsync('journalctl', [
+    '-u', 'urbackup-gui.service', '-n', String(limit), '--no-pager', '-o', 'json',
+  ]);
+  return stdout;
+}
 
 interface LogEntry {
   time: string;
@@ -45,13 +61,7 @@ export async function getLogs(req: AuthRequest, res: Response): Promise<void> {
   try {
     const limit = parseLimit(req.query.limit, 200, 1000);
 
-    // execFile — limit is a JS number, never touches a shell
-    const { stdout } = await execFileAsync('journalctl', [
-      '-u', 'urbackup-gui.service',
-      '-n', String(limit),
-      '--no-pager',
-      '-o', 'json',
-    ]);
+    const stdout = await readServiceJournal(limit);
 
     const logs: LogEntry[] = [];
     const lines = stdout.trim().split('\n');
@@ -114,13 +124,7 @@ export async function getLiveLog(req: AuthRequest, res: Response): Promise<void>
   try {
     const limit = parseLimit(req.query.limit, 50, 1000);
 
-    // execFile — limit is a JS number, never touches a shell
-    const { stdout } = await execFileAsync('journalctl', [
-      '-u', 'urbackup-gui.service',
-      '-n', String(limit),
-      '--no-pager',
-      '-o', 'json',
-    ]);
+    const stdout = await readServiceJournal(limit);
 
     const logs: LogEntry[] = [];
     const lines = stdout.trim().split('\n');

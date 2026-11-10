@@ -10,7 +10,10 @@ export interface WalkSkip {
 export interface WalkEntry {
   /** Path relative to the starting directory, '/'-separated: the name in the archive. */
   rel: string;
-  /** Absolute path to open. Open it with openFileWithin — the walk is lazy and the tree may change. */
+  /**
+   * Absolute path to open (for a symlinked file, its real target). Open it with
+   * openFileWithin — the walk is lazy and the tree may change.
+   */
   path: string;
 }
 
@@ -78,7 +81,9 @@ export async function* walkFilesWithin(
         next.add(l.isSymbolicLink() ? real : await realpath(childAbs));
         yield* walk(childAbs, childRel, next);
       } else if (isFile) {
-        yield { rel: childRel, path: childAbs };
+        // A symlinked file is opened by its (checked) target: openFileWithin
+        // refuses a symlink as the last component.
+        yield { rel: childRel, path: l.isSymbolicLink() ? real : childAbs };
       } else {
         onSkip({ path: childRel, reason: 'special-file' });
       }

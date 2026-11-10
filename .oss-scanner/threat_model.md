@@ -14,13 +14,13 @@ plus credentials for replication targets and managed servers. Treat it as a high
 
 | Component | Path | Runs as | Notes |
 |---|---|---|---|
-| Backend API | `backend/src/` (Express + TypeScript) | the user who ran `install.sh` (`setup/urbackup-gui.service`) | The backend calls `sudo` (for `systemctl`, `sqlite3 -u urbackup`, update units), so that user needs sudo rights and in practice often has `NOPASSWD: ALL`. Treat **command execution in the backend as root** on the backup server. |
+| Backend API | `backend/src/` (Express + TypeScript) | the `st0r` system account (`setup/urbackup-gui.service`; installs before 3.2.132 ran as the user who ran `install.sh` until moved) | No general sudo: the only root access is `sudo -n /usr/local/lib/st0r/start-update` (no arguments) and `sudo -n /usr/local/lib/st0r/st0r-helper <action>` (`setup/st0r-helper.sh`, which validates every argument). Command execution in the backend gives read access to all backups and write access to UrBackup's databases, not root — a way from `st0r` to root through the helper or launcher is in scope. |
 | Frontend | `frontend/src/` (React + Vite) | browser | Served as static files by the backend / nginx. |
 | stor-agent | `agent/src/index.ts` | **root** (`agent/setup/stor-agent.service`) | Listens on `0.0.0.0:7420` on managed remote servers; source allowlist (`allowed_ips`, St0r's address) and a shared API key, checked before the body is parsed; can run OS updates, St0r/UrBackup updates and reboots. |
 | MariaDB `urbackup_gui` | `database/` | — | St0r users, customers, replication targets (secrets AES-256-GCM encrypted with `APP_SECRET_KEY`). |
 | UrBackup SQLite DBs | `/var/urbackup/backup_server*.db` | — | Read directly; per-client settings are also written directly. |
 | UrBackup HTTP API | `http://localhost:55414/x` | — | Used for status, settings and backup control; it has no admin password in typical installs and must stay loopback-only. |
-| Installer / updater | `install.sh`, `setup/auto-update.sh` (installed root-owned as `/usr/local/lib/st0r/auto-update.sh`), `setup/start-update.sh` (`/usr/local/lib/st0r/start-update`) | root | The backend starts updates only through the no-argument launcher (`/etc/sudoers.d/st0r-update`). The updater verifies releases against `/etc/st0r/release-signers` and must not trust or execute anything from `/opt/urbackup-gui`, which the service user owns. |
+| Installer / updater | `install.sh`, `setup/auto-update.sh` (installed root-owned as `/usr/local/lib/st0r/auto-update.sh`), `setup/start-update.sh` (`/usr/local/lib/st0r/start-update`), `setup/st0r-helper.sh` (`/usr/local/lib/st0r/st0r-helper`), `setup/service-user.sh` | root | The backend starts updates only through the no-argument launcher (`/etc/sudoers.d/st0r-update`). The updater verifies releases against `/etc/st0r/release-signers` and must not trust or execute anything from `/opt/urbackup-gui`, which the service user owns. |
 
 `scripts/demo/` (screenshot tooling and a mock UrBackup API) and `docs/` are out of scope as targets, but
 `scripts/demo/mock-urbackup-api.mjs` is useful for exercising the backend.

@@ -6,7 +6,7 @@ import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { UrBackupService } from '../services/urbackup.js';
-import { execFile } from 'child_process';
+import { openUrBackupSettingsDbReadWrite } from '../config/urbackupDb.js';
 
 // Resolve .env relative to this file so it works in both dev (src/controllers/)
 // and production (dist/controllers/) without hardcoding the install path.
@@ -150,7 +150,7 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
     // Push internet_server to UrBackup so generated installers embed the correct server address
     const fqdnForUrBackup = urbackupServerFqdn || urbackupServerHost;
     if (fqdnForUrBackup) {
-      // Try API first; fall back to direct DB write (runs as root via sudo)
+      // Try API first; fall back to a direct DB write
       let pushedViaApi = false;
       try {
         const urbackupService = new UrBackupService();
@@ -168,15 +168,19 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
         if (!/^[a-zA-Z0-9.-]+$/.test(fqdnForUrBackup)) {
           logger.warn(`FQDN contains invalid characters, skipping DB write: ${fqdnForUrBackup}`);
         } else {
-          const dbPath = '/var/urbackup/backup_server_settings.db';
-          // Pass SQL via stdin (not as a CLI argument) to prevent any injection risk
-          const sql = `DELETE FROM settings WHERE key='internet_server' AND clientid=0;\nINSERT INTO settings (key, value, clientid) VALUES ('internet_server', '${fqdnForUrBackup}', 0);\n`;
-          const child = execFile('sudo', ['-u', 'urbackup', 'sqlite3', dbPath], (err) => {
-            if (err) logger.warn(`Could not write internet_server to UrBackup DB: ${err.message}`);
-            else logger.info(`Wrote internet_server=${fqdnForUrBackup} to UrBackup DB directly`);
-          });
-          child.stdin?.write(sql);
-          child.stdin?.end();
+          // The service user writes UrBackup's settings database through the
+          // urbackup group, as elsewhere. (No unique key: DELETE, then INSERT.)
+          let db;
+          try {
+            db = await openUrBackupSettingsDbReadWrite();
+            await db.run("DELETE FROM settings WHERE key = 'internet_server' AND clientid = 0");
+            await db.run("INSERT INTO settings (key, value, clientid) VALUES ('internet_server', ?, 0)", [fqdnForUrBackup]);
+            logger.info(`Wrote internet_server=${fqdnForUrBackup} to UrBackup DB directly`);
+          } catch (err: any) {
+            logger.warn(`Could not write internet_server to UrBackup DB: ${err?.message ?? err}`);
+          } finally {
+            await db?.close().catch(() => undefined);
+          }
         }
       }
     }

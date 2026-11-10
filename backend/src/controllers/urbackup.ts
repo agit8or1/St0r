@@ -6,7 +6,7 @@ import { audit } from '../utils/audit.js';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
-import { randomUUID } from 'crypto';
+import { runHelper } from '../utils/privileged.js';
 import { getUrBackupDb } from '../config/urbackupDb.js';
 import { scopeOf, filterByClientName, assertClientAccess } from '../middleware/scope.js';
 
@@ -591,23 +591,14 @@ export async function browseClientFilesystem(req: AuthRequest, res: Response): P
   }
 }
 
-/** Run a command through sudo, rejecting on a non-zero exit. */
-function sudoRun(args: string[]): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    const proc = spawn('sudo', args);
-    let stderr = '';
-    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
-    proc.on('close', (code: number) =>
-      code === 0
-        ? resolve()
-        : reject(new Error(`${args[0]} exited ${code}${stderr.trim() ? `: ${stderr.trim()}` : ''}`))
-    );
-  });
+/** The decompress directory belongs to urbackup; only the helper can remove it. */
+function removeVhdWorkDir(dir: string): void {
+  runHelper('vhd-cleanup', [dir]).catch((e) => logger.warn(`[convertVhd] cleanup of ${dir} failed: ${e.message}`));
 }
 
 export async function convertAndDownloadImageBackup(req: AuthRequest, res: Response): Promise<void> {
   const { clientId, backupId } = req.params;
-  const tmpDir = `/tmp/urbackup-export-${randomUUID()}`;
+  let tmpDir: string | null = null;
   let tmpFile: string | null = null;
 
   try {
@@ -667,43 +658,18 @@ export async function convertAndDownloadImageBackup(req: AuthRequest, res: Respo
       return;
     }
 
-    // Copy to temp dir so decompress-file doesn't touch the original backup.
-    //
-    // `urbackupsrv decompress-file` drops privileges to the urbackup user, so it
-    // must be able to write the output. It writes in place, which means creating
-    // a new file in tmpDir — so tmpDir needs group write for urbackup, not just
-    // the file. The directory stays owned by the service user: /tmp is sticky, so
-    // an urbackup-owned directory there could not be removed during cleanup.
-    const serviceGid = process.getgid?.() ?? 0;
-    fs.mkdirSync(tmpDir, { recursive: true });
-    await sudoRun(['chgrp', 'urbackup', tmpDir]);
-    fs.chmodSync(tmpDir, 0o770);
-
+    // The root-owned helper copies the image into a fresh private directory,
+    // decompresses it there (urbackupsrv decompress-file) and hands back the
+    // result read-only to this service's group. Nothing it touches is writable
+    // by the panel, and it re-checks that srcPath is a backup in the storage folder.
+    logger.info(`[convertVhd] Decompressing a copy of ${srcPath} (${(srcStat.size / 1e9).toFixed(1)} GB)`);
+    const { stdout } = await runHelper('vhd-decompress', [srcPath], { timeout: 6 * 60 * 60 * 1000 });
+    const produced = stdout.trim();
+    const m = /^(\/tmp\/st0r-vhd-[A-Za-z0-9]{10})\/[^/]+$/.exec(produced);
+    if (!m) throw new Error('Unexpected output from the decompress step');
+    tmpDir = m[1];
+    tmpFile = produced;
     const fileName = path.basename(srcPath);
-    tmpFile = path.join(tmpDir, fileName);
-
-    logger.info(`[convertVhd] Copying ${srcPath} → ${tmpFile} (${(srcStat.size / 1e9).toFixed(1)} GB)`);
-    await fs.promises.copyFile(srcPath, tmpFile);
-    await sudoRun(['chgrp', 'urbackup', tmpFile]);
-    fs.chmodSync(tmpFile, 0o660);
-
-    // Decompress in-place inside tmpDir
-    logger.info(`[convertVhd] Decompressing ${tmpFile}`);
-    await new Promise<void>((resolve, reject) => {
-      const proc = spawn('sudo', ['urbackupsrv', 'decompress-file', '-f', tmpFile!]);
-      proc.stderr.on('data', (d: Buffer) => logger.debug(`[decompress-file] ${d.toString().trim()}`));
-      proc.on('close', (code: number) => code === 0 ? resolve() : reject(new Error(`decompress-file exited ${code}`)));
-    });
-
-    if (!fs.existsSync(tmpFile)) {
-      throw new Error('Decompressed file not found after conversion');
-    }
-
-    // decompress-file recreated the output as urbackup:urbackup 0750. Hand it back
-    // to the service group so Node can stream it, without making a customer's disk
-    // image readable by every local account.
-    await sudoRun(['chown', `urbackup:${serviceGid}`, tmpFile]);
-    await sudoRun(['chmod', '640', tmpFile]);
 
     const vhdStat = fs.statSync(tmpFile);
     const downloadName = fileName.replace(/\.vhdz$/, '.vhd');
@@ -715,12 +681,20 @@ export async function convertAndDownloadImageBackup(req: AuthRequest, res: Respo
 
     const stream = fs.createReadStream(tmpFile);
     stream.pipe(res);
-    res.on('finish', () => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
-    res.on('close', () => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
+    const dir = tmpDir;
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      stream.destroy();
+      removeVhdWorkDir(dir);
+    };
+    res.on('finish', cleanup);
+    res.on('close', cleanup);
 
   } catch (error: any) {
     logger.error('[convertVhd] Failed:', error);
-    try { if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+    if (tmpDir) removeVhdWorkDir(tmpDir);
     if (!res.headersSent) {
       res.status(500).json({ error: error.message || 'Conversion failed' });
     }

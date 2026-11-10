@@ -109,7 +109,10 @@ else
     echo -e "${YELLOW}  Could not read DB credentials from .env — skipping migrations${NC}"
 fi
 
-chown -R "$BUILD_USER:$BUILD_USER" "$DEPLOY_DIR/backend/dist" "$DEPLOY_DIR/frontend" "$DEPLOY_DIR/database"
+# Deployed files belong to the account the service runs as (st0r), not the builder.
+RUN_USER=$(systemctl show "$SERVICE" -p User --value 2>/dev/null)
+RUN_USER="${RUN_USER:-$BUILD_USER}"
+chown -R -h "$RUN_USER:$(id -gn "$RUN_USER")" "$DEPLOY_DIR/backend/dist" "$DEPLOY_DIR/frontend" "$DEPLOY_DIR/database"
 echo -e "${GREEN}✓ Migrations and version manifest deployed${NC}"
 echo ""
 

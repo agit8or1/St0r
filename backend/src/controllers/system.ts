@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
+import { runHelper, HelperMissingError } from '../utils/privileged.js';
 import { existsSync, truncateSync } from 'fs';
 import { readFile } from 'fs/promises';
 
@@ -150,6 +151,7 @@ export function updateLaunchCommand(launcherInstalled: boolean, legacyExists = e
   if (launcherInstalled) return ['sudo', ['-n', UPDATE_LAUNCHER]];
   if (!legacyExists) return null;
   return ['sudo', [
+    '-n',
     'systemd-run',
     '--unit=urbackup-gui-update',
     '--description=UrBackup GUI Update',
@@ -190,26 +192,22 @@ export async function triggerUpdate(req: Request, res: Response) {
       }
     } catch (_e) { /* non-zero exit = not active, continue */ }
 
-    // Clear the log NOW (synchronously) so the first poll from the frontend
-    // never reads stale "SUCCESS" output from a previous run and false-completes.
-    const updateLogPath = '/var/log/urbackup-gui-update.log';
+    // The launcher starts the log afresh (root-owned) and the root-owned updater
+    // as a background unit, then returns; waiting for it means the first poll
+    // from the page never reads a previous run's "SUCCESS". It takes no arguments.
+    if (launch[1][1] !== UPDATE_LAUNCHER) {
+      // Legacy install (no launcher yet; its service user still has full sudo):
+      // clear the log and the previous unit here, once.
+      try { truncateSync('/var/log/urbackup-gui-update.log', 0); } catch (_e) { /* not there yet */ }
+      try { await execFileAsync('sudo', ['-n', 'systemctl', 'reset-failed', 'urbackup-gui-update.service']); } catch (_e) { /* no such unit */ }
+    }
     try {
-      truncateSync(updateLogPath, 0);
-    } catch (_e) {
-      // Log may not exist yet on first run — ignore
+      await execFileAsync(launch[0], launch[1], { timeout: 30_000 });
+    } catch (error: any) {
+      logger.error('Failed to start update script:', error);
+      res.status(500).json({ error: 'Failed to start the update', message: String(error?.stderr || error?.message || '').trim() });
+      return;
     }
-
-    // The launcher resets the previous unit and starts the root-owned updater
-    // in the background (systemd-run); it takes no arguments. The legacy path
-    // has to reset the unit itself.
-    if (launch[1][0] === 'systemd-run') {
-      try { await execFileAsync('sudo', ['systemctl', 'reset-failed', 'urbackup-gui-update.service']); } catch (_e) { /* unit may not exist */ }
-    }
-    execFile(launch[0], launch[1], (error) => {
-      if (error) {
-        logger.error('Failed to start update script:', error);
-      }
-    });
 
     logger.info('Update process started in background');
 
@@ -304,8 +302,6 @@ export async function triggerUrBackupServerUpdate(req: Request, res: Response) {
       return;
     }
 
-    const logFile = '/var/log/urbackup-server-update.log';
-
     // Check if already running
     try {
       const { stdout } = await execFileAsync('systemctl', ['is-active', 'urbackup-server-pkg-update']);
@@ -315,22 +311,15 @@ export async function triggerUrBackupServerUpdate(req: Request, res: Response) {
       }
     } catch (_e) { /* not running */ }
 
-    try { await execFileAsync('sudo', ['systemctl', 'reset-failed', 'urbackup-server-pkg-update.service']); } catch (_e) {}
-
-    // Clear log
-    try { truncateSync(logFile, 0); } catch (_e) {}
-
-    execFile('sudo', [
-      'systemd-run',
-      '--unit=urbackup-server-pkg-update',
-      '--description=UrBackup Server Package Update',
-      `--property=StandardOutput=append:${logFile}`,
-      `--property=StandardError=append:${logFile}`,
-      '/bin/bash', '-c',
-      'DEBIAN_FRONTEND=noninteractive apt-get update -q 2>&1 && DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade urbackup-server 2>&1 && systemctl restart urbackupsrv && echo "SUCCESS: UrBackup server updated and restarted" || echo "FAILED: UrBackup server update failed"',
-    ], (error) => {
-      if (error) logger.error('Failed to start UrBackup server update:', error);
-    });
+    // The helper resets the unit, starts the log afresh and runs the upgrade as
+    // a background unit; this waits only for the start.
+    try {
+      await runHelper('urbackup-server-update');
+    } catch (error: any) {
+      logger.error('Failed to start UrBackup server update:', error);
+      res.status(error instanceof HelperMissingError ? 503 : 500).json({ error: error.message || 'Failed to start the update' });
+      return;
+    }
 
     logger.info(`UrBackup server update triggered by ${user.username}`);
     res.json({ success: true, message: 'UrBackup server update started' });

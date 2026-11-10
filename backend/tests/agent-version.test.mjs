@@ -54,3 +54,49 @@ test('SSH install passes the connecting address as the agent allowlist', async (
   assert.match(out, /^STOR_AGENT_ALLOWED_IPS=203\.0\.113\.9$/m);
   assert.match(out, /^STOR_AGENT_PORT=7420$/m);
 });
+
+// ── The manual install command names St0r's address when it can be known ──
+const { agentInstallCommand, serveInstallScript } = await import('../dist/controllers/servers.js');
+const { isPrivateAddress, storAddressFor } = await import('../dist/utils/localAddress.js');
+
+test('private-address check', () => {
+  for (const ip of ['10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.22.251', '127.0.0.1', '169.254.1.1', '::1', 'fd00::5', 'fe80::1', '::ffff:192.168.1.2']) {
+    assert.equal(isPrivateAddress(ip), true, ip);
+  }
+  for (const ip of ['8.8.8.8', '172.32.0.1', '192.0.2.5', '2001:db8::1', 'example.com', '']) {
+    assert.equal(isPrivateAddress(ip), false, ip);
+  }
+});
+
+test("St0r's address is found for a host on a private network, not across the Internet", async () => {
+  assert.equal(await storAddressFor('127.0.0.1', 7420), '127.0.0.1');
+  assert.equal(await storAddressFor('192.0.2.5', 7420), null);
+  assert.equal(await storAddressFor('no-such-host.invalid', 7420), null);
+});
+
+test('install command carries the allowlist when the address is known', () => {
+  const t = 'a'.repeat(64);
+  assert.equal(agentInstallCommand('https://stor.example', t, 7420, '192.168.1.5'),
+    `curl -fsSL "https://stor.example/api/agent-install/${t}" | sudo AGENT_PORT=7420 STOR_AGENT_ALLOWED_IPS=192.168.1.5 bash`);
+  assert.equal(agentInstallCommand('https://stor.example', t, 7420, null),
+    `curl -fsSL "https://stor.example/api/agent-install/${t}" | sudo AGENT_PORT=7420 bash`);
+  // Never anything but an address.
+  assert.doesNotMatch(agentInstallCommand('https://stor.example', t, 7420, '1.2.3.4; rm -rf /'), /rm -rf/);
+});
+
+test('served install script hands the agent installer its allowlist', async () => {
+  const saved = server.host;
+  try {
+    server.host = '127.0.0.1';
+    server.install_token = 'b'.repeat(64);
+    const res = { headers: {}, status(c) { this.code = c; return this; }, setHeader(k, v) { this.headers[k] = v; }, send(b) { this.body = b; } };
+    await serveInstallScript({ params: { token: 'b'.repeat(64) } }, res);
+    assert.match(res.body, /^ALLOWED_IPS="\$\{STOR_AGENT_ALLOWED_IPS:-127\.0\.0\.1\}"$/m);
+    assert.match(res.body, /STOR_AGENT_ALLOWED_IPS="\$ALLOWED_IPS" bash install\.sh/);
+    server.host = '192.0.2.5';
+    await serveInstallScript({ params: { token: 'b'.repeat(64) } }, res);
+    assert.match(res.body, /^ALLOWED_IPS="\$\{STOR_AGENT_ALLOWED_IPS:-\}"$/m);
+  } finally {
+    server.host = saved;
+  }
+});

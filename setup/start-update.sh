@@ -26,6 +26,9 @@ if systemctl is-active --quiet "$UNIT"; then
   exit 0
 fi
 systemctl reset-failed "${UNIT}.service" 2>/dev/null || true
+# A fresh root-owned log, so the panel never reads a previous run's result.
+rm -f -- "$LOG"
+install -m 0644 /dev/null "$LOG"
 
 exec systemd-run \
   --unit="$UNIT" \

@@ -224,7 +224,7 @@ if [ "$EUID" -ne 0 ]; then
    exit 1
 fi
 
-# Get the actual user who ran sudo
+# Who ran the installer (shown only: St0r itself runs as its own "st0r" account)
 ACTUAL_USER="${SUDO_USER:-$USER}"
 INSTALL_DIR="/opt/urbackup-gui"
 VERSION_FILE="$INSTALL_DIR/version.json"
@@ -552,7 +552,7 @@ if [ "$INSTALL_STOR" = true ]; then
 
     # Copy/update application files.
     #
-    # The install directory belongs to the service user ($ACTUAL_USER), so root
+    # The install directory belongs to the service user, so root
     # does not write into it or trust anything in it: the source is staged in a
     # fresh root-owned directory and copied in AS the service user, and
     # everything root itself uses (schema, migrations, service unit, nginx
@@ -587,13 +587,42 @@ if [ "$INSTALL_STOR" = true ]; then
     chmod -R a+rX,go-w "$SRC_DIR"
     chmod 0755 "$STAGE"
 
+    # The service account. St0r runs as its own system user (st0r), with no
+    # login and no sudo beyond the two root-owned commands in
+    # /etc/sudoers.d/st0r-update. Installs that ran as the installing user are
+    # moved over (the service is stopped above).
+    # shellcheck source=setup/service-user.sh
+    . "$SRC_DIR/setup/service-user.sh"
+    CURRENT_SERVICE_USER=""
+    if [ -f /etc/systemd/system/urbackup-gui.service ]; then
+        CURRENT_SERVICE_USER=$(systemctl show urbackup-gui -p User --value 2>/dev/null || true)
+    fi
+    NODE_BIN=$(command -v node || echo /usr/bin/node)
+    st0r_ensure_user
+    if WHY=$(st0r_preflight "$ST0R_USER" "$NODE_BIN"); then
+        SERVICE_USER="$ST0R_USER"
+    elif [ -n "$CURRENT_SERVICE_USER" ]; then
+        echo "  WARN: keeping service user ${CURRENT_SERVICE_USER}: ${WHY}"
+        SERVICE_USER="$CURRENT_SERVICE_USER"
+    else
+        echo "ERROR: the ${ST0R_USER} service account cannot run St0r: ${WHY}"
+        exit 1
+    fi
+    if [ -n "$CURRENT_SERVICE_USER" ] && [ "$CURRENT_SERVICE_USER" != "$SERVICE_USER" ]; then
+        systemctl stop urbackup-gui 2>/dev/null || true
+        st0r_migrate "$CURRENT_SERVICE_USER" "$SERVICE_USER"
+    fi
+    echo "  Service user: $SERVICE_USER"
+    # Run a command as the service user, with its own HOME (npm's cache).
+    as_svc() { sudo -u "$SERVICE_USER" -H "$@"; }
+
     # Fresh install: root creates the directory and hands it over. Upgrade:
     # earlier root-run updates left root-owned directories; hand those back.
     install -d -m 0755 "$INSTALL_DIR"
-    chown "$ACTUAL_USER:$(id -gn "$ACTUAL_USER")" "$INSTALL_DIR"
-    chown_dirs_to "$INSTALL_DIR" "$ACTUAL_USER"
-    sudo -u "$ACTUAL_USER" rsync -a "$SRC_DIR/" "$INSTALL_DIR/"
-    sudo -u "$ACTUAL_USER" rm -f "$INSTALL_DIR/auto-update.sh"   # old location, unused
+    chown "$SERVICE_USER:$(id -gn "$SERVICE_USER")" "$INSTALL_DIR"
+    chown_dirs_to "$INSTALL_DIR" "$SERVICE_USER"
+    as_svc rsync -a "$SRC_DIR/" "$INSTALL_DIR/"
+    as_svc rm -f "$INSTALL_DIR/auto-update.sh"   # old location, unused
 
     # Check if this is a source install (has src/ directories)
     if [ -d "$INSTALL_DIR/backend/src" ]; then
@@ -602,7 +631,7 @@ if [ "$INSTALL_STOR" = true ]; then
 
     # Root-owned updater, its no-argument launcher, the release key and the
     # sudoers rule for the launcher (see setup/install-root-files.sh).
-    bash "$SRC_DIR/setup/install-root-files.sh" "$SRC_DIR" "$ACTUAL_USER"
+    bash "$SRC_DIR/setup/install-root-files.sh" "$SRC_DIR" "$SERVICE_USER"
 
     # Configure MariaDB
     echo "[5/9] Configuring MariaDB..."
@@ -642,24 +671,24 @@ SQLEOF
     fi
 
     # Install backend dependencies, as the service user, exactly as locked in
-    # package-lock.json (npm ci) and without dependency install scripts. Only
-    # sqlite3 needs its install step (it fetches its prebuilt binary), so it is
-    # rebuilt by name.
+    # package-lock.json (npm ci) and without dependency install scripts. The one
+    # native binary (sqlite3) is the official prebuilt, checked against the
+    # SHA-256 pinned in setup/sqlite3-prebuilt.sha256 (install-sqlite3.sh).
     NPM_CI=(npm ci --ignore-scripts --no-audit --no-fund)
     echo "[7/9] Installing backend dependencies..."
     cd $INSTALL_DIR/backend
-    sudo -u "$ACTUAL_USER" rm -rf node_modules
+    as_svc rm -rf node_modules
     if [ "$IS_SOURCE_INSTALL" = true ]; then
         # Need devDependencies (typescript/tsc) to build from source
-        sudo -u "$ACTUAL_USER" "${NPM_CI[@]}" --include=dev --silent
-        sudo -u "$ACTUAL_USER" npm rebuild sqlite3 --silent
+        as_svc "${NPM_CI[@]}" --include=dev --silent
+        as_svc bash "$SRC_DIR/setup/install-sqlite3.sh" "$INSTALL_DIR/backend"
         echo "  Building backend from source..."
-        sudo -u "$ACTUAL_USER" npm run build
+        as_svc npm run build
         # Remove dev deps from production install
-        sudo -u "$ACTUAL_USER" npm prune --omit=dev --ignore-scripts --silent
+        as_svc npm prune --omit=dev --ignore-scripts --silent
     else
-        sudo -u "$ACTUAL_USER" "${NPM_CI[@]}" --omit=dev --silent
-        sudo -u "$ACTUAL_USER" npm rebuild sqlite3 --silent
+        as_svc "${NPM_CI[@]}" --omit=dev --silent
+        as_svc bash "$SRC_DIR/setup/install-sqlite3.sh" "$INSTALL_DIR/backend"
         echo "  ✓ Using pre-built backend files"
     fi
 
@@ -667,10 +696,10 @@ SQLEOF
     if [ "$IS_SOURCE_INSTALL" = true ]; then
         echo "[8/9] Building frontend from source..."
         cd $INSTALL_DIR/frontend
-        sudo -u "$ACTUAL_USER" rm -rf node_modules
-        sudo -u "$ACTUAL_USER" "${NPM_CI[@]}" --include=dev --silent
-        sudo -u "$ACTUAL_USER" npm run build
-        sudo -u "$ACTUAL_USER" npm prune --omit=dev --ignore-scripts --silent
+        as_svc rm -rf node_modules
+        as_svc "${NPM_CI[@]}" --include=dev --silent
+        as_svc npm run build
+        as_svc npm prune --omit=dev --ignore-scripts --silent
     else
         echo "[8/9] Frontend setup..."
         echo "  ✓ Using pre-built frontend files"
@@ -687,7 +716,7 @@ SQLEOF
 
     # Ensure the service user is in the urbackup group (for SQLite write access)
     if id urbackup &>/dev/null; then
-        usermod -a -G urbackup $ACTUAL_USER 2>/dev/null || true
+        usermod -a -G urbackup "$SERVICE_USER" 2>/dev/null || true
         # Make UrBackup database files group-writable
         chmod -f g+w /var/urbackup/backup_server.db \
                      /var/urbackup/backup_server.db-shm \
@@ -699,9 +728,8 @@ SQLEOF
     fi
 
     # Create systemd service for backend
-    # Substitute the actual runtime user and node path into the service file
-    NODE_BIN=$(command -v node || echo /usr/bin/node)
-    sed -e "s|User=administrator|User=${ACTUAL_USER}|g" \
+    # Substitute the service user and node path into the service file
+    sed -e "s|^User=.*|User=${SERVICE_USER}|" \
         -e "s|ExecStart=/usr/bin/node|ExecStart=${NODE_BIN}|g" \
         "$SRC_DIR/setup/urbackup-gui.service" > /etc/systemd/system/urbackup-gui.service
     systemctl daemon-reload
@@ -712,7 +740,7 @@ SQLEOF
         if [ -z "$GENERATED_DB_PASS" ]; then
             GENERATED_DB_PASS=$(openssl rand -hex 24)
         fi
-        sudo -u "$ACTUAL_USER" bash -c 'umask 027; cat > "$1"' _ "$INSTALL_DIR/backend/.env" <<EOF
+        as_svc bash -c 'umask 027; cat > "$1"' _ "$INSTALL_DIR/backend/.env" <<EOF
 NODE_ENV=production
 PORT=3000
 DB_HOST=localhost
@@ -745,7 +773,7 @@ EOF
     # page shows. Overwriting it used to record 3.2.78 over newer code.
     if ! grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"$INSTALLER_VERSION\"" "$VERSION_FILE" 2>/dev/null; then
         echo "{\"version\":\"$INSTALLER_VERSION\",\"date\":\"$INSTALLER_DATE\"}" \
-            | sudo -u "$ACTUAL_USER" bash -c 'cat > "$1.tmp" && mv -f "$1.tmp" "$1"' _ "$VERSION_FILE"
+            | as_svc bash -c 'cat > "$1.tmp" && mv -f "$1.tmp" "$1"' _ "$VERSION_FILE"
     fi
 
     echo ""
@@ -823,7 +851,7 @@ if [ "$INSTALL_STOR" = true ]; then
     echo "  Sign in with:"
     echo "    Username: admin"
     if [ -s "$PW_FILE" ]; then
-        echo "    Password: $(sudo -u "$ACTUAL_USER" cat "$PW_FILE")"
+        echo "    Password: $(sudo -u "$(systemctl show urbackup-gui -p User --value)" cat "$PW_FILE")"
         echo ""
         echo "  This password was generated for this installation and saved to:"
         echo "    $PW_FILE"

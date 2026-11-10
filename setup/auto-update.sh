@@ -84,6 +84,13 @@ rollback() {
   echo "$(timestamp) ════════════════════════════════════════════════"
   echo "$(timestamp) UPDATE FAILED (exit code $err) — rolling back"
   echo "$(timestamp) ════════════════════════════════════════════════"
+  if [ -n "${MIGRATED_FROM:-}" ]; then
+    # The previous version expects the previous service user.
+    systemctl stop urbackup-gui 2>/dev/null || true
+    st0r_migrate "$SERVICE_USER" "$MIGRATED_FROM" || true
+    SERVICE_USER="$MIGRATED_FROM"; SERVICE_HOME="$OLD_SERVICE_HOME"
+    MIGRATED_FROM=""
+  fi
   if [ -f "$BACKUP_DIR/$BACKUP_MARKER" ]; then
     echo "$(timestamp) Restoring from backup $BACKUP_DIR ..."
     as_service rsync -a --delete --exclude="$BACKUP_MARKER" "$BACKUP_DIR/" "$INSTALL_DIR/" || \
@@ -248,9 +255,32 @@ as_service touch "$BACKUP_DIR/$BACKUP_MARKER"
 echo "$(timestamp) Stopping urbackup-gui service..."
 systemctl stop urbackup-gui 2>/dev/null || true
 
+SRC="$TEMP_DIR/src"
+
+# ── 4b. Dedicated service user ────────────────────────────────────────────
+# St0r runs as its own unprivileged account (st0r). Installs that still run as
+# the account St0r was installed with move over here — only if the new account
+# can run this Node.js and read the backups; otherwise they stay as they are and
+# re-running install.sh finishes the move.
+# shellcheck source=service-user.sh
+. "$SRC/setup/service-user.sh"
+MIGRATED_FROM=""
+OLD_SERVICE_HOME="$SERVICE_HOME"
+if [ "$SERVICE_USER" != "$ST0R_USER" ]; then
+  st0r_ensure_user
+  if why=$(st0r_preflight "$ST0R_USER" "$NODE_BIN"); then
+    st0r_migrate "$SERVICE_USER" "$ST0R_USER"
+    MIGRATED_FROM="$SERVICE_USER"
+    SERVICE_USER="$ST0R_USER"
+    SERVICE_HOME="$ST0R_HOME"
+  else
+    echo "$(timestamp) WARN: still running as ${SERVICE_USER}, not ${ST0R_USER}: ${why}."
+    echo "$(timestamp)       Re-run install.sh to move St0r to its own service account."
+  fi
+fi
+
 # ── 5. Install new files (preserve .env), as the service user ─────────────
 echo "$(timestamp) Installing new version..."
-SRC="$TEMP_DIR/src"
 # Backend source (compiled from TypeScript below)
 as_service rsync -a --exclude='.env' --exclude='node_modules' --exclude='dist' \
   "$SRC/backend/"  "$INSTALL_DIR/backend/"
@@ -282,12 +312,14 @@ as_service rsync -a "$SRC/version.json" "$SRC/VERSION" "$INSTALL_DIR/"
 # npm ci installs exactly the release's signed package-lock.json (integrity
 # hashes included) and nothing newer; there is no `npm audit fix` here, since
 # that could pull versions the release never shipped. --ignore-scripts keeps
-# dependency install scripts from running; the one native module that needs its
-# install step (sqlite3, which fetches its prebuilt binary) is rebuilt by name.
+# dependency install scripts from running. The one native module that needs a
+# binary (sqlite3) gets it from install-sqlite3.sh: the official prebuilt, checked
+# against the SHA-256 pinned in this release, never an unchecked download.
 # devDependencies (TypeScript, Vite) are needed because the release is source;
 # they come from the same lockfile and are pruned after the build.
 echo "$(timestamp) Installing backend dependencies (npm ci)..."
-as_service bash -c 'cd "$1" && npm ci --include=dev --ignore-scripts 2>&1 && npm rebuild sqlite3 2>&1' _ "$INSTALL_DIR/backend"
+as_service bash -c 'cd "$1" && npm ci --include=dev --ignore-scripts 2>&1' _ "$INSTALL_DIR/backend"
+as_service bash "$SRC/setup/install-sqlite3.sh" "$INSTALL_DIR/backend" 2>&1
 echo "$(timestamp) Dependencies installed successfully"
 
 echo "$(timestamp) Building backend..."
@@ -353,6 +385,22 @@ bash "$SRC/setup/install-root-files.sh" "$SRC" "$SERVICE_USER"
 # ── 8. Restart service ────────────────────────────────────────────────────
 echo "$(timestamp) Starting urbackup-gui service..."
 systemctl start urbackup-gui 2>/dev/null || true
+
+# After a change of service user, keep it only if the panel comes up.
+if [ -n "$MIGRATED_FROM" ]; then
+  if st0r_service_healthy; then
+    echo "$(timestamp) St0r is running as ${SERVICE_USER}"
+  else
+    echo "$(timestamp) WARN: St0r did not start as ${SERVICE_USER}; going back to ${MIGRATED_FROM}"
+    echo "$(timestamp)       (see journalctl -u urbackup-gui). Re-run install.sh to try again."
+    systemctl stop urbackup-gui 2>/dev/null || true
+    st0r_migrate "$SERVICE_USER" "$MIGRATED_FROM"
+    SERVICE_USER="$MIGRATED_FROM"
+    bash "$SRC/setup/install-root-files.sh" "$SRC" "$SERVICE_USER"
+    systemctl start urbackup-gui 2>/dev/null || true
+  fi
+  MIGRATED_FROM=""
+fi
 
 # ── 9. Prune old backups ──────────────────────────────────────────────────
 # Every update leaves a full copy of the install (with .env) in /opt; keep the

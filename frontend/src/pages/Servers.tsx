@@ -113,6 +113,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
 
   // Install command result
   const [installCmd, setInstallCmd] = useState('');
+  const [storAddress, setStorAddress] = useState<string | null>(null);
   const [cmdCopied, setCmdCopied] = useState(false);
   const [fqdnWarning, setFqdnWarning] = useState(false);
 
@@ -144,6 +145,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
         const td = await tokenResp.json();
         if (!tokenResp.ok || !td.command) throw new Error(td.error || 'Failed to generate install command');
         setInstallCmd(td.command);
+        setStorAddress(typeof td.storAddress === 'string' ? td.storAddress : null);
         setFqdnWarning(!td.baseUrl || td.baseUrl.includes('localhost'));
         setStep('done');
       } else if (method === 'ssh') {
@@ -273,6 +275,11 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
               <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <span>This command expires in 24 hours. Once the agent is running, the server card will show as online automatically.</span>
             </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {storAddress
+                ? <>The agent will accept requests only from St0r's address, <code className="font-mono">{storAddress}</code>.</>
+                : <>The agent will accept requests only from the first address that uses its API key: St0r, when it registers the agent. To name St0r's address yourself, add <code className="font-mono">STOR_AGENT_ALLOWED_IPS=&lt;address&gt;</code> after <code className="font-mono">sudo</code>.</>}
+            </p>
           </div>
           <div className="flex justify-end p-6 border-t dark:border-gray-700">
             <button onClick={onClose} className="btn btn-primary">Done</button>

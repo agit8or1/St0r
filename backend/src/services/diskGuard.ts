@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../utils/logger.js';
+import { runHelper } from '../utils/privileged.js';
 import { query } from '../config/database.js';
 import { openUrBackupSettingsDbReadWrite } from '../config/urbackupDb.js';
 import { UrBackupService } from './urbackup.js';
@@ -224,11 +225,8 @@ export class DiskGuard {
     }
     logger.warn(`[DiskGuard] Running urbackupsrv cleanup -a ${amount}`);
     try {
-      const { stdout, stderr } = await execFileAsync(
-        'sudo',
-        ['-n', 'urbackupsrv', 'cleanup', '-u', 'urbackup', '-a', amount],
-        { timeout: 30 * 60 * 1000, maxBuffer: 8 * 1024 * 1024 }
-      );
+      const { stdout, stderr } = await runHelper('urbackup-cleanup', [amount],
+        { timeout: 30 * 60 * 1000, maxBuffer: 8 * 1024 * 1024 });
       return { ok: true, output: `${stdout}\n${stderr}`.trim() };
     } catch (err: any) {
       const output = `${err?.stdout ?? ''}\n${err?.stderr ?? ''}`.trim() || String(err?.message ?? err);
@@ -246,11 +244,8 @@ export class DiskGuard {
   async removeUnknown(): Promise<{ ok: boolean; output: string }> {
     logger.warn('[DiskGuard] Running urbackupsrv remove-unknown');
     try {
-      const { stdout, stderr } = await execFileAsync(
-        'sudo',
-        ['-n', 'urbackupsrv', 'remove-unknown', '-u', 'urbackup'],
-        { timeout: 60 * 60 * 1000, maxBuffer: 16 * 1024 * 1024 }
-      );
+      const { stdout, stderr } = await runHelper('urbackup-remove-unknown', [],
+        { timeout: 60 * 60 * 1000, maxBuffer: 16 * 1024 * 1024 });
       return { ok: true, output: `${stdout}\n${stderr}`.trim() };
     } catch (err: any) {
       const output = `${err?.stdout ?? ''}\n${err?.stderr ?? ''}`.trim() || String(err?.message ?? err);

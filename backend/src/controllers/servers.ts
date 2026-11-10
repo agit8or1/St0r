@@ -4,6 +4,9 @@ import { encrypt, decrypt } from '../services/secrets.js';
 import { agentGet, agentPost, pingAgent, normalizeFingerprint } from '../services/agentClient.js';
 import { testSshConnection, installAgentViaSsh, AGENT_TLS_FINGERPRINT_CMD } from '../services/serverSsh.js';
 import { logger } from '../utils/logger.js';
+import { runHelper, HelperMissingError } from '../utils/privileged.js';
+import { storAddressFor } from '../utils/localAddress.js';
+import { isIP } from 'net';
 import { randomUUID } from 'crypto';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -514,17 +517,14 @@ export async function triggerOsUpdate(req: Request, res: Response) {
     const server = rows[0];
 
     if (server.is_local) {
-      const { truncateSync } = await import('fs');
-      const logFile = '/var/log/stor-os-update.log';
-      try { await execFileAsync('systemctl', ['reset-failed', 'stor-local-os-update.service']); } catch { /* ok */ }
-      try { truncateSync(logFile, 0); } catch { /* ok */ }
-      execFile('sudo', [
-        'systemd-run', '--unit=stor-local-os-update',
-        `--property=StandardOutput=append:${logFile}`,
-        `--property=StandardError=append:${logFile}`,
-        '/bin/bash', '-c',
-        'DEBIAN_FRONTEND=noninteractive apt-get update -q 2>&1 && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y 2>&1 && echo "SUCCESS: OS packages updated" || echo "FAILED: OS update failed"',
-      ], (err) => { if (err) logger.error('[servers] os-update error:', err); });
+      // Root-owned helper: resets the unit and log, runs apt-get upgrade in the background.
+      try {
+        await runHelper('os-update');
+      } catch (err: any) {
+        logger.error('[servers] os-update error:', err);
+        res.status(err instanceof HelperMissingError ? 503 : 500).json({ error: err.message });
+        return;
+      }
       res.json({ success: true });
       return;
     }
@@ -576,7 +576,7 @@ export async function rebootServer(req: Request, res: Response) {
     if (server.is_local) {
       res.json({ success: true, message: 'Rebooting in 5 seconds' });
       setTimeout(async () => {
-        try { await execFileAsync('sudo', ['systemctl', 'reboot']); } catch (e) { logger.error('[servers] reboot:', e); }
+        try { await runHelper('reboot'); } catch (e) { logger.error('[servers] reboot:', e); }
       }, 5000);
       return;
     }
@@ -675,6 +675,17 @@ function getStorBaseUrl(): string {
   return `http://localhost:${process.env.PORT || 3000}`;
 }
 
+/**
+ * The one-line agent install command. With St0r's address known (same private
+ * network) the agent is told to accept only that address; otherwise it locks
+ * itself to the first address that presents its API key, which is St0r
+ * registering it moments later.
+ */
+export function agentInstallCommand(baseUrl: string, token: string, agentPort: number, storAddress: string | null): string {
+  const allowed = storAddress && isIP(storAddress) ? ` STOR_AGENT_ALLOWED_IPS=${storAddress}` : '';
+  return `curl -fsSL "${baseUrl}/api/agent-install/${token}" | sudo AGENT_PORT=${agentPort}${allowed} bash`;
+}
+
 export async function generateInstallToken(req: Request, res: Response) {
   const user = (req as any).user;
   if (!user?.isAdmin) { res.status(403).json({ error: 'Admins only' }); return; }
@@ -696,10 +707,11 @@ export async function generateInstallToken(req: Request, res: Response) {
 
   const baseUrl = getStorBaseUrl();
   const agentPort = server.agent_port || 7420;
-  const command = `curl -fsSL "${baseUrl}/api/agent-install/${token}" | sudo AGENT_PORT=${agentPort} bash`;
+  const storAddress = await storAddressFor(server.host, agentPort);
+  const command = agentInstallCommand(baseUrl, token, agentPort, storAddress);
 
   logger.info(`[servers] Install token generated for server ${server.id} by ${user.username}`);
-  res.json({ token, command, expires, baseUrl });
+  res.json({ token, command, expires, baseUrl, storAddress });
 }
 
 /**
@@ -726,6 +738,8 @@ export async function serveInstallScript(req: Request, res: Response) {
   const server = rows[0];
   const baseUrl = getStorBaseUrl();
   const agentPort = server.agent_port || 7420;
+  const storAddress = await storAddressFor(server.host, agentPort);
+  const defaultAllowed = storAddress && isIP(storAddress) ? storAddress : '';
 
   // Build and serve the install script dynamically. \$ marks a shell variable,
   // as opposed to a ${} interpolated here.
@@ -737,10 +751,19 @@ STOR_SERVER="${baseUrl}"
 SERVER_ID="${server.id}"
 REGISTER_TOKEN="${token}"
 AGENT_PORT="\${AGENT_PORT:-${agentPort}}"
+# Addresses the agent accepts requests from (St0r's, as this host sees it).
+ALLOWED_IPS="\${STOR_AGENT_ALLOWED_IPS:-${defaultAllowed}}"
 
 echo "=== St0r Agent Installer ==="
 echo "  Server: \$STOR_SERVER"
 echo "  Agent port: \$AGENT_PORT"
+if [ -n "\$ALLOWED_IPS" ]; then
+  echo "  Accepts requests from: \$ALLOWED_IPS"
+else
+  echo "  Accepts requests from: the first address that presents the agent's API key"
+  echo "    (St0r, when it registers the agent). To name St0r's address instead, re-run"
+  echo "    with STOR_AGENT_ALLOWED_IPS=<address> after sudo."
+fi
 echo ""
 
 # Require root
@@ -769,7 +792,7 @@ tar xzf "\$TMPDIR/stor-agent.tar.gz" -C "\$TMPDIR"
 # Run the agent install script
 cd "\$TMPDIR"
 chmod +x install.sh
-STOR_AGENT_PORT="\$AGENT_PORT" bash install.sh
+STOR_AGENT_PORT="\$AGENT_PORT" STOR_AGENT_ALLOWED_IPS="\$ALLOWED_IPS" bash install.sh
 
 # Read the generated API key
 API_KEY=\$(node -e "console.log(require('/etc/stor-agent/config.json').api_key)" 2>/dev/null || echo "")

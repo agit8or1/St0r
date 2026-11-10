@@ -1,10 +1,8 @@
-import { execFile as execFileCb } from 'child_process';
-import { promisify } from 'util';
 import { resolve, dirname } from 'path';
 import { existsSync } from 'fs';
 import { getUrBackupDb, openUrBackupDbReadWrite } from '../config/urbackupDb.js';
-const execFile = promisify(execFileCb);
 import { logger } from '../utils/logger.js';
+import { runHelper } from '../utils/privileged.js';
 import { pool } from '../config/database.js';
 
 /**
@@ -930,7 +928,9 @@ export class UrBackupDbService {
       // delete_pending=1 is already set so the backup won't appear in listings.
       const dirSnapshot = dirToDelete;
       logger.info(`Queuing background deletion: ${dirSnapshot}`);
-      execFile('sudo', ['-u', 'urbackup', 'rm', '-rf', '--', dirSnapshot], { timeout: 600_000 })
+      // The root-owned helper re-checks that the path is a backup inside the
+      // storage folder and removes it as the urbackup user.
+      runHelper('delete-backup', [dirSnapshot], { timeout: 600_000 })
         .then(() => logger.info(`Background deletion complete: ${dirSnapshot}`))
         .catch(err => logger.error(`Background deletion failed for ${dirSnapshot}:`, err));
 
