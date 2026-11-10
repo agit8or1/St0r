@@ -1,6 +1,6 @@
 {
   "name": "urbackup-gui-backend",
-  "version": "3.2.131",
+  "version": "3.2.132",
   "description": "Backend API for UrBackup GUI",
   "main": "dist/server.js",
   "type": "module",

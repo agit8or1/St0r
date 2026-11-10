@@ -1,10 +1,10 @@
 {
-  "version": "3.2.131",
+  "version": "3.2.132",
   "releaseDate": "2026-11-10",
   "changelog": [
-    "Security hardening \u2014 please update.",
-    "New: install.sh --domain sets up HTTPS with a free Let's Encrypt certificate.",
-    "The Servers page now shows when a remote agent has an update available, with a one-click update over SSH.",
-    "Re-running the installer keeps your existing nginx (HTTPS) configuration."
+    "Security hardening — please update.",
+    "St0r now runs as its own service account (st0r); existing installs move over on update.",
+    "Folder downloads include symlinked files that point inside the client's backup again.",
+    "The agent install command names St0r's address when both are on the same private network."
   ]
 }

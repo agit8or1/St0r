@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.132] - 2026-11-10
+
+Security release. Please update.
+
+### Security
+- Security hardening.
+
+### Changed
+- **St0r runs as its own system account, `st0r`** (no login shell, home `/var/lib/st0r`), instead of the account that ran the installer. Updates and re-running `install.sh` move existing installs over after checking that `st0r` can run St0r's Node.js and read the backup storage; otherwise the install keeps its account and the update log says why.
+- The panel's root actions (UrBackup and OS updates, reboot, UrBackup cleanup, deleting a backup, image export, the log page) go through the root-owned `/usr/local/lib/st0r/st0r-helper`. On an install updated straight from 3.2.130 or earlier they ask for **Update Now** to be run once more.
+- The `sqlite3` native binary is the official prebuilt, checked against a SHA-256 pinned in the release.
+- The agent install command names St0r's address when St0r and the server are on the same private network.
+- `deploy.sh` hands deployed files to the service's own account.
+
+### Fixed
+- Folder downloads include symlinked files whose target is inside the client's backup again (3.2.131 left them out).
+
+### Tests
+- New regression tests for the service account and helper, symlinked files in folder downloads, the agent install command and the `sqlite3` binary check.
+
 ## [3.2.131] - 2026-11-10
 
 Security release. See advisory [GHSA-6f2v-5f8c-2jjj](https://github.com/agit8or1/St0r/security/advisories/GHSA-6f2v-5f8c-2jjj).

@@ -158,7 +158,7 @@ parse_args "$@" || exit 1
 #  - ST0R_INSTALL_VERSION=3.2.118 pins a release explicitly.
 #  - If GitHub cannot be asked, FALLBACK_VERSION, with a warning. It is a
 #    last resort, not the normal path, so it going stale is no longer silent.
-FALLBACK_VERSION="3.2.131"
+FALLBACK_VERSION="3.2.132"
 FALLBACK_DATE="2026-11-10"
 RELEASES_API="https://api.github.com/repos/agit8or1/St0r/releases/latest"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
