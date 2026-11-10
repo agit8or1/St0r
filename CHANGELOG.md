@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.131] - 2026-11-10
+
+Security release. Please update.
+
+### Security
+- Security hardening.
+
+### Added
+- **`install.sh --domain <name> [--email <address>]`** sets up HTTPS with a Let's Encrypt certificate (Certbot) and redirects HTTP to HTTPS. On an existing install it only enables HTTPS. Without it, the installer ends by saying how to enable HTTPS.
+- **Agent updates.** The Servers page shows when a remote agent is older than the one St0r ships, with **Update agent via SSH** (or run the install command again; the agent keeps its API key, certificate and settings). Agent 1.1.0 reports its version in `/health`.
+
+### Changed
+- The updater is installed root-owned in `/usr/local/lib/st0r/` and started through `/usr/local/lib/st0r/start-update`; the release key lives in `/etc/st0r/release-signers`. Existing installs move over on their next update from the interface, or when `install.sh` is run again.
+- Updates and installs install dependencies with `npm ci` from the release's lockfile, as the service user.
+- Re-running `install.sh` keeps an existing St0r nginx site instead of replacing it.
+- `install.sh` installs the signed release asset rather than GitHub's source archive, so only releases from 3.2.130 on can be installed without a checkout.
+- Folder downloads are zipped by St0r itself; the `zip` command is no longer used.
+
+### Tests
+- New regression tests for the installer and updater scripts, backup file and folder downloads, and the agent.
+
 ## [3.2.130] - 2026-11-09
 
 Security release. See advisory [GHSA-hmxr-c2q9-q929](https://github.com/agit8or1/St0r/security/advisories/GHSA-hmxr-c2q9-q929).

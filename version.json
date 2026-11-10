@@ -1,12 +1,10 @@
 {
-  "version": "3.2.130",
-  "releaseDate": "2026-11-09",
+  "version": "3.2.131",
+  "releaseDate": "2026-11-10",
   "changelog": [
-    "Security release \u2014 please update. Fixes several access-control issues found in a security review (advisory GHSA-hmxr-c2q9-q929).",
-    "Folder downloads no longer follow links that point outside the endpoint's own backups.",
-    "The forced password change at first sign-in is now enforced by the server, not just the login page.",
-    "Updates are now cryptographically signed, and St0r refuses to install an update whose signature doesn't check out (from the next update onward).",
-    "Downloads and restores are now recorded in the log with who did them.",
-    "The session cookie is marked Secure automatically when St0r is served over HTTPS."
+    "Security hardening \u2014 please update.",
+    "New: install.sh --domain sets up HTTPS with a free Let's Encrypt certificate.",
+    "The Servers page now shows when a remote agent has an update available, with a one-click update over SSH.",
+    "Re-running the installer keeps your existing nginx (HTTPS) configuration."
   ]
 }
