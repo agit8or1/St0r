@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.2.132] - 2026-11-10
 
-Security release. Please update.
+Security release. See advisory [GHSA-62wr-6r33-9863](https://github.com/agit8or1/St0r/security/advisories/GHSA-62wr-6r33-9863).
 
 ### Security
 - Security hardening.
