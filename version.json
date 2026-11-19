@@ -1,9 +1,9 @@
 {
-  "version": "3.2.133",
-  "releaseDate": "2026-11-10",
+  "version": "3.2.134",
+  "releaseDate": "2026-11-19",
   "changelog": [
-    "Recovery drills: scheduled restores of a canary file from the offsite copy, checked against a checksum St0r keeps separately.",
-    "Optional isolated boot drills: a Windows (UEFI) image booted as a disposable Proxmox clone with its application service checked.",
-    "Backup, replication and verified recovery shown as separate statuses, with a printable customer report."
+    "Alerts page: rule changes are now saved and survive a reload (issue #27).",
+    "Alert rules are evaluated on the server and notify by e-mail (Settings → Email & Alerts) and/or Pushover.",
+    "Test button per rule to check notification delivery."
   ]
 }

@@ -33,6 +33,7 @@ import storageLimitsRoutes from './routes/storageLimits.js';
 import diskGuardRoutes from './routes/diskGuard.js';
 import serversRoutes from './routes/servers.js';
 import recoveryRoutes from './routes/recovery.js';
+import alertsRoutes from './routes/alerts.js';
 import { serveArtifact } from './services/drills/artifacts.js';
 import { serveInstallScript, serveAgentPackage, agentRegister } from './controllers/servers.js';
 
@@ -151,6 +152,7 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/browse', browseRoutes);
 app.use('/api/replication', replicationRoutes);
 app.use('/api/recovery', recoveryRoutes);
+app.use('/api/alerts', alertsRoutes);
 app.use('/api/storage-limits', storageLimitsRoutes);
 app.use('/api/disk-guard', diskGuardRoutes);
 // Public agent install endpoints (no auth — token-protected)
@@ -239,6 +241,8 @@ async function ensureTables() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  const { ensureAlertTables } = await import('./services/alertRules.js');
+  await ensureAlertTables();
 }
 
 // Where the generated first-run password is written for the installer to read.
@@ -349,6 +353,10 @@ async function startServer() {
     // Start disk space guard — stops backups before the storage volume fills
     const { diskGuard } = await import('./services/diskGuard.js');
     diskGuard.start();
+
+    // Alert rules from the Alerts page — evaluate and notify (issue #27)
+    const { alertMonitor } = await import('./services/alertRules.js');
+    alertMonitor.start();
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);

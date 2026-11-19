@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.134] - 2026-11-19
+
+### Fixed
+- **Alerts page changes were not saved** ([#27](https://github.com/agit8or1/St0r/issues/27)). The alert rules only ever lived in the browser, seeded from hard-coded defaults, so every edit was lost on reload — and no rule was ever evaluated or sent. Rules are now stored in the database (table `alert_rules`, created automatically at startup) and saved through `/api/alerts/rules`; errors are shown inline.
+
+### Added
+- Alert rules are checked on the server every 10 minutes (`ST0R_ALERT_INTERVAL_MIN`) against live UrBackup status: backup failure, client offline for N hours, storage above N %, last backup older than N days. Backup types disabled for a client are ignored.
+- Notifications go out by e-mail, using the mail server from **Settings → Email & Alerts** (the admin address, or the rule's own address list), and/or **Pushover** using the keys configured there. Each condition notifies once and again only after it has cleared and recurred.
+- A **test** button per rule sends a test notification and reports delivery errors.
+- Active alerts are computed by the server from the saved rules; customer-scoped users see only their own clients. Acknowledge/Dismiss are remembered in the browser until the condition clears.
+
 ## [3.2.133] - 2026-11-10
 
 ### Added

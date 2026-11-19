@@ -584,3 +584,31 @@ class RecoveryApi {
 }
 
 export const recoveryApi = new RecoveryApi();
+
+/** Alert rules + active alerts (Alerts page, issue #27). */
+export type AlertRuleType = 'backup_failure' | 'client_offline' | 'storage_low' | 'backup_old';
+export interface AlertRule {
+  type: AlertRuleType;
+  name: string;
+  enabled: boolean;
+  threshold: number | null;
+  notifyEmail: boolean;
+  notifyPushover: boolean;
+  emailTo: string;
+}
+export interface ActiveAlert {
+  key: string;
+  type: AlertRuleType;
+  severity: 'critical' | 'warning';
+  message: string;
+  clientName?: string;
+  since: number | null;
+}
+class AlertsApi {
+  private api = new HttpClient();
+  async rules() { return (await this.api.get<AlertRule[]>('/alerts/rules')).data; }
+  async updateRule(type: AlertRuleType, r: Partial<AlertRule>) { return (await this.api.put<AlertRule>(`/alerts/rules/${type}`, r)).data; }
+  async testRule(type: AlertRuleType) { await this.api.post(`/alerts/rules/${type}/test`); }
+  async active() { return (await this.api.get<ActiveAlert[]>('/alerts/active')).data; }
+}
+export const alertsApi = new AlertsApi();

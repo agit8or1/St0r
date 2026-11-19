@@ -1,151 +1,133 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { Tooltip } from '../components/Tooltip';
-import { Bell, Edit, Save, X, AlertTriangle, CheckCircle } from 'lucide-react';
-import { api } from '../services/api';
+import { Bell, Edit, Save, X, AlertTriangle, CheckCircle, Send } from 'lucide-react';
+import { alertsApi, AlertRule, ActiveAlert, AlertRuleType } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 
-interface AlertRule {
-  id: number;
-  name: string;
-  type: 'backup_failure' | 'client_offline' | 'storage_low' | 'backup_old';
-  enabled: boolean;
-  threshold?: number;
-  notifyEmail: boolean;
-  notifyPushover: boolean;
-  emailTo?: string;
-}
-
-interface Alert {
-  id: number;
-  type: string;
-  severity: 'critical' | 'warning' | 'info';
-  message: string;
-  clientName?: string;
-  timestamp: string;
+interface Alert extends ActiveAlert {
   acknowledged: boolean;
 }
 
+const ACK_STORAGE_KEY = 'st0r.alerts.acknowledged';
+const DISMISS_STORAGE_KEY = 'st0r.alerts.dismissed';
+
+function loadKeySet(storageKey: string): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(storageKey) || '[]')); } catch { return new Set(); }
+}
+function saveKeySet(storageKey: string, keys: Set<string>) {
+  try { localStorage.setItem(storageKey, JSON.stringify([...keys])); } catch { /* storage unavailable */ }
+}
+
+function errorText(err: any, fallback: string): string {
+  return err?.response?.data?.error || err?.message || fallback;
+}
+
 export function Alerts() {
+  const { user } = useAuth();
+  const isAdmin = !!user?.isAdmin;
   const [activeAlerts, setActiveAlerts] = useState<Alert[]>([]);
-  const [alertRules, setAlertRules] = useState<AlertRule[]>([
-    {
-      id: 1,
-      name: 'Backup Failure Alert',
-      type: 'backup_failure',
-      enabled: true,
-      notifyEmail: true,
-      notifyPushover: false,
-      emailTo: 'admin@example.com'
-    },
-    {
-      id: 2,
-      name: 'Client Offline Alert',
-      type: 'client_offline',
-      enabled: true,
-      threshold: 24,
-      notifyEmail: true,
-      notifyPushover: true,
-      emailTo: 'admin@example.com'
-    },
-    {
-      id: 3,
-      name: 'Storage Low Alert',
-      type: 'storage_low',
-      enabled: false,
-      threshold: 90,
-      notifyEmail: true,
-      notifyPushover: false,
-      emailTo: 'admin@example.com'
-    },
-    {
-      id: 4,
-      name: 'Old Backup Alert',
-      type: 'backup_old',
-      enabled: true,
-      threshold: 7,
-      notifyEmail: true,
-      notifyPushover: false,
-      emailTo: 'admin@example.com'
-    }
-  ]);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
+    loadRules();
     loadActiveAlerts();
   }, []);
 
+  const loadRules = async () => {
+    try {
+      setAlertRules(await alertsApi.rules());
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(errorText(err, 'Failed to load alert rules'));
+    }
+  };
+
   const loadActiveAlerts = async () => {
     try {
-      // Generate sample alerts based on actual client status
-      const clients = await api.getClients();
-      const alerts: Alert[] = [];
-
-      // Check for failed backups
-      clients.forEach(client => {
-        if (!client.file_ok && !client.image_ok) {
-          alerts.push({
-            id: Math.random(),
-            type: 'backup_failure',
-            severity: 'critical',
-            message: `Backup failed for client ${client.name}`,
-            clientName: client.name,
-            timestamp: new Date().toISOString(),
-            acknowledged: false
-          });
-        }
-      });
-
-      // Check for offline clients
-      clients.forEach(client => {
-        if (!client.online) {
-          alerts.push({
-            id: Math.random(),
-            type: 'client_offline',
-            severity: 'warning',
-            message: `Client ${client.name} is offline`,
-            clientName: client.name,
-            timestamp: new Date().toISOString(),
-            acknowledged: false
-          });
-        }
-      });
-
-      setActiveAlerts(alerts);
+      const alerts = await alertsApi.active();
+      const acked = loadKeySet(ACK_STORAGE_KEY);
+      const dismissed = loadKeySet(DISMISS_STORAGE_KEY);
+      const current = new Set(alerts.map(a => a.key));
+      // Forget acknowledgements for conditions that have cleared, so a recurrence shows again.
+      saveKeySet(ACK_STORAGE_KEY, new Set([...acked].filter(k => current.has(k))));
+      saveKeySet(DISMISS_STORAGE_KEY, new Set([...dismissed].filter(k => current.has(k))));
+      setActiveAlerts(alerts
+        .filter(a => !dismissed.has(a.key))
+        .map(a => ({ ...a, acknowledged: acked.has(a.key) })));
     } catch (err) {
       console.error('Failed to load alerts:', err);
     }
   };
 
-  const handleAcknowledge = (alertId: number) => {
-    setActiveAlerts(alerts =>
-      alerts.map(a => a.id === alertId ? { ...a, acknowledged: true } : a)
-    );
+  const handleAcknowledge = (key: string) => {
+    const acked = loadKeySet(ACK_STORAGE_KEY);
+    acked.add(key);
+    saveKeySet(ACK_STORAGE_KEY, acked);
+    setActiveAlerts(alerts => alerts.map(a => a.key === key ? { ...a, acknowledged: true } : a));
   };
 
-  const handleDismiss = (alertId: number) => {
-    setActiveAlerts(alerts => alerts.filter(a => a.id !== alertId));
+  const handleDismiss = (key: string) => {
+    const dismissed = loadKeySet(DISMISS_STORAGE_KEY);
+    dismissed.add(key);
+    saveKeySet(DISMISS_STORAGE_KEY, dismissed);
+    setActiveAlerts(alerts => alerts.filter(a => a.key !== key));
   };
 
   const handleEditRule = (rule: AlertRule) => {
-    setEditingRule(rule);
+    setEditingRule({ ...rule });
+    setModalError(null);
     setShowModal(true);
   };
 
-  const handleSaveRule = () => {
-    if (!editingRule) return;
-
-    setAlertRules(rules =>
-      rules.map(r => r.id === editingRule.id ? editingRule : r)
-    );
-    setShowModal(false);
-    setEditingRule(null);
+  const saveRule = async (type: AlertRuleType, changes: Partial<AlertRule>): Promise<boolean> => {
+    try {
+      const saved = await alertsApi.updateRule(type, changes);
+      setAlertRules(rules => rules.map(r => r.type === type ? saved : r));
+      loadActiveAlerts();
+      return true;
+    } catch (err) {
+      const msg = errorText(err, 'Failed to save alert rule');
+      if (showModal) setModalError(msg); else setNotice({ ok: false, text: msg });
+      return false;
+    }
   };
 
-  const handleToggleRule = (ruleId: number) => {
-    setAlertRules(rules =>
-      rules.map(r => r.id === ruleId ? { ...r, enabled: !r.enabled } : r)
-    );
+  const handleSaveRule = async () => {
+    if (!editingRule) return;
+    setSaving(true);
+    const { type, name, threshold, emailTo, notifyEmail, notifyPushover } = editingRule;
+    const ok = await saveRule(type, {
+      name, emailTo, notifyEmail, notifyPushover,
+      ...(threshold !== null ? { threshold } : {}),
+    });
+    setSaving(false);
+    if (ok) {
+      setShowModal(false);
+      setEditingRule(null);
+      setNotice({ ok: true, text: `Saved "${name}"` });
+    }
+  };
+
+  const handleToggleRule = async (rule: AlertRule) => {
+    setNotice(null);
+    await saveRule(rule.type, { enabled: !rule.enabled });
+  };
+
+  const handleTestRule = async (rule: AlertRule) => {
+    setNotice(null);
+    try {
+      await alertsApi.testRule(rule.type);
+      setNotice({ ok: true, text: `Test notification sent for "${rule.name}"` });
+    } catch (err) {
+      setNotice({ ok: false, text: errorText(err, 'Test notification failed') });
+    }
   };
 
   const getSeverityColor = (severity: string) => {
@@ -206,7 +188,7 @@ export function Alerts() {
             <div className="space-y-3">
               {activeAlerts.filter(a => !a.acknowledged).map(alert => (
                 <div
-                  key={alert.id}
+                  key={alert.key}
                   className={`p-4 rounded-lg border ${getSeverityColor(alert.severity)}`}
                 >
                   <div className="flex items-start justify-between">
@@ -229,14 +211,14 @@ export function Alerts() {
                         </div>
                         <p className="text-sm">{alert.message}</p>
                         <p className="text-xs mt-1 opacity-75">
-                          {new Date(alert.timestamp).toLocaleString()}
+                          {alert.since ? `Since ${new Date(alert.since).toLocaleString()}` : 'Current'}
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <Tooltip text="Mark as acknowledged — alert moves to history but stays visible">
                         <button
-                          onClick={() => handleAcknowledge(alert.id)}
+                          onClick={() => handleAcknowledge(alert.key)}
                           className="px-3 py-1 text-sm rounded bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
                           Acknowledge
@@ -244,7 +226,7 @@ export function Alerts() {
                       </Tooltip>
                       <Tooltip text="Permanently dismiss this alert">
                         <button
-                          onClick={() => handleDismiss(alert.id)}
+                          onClick={() => handleDismiss(alert.key)}
                           className="px-3 py-1 text-sm rounded bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
                           Dismiss
@@ -266,10 +248,23 @@ export function Alerts() {
             </h2>
           </div>
 
+          {loadError && (
+            <div className="mb-3 p-3 rounded bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-sm">{loadError}</div>
+          )}
+          {notice && (
+            <div className={`mb-3 p-3 rounded text-sm ${notice.ok ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'}`}>
+              {notice.text}
+            </div>
+          )}
+          <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+            Rules are checked on the server every 10 minutes. E-mail uses the mail server and admin address from
+            Settings → Email &amp; Alerts; Pushover uses the keys configured there.
+          </p>
+
           <div className="space-y-3">
             {alertRules.map(rule => (
               <div
-                key={rule.id}
+                key={rule.type}
                 className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
               >
                 <div className="flex items-center gap-4 flex-1">
@@ -277,7 +272,8 @@ export function Alerts() {
                     <input
                       type="checkbox"
                       checked={rule.enabled}
-                      onChange={() => handleToggleRule(rule.id)}
+                      onChange={() => handleToggleRule(rule)}
+                      disabled={!isAdmin}
                       className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                   </Tooltip>
@@ -298,7 +294,7 @@ export function Alerts() {
                       </Tooltip>
                     </div>
                     <div className="flex gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
-                      {rule.threshold && (
+                      {rule.threshold !== null && (
                         <Tooltip text={
                           rule.type === 'storage_low' ? `Alert fires when storage usage exceeds ${rule.threshold}%` :
                           rule.type === 'client_offline' ? `Alert fires when a client has been offline for more than ${rule.threshold} hours` :
@@ -315,14 +311,28 @@ export function Alerts() {
                     </div>
                   </div>
                 </div>
-                <Tooltip text="Edit this alert rule">
-                  <button
-                    onClick={() => handleEditRule(rule)}
-                    className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                </Tooltip>
+                {isAdmin && (
+                  <div className="flex gap-1">
+                    {(rule.notifyEmail || rule.notifyPushover) && (
+                      <Tooltip text="Send a test notification over this rule's channels">
+                        <button
+                          onClick={() => handleTestRule(rule)}
+                          className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                        >
+                          <Send className="h-4 w-4" />
+                        </button>
+                      </Tooltip>
+                    )}
+                    <Tooltip text="Edit this alert rule">
+                      <button
+                        onClick={() => handleEditRule(rule)}
+                        className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                    </Tooltip>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -337,18 +347,18 @@ export function Alerts() {
             <div className="space-y-2">
               {activeAlerts.filter(a => a.acknowledged).map(alert => (
                 <div
-                  key={alert.id}
+                  key={alert.key}
                   className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg opacity-60"
                 >
                   <div className="flex-1">
                     <p className="text-sm text-gray-900 dark:text-gray-100">{alert.message}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {new Date(alert.timestamp).toLocaleString()}
+                      {alert.since ? `Since ${new Date(alert.since).toLocaleString()}` : 'Current'}
                     </p>
                   </div>
                   <Tooltip text="Remove from acknowledged alerts">
                     <button
-                      onClick={() => handleDismiss(alert.id)}
+                      onClick={() => handleDismiss(alert.key)}
                       className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     >
                       <X className="h-4 w-4" />
@@ -380,7 +390,7 @@ export function Alerts() {
                 />
               </div>
 
-              {editingRule.threshold !== undefined && (
+              {editingRule.threshold !== null && (
                 <div>
                   <label className="label">
                     Threshold ({editingRule.type === 'storage_low' ? '%' : editingRule.type === 'client_offline' ? 'hours' : 'days'})
@@ -388,6 +398,8 @@ export function Alerts() {
                   <input
                     type="number"
                     value={editingRule.threshold}
+                    min={1}
+                    max={editingRule.type === 'storage_low' ? 100 : undefined}
                     onChange={(e) => setEditingRule({ ...editingRule, threshold: Number(e.target.value) })}
                     className="input"
                   />
@@ -395,9 +407,10 @@ export function Alerts() {
               )}
 
               <div>
-                <label className="label">Email To</label>
+                <label className="label">Email To (optional — defaults to the admin address in Settings)</label>
                 <input
-                  type="email"
+                  type="text"
+                  placeholder="admin address from Settings"
                   value={editingRule.emailTo || ''}
                   onChange={(e) => setEditingRule({ ...editingRule, emailTo: e.target.value })}
                   className="input"
@@ -433,6 +446,10 @@ export function Alerts() {
               </div>
             </div>
 
+            {modalError && (
+              <div className="mt-4 p-3 rounded bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-sm">{modalError}</div>
+            )}
+
             <div className="flex justify-end gap-2 mt-6">
               <button
                 onClick={() => { setShowModal(false); setEditingRule(null); }}
@@ -443,10 +460,11 @@ export function Alerts() {
               </button>
               <button
                 onClick={handleSaveRule}
+                disabled={saving}
                 className="btn btn-primary flex items-center gap-2"
               >
                 <Save className="h-4 w-4" />
-                Save
+                {saving ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>
