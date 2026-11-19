@@ -7,9 +7,6 @@ import {
   ClipboardCopy,
   Check,
   Star,
-  Github,
-  Linkedin,
-  Facebook,
   Mail,
   ExternalLink,
   Briefcase,
@@ -25,6 +22,7 @@ import {
   projectShortShare,
   GrowthProject,
 } from '../config/growth';
+import { Github, Linkedin, Facebook } from './BrandIcons';
 import { copyText, canNativeShare, nativeShare, openExternal, shareTargets } from '../utils/share';
 
 interface HelpUsGrowModalProps {

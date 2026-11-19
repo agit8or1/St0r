@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -11,7 +12,7 @@ import type { ReplicationTarget, ReplicationRun } from '../types';
 import { formatBytes } from '../utils/format';
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg: Record<string, { cls: string; icon: JSX.Element }> = {
+  const cfg: Record<string, { cls: string; icon: React.JSX.Element }> = {
     success: { cls: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', icon: <CheckCircle className="h-3 w-3" /> },
     running: { cls: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', icon: <Loader2 className="h-3 w-3 animate-spin" /> },
     failed: { cls: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300', icon: <AlertCircle className="h-3 w-3" /> },

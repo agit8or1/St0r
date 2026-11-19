@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronRight, ChevronDown, Folder, HardDrive, Loader2, FolderOpen } from 'lucide-react';
 
@@ -112,7 +113,7 @@ export function DirectoryBrowser({ clientId, onSelect, selectedPath }: Directory
     }
   };
 
-  const renderNode = (node: DirectoryNode, depth: number = 0, path: DirectoryNode[] = []): JSX.Element => {
+  const renderNode = (node: DirectoryNode, depth: number = 0, path: DirectoryNode[] = []): React.JSX.Element => {
     const currentPath = [...path, node];
     const isSelected = selectedPath === node.path;
     const Icon = node.type === 'drive' ? HardDrive : node.expanded ? FolderOpen : Folder;
