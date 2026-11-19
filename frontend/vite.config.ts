@@ -24,7 +24,7 @@ function readEnvKey(envPath: string, key: string): string | null {
   return null;
 }
 
-const backendEnv = resolve(__dirname, '../backend/.env');
+const backendEnv = resolve(import.meta.dirname, '../backend/.env');
 
 // FQDN from backend settings (.env file) or from the process environment
 const fqdn =
