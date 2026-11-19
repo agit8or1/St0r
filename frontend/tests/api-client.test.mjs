@@ -7,7 +7,7 @@ import { once } from 'node:events';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { transformWithEsbuild } from 'vite';
+import { transformWithOxc } from 'vite';
 
 const requests = [];
 const server = createServer((req, res) => {
@@ -38,7 +38,7 @@ const win = globalThis.window = { location: { origin, pathname: '/clients', href
 
 const dir = await mkdtemp(join(tmpdir(), 'stor-frontend-test-'));
 const source = await readFile(new URL('../src/services/api.ts', import.meta.url), 'utf8');
-const { code } = await transformWithEsbuild(source, 'api.ts', { loader: 'ts', format: 'esm' });
+const { code } = await transformWithOxc(source, 'api.ts', { lang: 'ts' });
 await writeFile(join(dir, 'api.mjs'), code);
 const { api, HttpError } = await import(join(dir, 'api.mjs'));
 test.after(async () => { server.close(); await rm(dir, { recursive: true, force: true }); });
