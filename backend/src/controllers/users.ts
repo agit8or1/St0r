@@ -114,7 +114,7 @@ export async function addUser(req: Request, res: Response) {
 /**
  * Update a user
  */
-export async function modifyUser(req: Request, res: Response) {
+export async function modifyUser(req: Request<{ id: string }>, res: Response) {
   try {
     const { id } = req.params;
     const { username, email, password, isAdmin, customerIds } = req.body;
@@ -165,7 +165,7 @@ export async function modifyUser(req: Request, res: Response) {
 /**
  * Delete a user
  */
-export async function removeUser(req: Request, res: Response) {
+export async function removeUser(req: Request<{ id: string }>, res: Response) {
   try {
     const { id } = req.params;
     const requestingUser = (req as any).user;

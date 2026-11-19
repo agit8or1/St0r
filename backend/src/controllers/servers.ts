@@ -719,7 +719,7 @@ export async function generateInstallToken(req: Request, res: Response) {
  * The token identifies which server entry to register against.
  * No auth header required (token IS the auth).
  */
-export async function serveInstallScript(req: Request, res: Response) {
+export async function serveInstallScript(req: Request<{ token: string }>, res: Response) {
   const { token } = req.params;
   if (!token || !/^[a-f0-9]{64}$/.test(token)) {
     res.status(400).send('Invalid token\n');
@@ -837,7 +837,7 @@ fi
  * Serves the agent package tarball. Token auth only (same token from install script).
  * This means the remote server can download the agent without any stored credentials.
  */
-export async function serveAgentPackage(req: Request, res: Response) {
+export async function serveAgentPackage(req: Request<{ token: string }>, res: Response) {
   const { token } = req.params;
   if (!token || !/^[a-f0-9]{64}$/.test(token)) {
     res.status(400).json({ error: 'Invalid token' });
