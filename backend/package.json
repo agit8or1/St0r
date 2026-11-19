@@ -53,7 +53,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/node": "^20.10.5",
+    "@types/node": "^26.6.6",
     "@types/nodemailer": "^7.0.3",
     "@types/sqlite3": "^3.1.11",
     "eslint": "^9.39.5",
