@@ -76,7 +76,7 @@ export function PathSelector({ onSelect, onClose, existingPaths }: PathSelectorP
               <div><strong>Linux:</strong> /home/username/documents, /var/www</div>
               <div><strong>Network:</strong> \\server\share (Windows) or /mnt/share (Linux)</div>
             </div>
-            <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-800 dark:text-yellow-200">
+            <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-sm text-xs text-yellow-800 dark:text-yellow-200">
               <strong>Note:</strong> Live filesystem browsing requires the UrBackup web interface to be enabled (headless mode must be OFF).
             </div>
           </div>

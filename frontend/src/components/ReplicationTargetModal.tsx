@@ -232,7 +232,7 @@ export function ReplicationTargetModal({ target, onClose, onSaved }: Props) {
                   <input type="text" value={rp.dst} onChange={e => { const n = [...repoPaths]; n[i].dst = e.target.value; setRepoPaths(n); }}
                     placeholder="Target path" className="input flex-1 text-xs" />
                   <button type="button" onClick={() => setRepoPaths(repoPaths.filter((_, j) => j !== i))}
-                    className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    className="rounded-sm p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -293,11 +293,11 @@ export function ReplicationTargetModal({ target, onClose, onSaved }: Props) {
             </div>
             <div className="mt-3 flex gap-6">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={verifyAfterSync} onChange={e => setVerifyAfterSync(e.target.checked)} className="rounded text-primary-600" />
+                <input type="checkbox" checked={verifyAfterSync} onChange={e => setVerifyAfterSync(e.target.checked)} className="rounded-sm text-primary-600" />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Verify after sync</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={checksumVerify} onChange={e => setChecksumVerify(e.target.checked)} className="rounded text-primary-600" />
+                <input type="checkbox" checked={checksumVerify} onChange={e => setChecksumVerify(e.target.checked)} className="rounded-sm text-primary-600" />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Checksum verify</span>
               </label>
             </div>

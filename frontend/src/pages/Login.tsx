@@ -77,7 +77,7 @@ export function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100">
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-primary-50 to-primary-100">
       <div className="w-full max-w-md">
         <div className="card">
           {/* Logo */}

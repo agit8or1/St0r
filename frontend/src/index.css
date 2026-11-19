@@ -1,6 +1,89 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+@utility btn-primary {
+  @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+}
+
+@utility btn-secondary {
+  @apply bg-gray-200 text-gray-900 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600;
+}
+
+@utility btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700 active:bg-red-800;
+}
+
+@utility btn-success {
+  @apply bg-green-600 text-white hover:bg-green-700 active:bg-green-800;
+}
+
+@utility card {
+  @apply bg-white rounded-lg shadow-md p-6 dark:bg-gray-800 dark:shadow-xl dark:border dark:border-gray-700;
+}
+
+@utility input {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-hidden dark:bg-gray-900 dark:border-gray-600 dark:text-gray-50;
+}
+
+@utility label {
+  @apply block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200;
+}
+
+@utility heartbeat {
+  /* "Help Us Grow" entry button: a gentle double-thump heartbeat with a soft
+     red glow on the heart. Long pause between beats so it reads as alive
+     rather than as an alarm.
+     Both animations live in one shorthand on purpose — two classes each
+     setting `animation` would override one another, leaving only one running.
+     The class goes on the icon, so the button keeps its Tailwind shadow. */
+  animation:
+    heartbeat-pulse 2.6s ease-in-out infinite,
+    heartbeat-glow 2.6s ease-in-out infinite;
+  transform-origin: center;
+
+  /* Respect the OS "reduce motion" setting: keep the heart and a static glow,
+     drop the movement. */
+  @media (prefers-reduced-motion: reduce) {
+    animation: none !important;
+    filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.45));
+  }
+}
 
 @layer base {
   body {
@@ -10,55 +93,15 @@
   * {
     @apply border-gray-200 dark:border-gray-700;
   }
-}
 
-@layer components {
-  .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
-  }
-
-  .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
-  }
-
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-900 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600;
-  }
-
-  .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700 active:bg-red-800;
-  }
-
-  .btn-success {
-    @apply bg-green-600 text-white hover:bg-green-700 active:bg-green-800;
-  }
-
-  .card {
-    @apply bg-white rounded-lg shadow-md p-6 dark:bg-gray-800 dark:shadow-xl dark:border dark:border-gray-700;
-  }
-
-  .input {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-gray-50;
-  }
-
-  .label {
-    @apply block text-sm font-medium text-gray-700 mb-2 dark:text-gray-200;
+  /* Tailwind v4's preflight resets buttons to the default cursor; keep v3's pointer. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
   }
 }
 
 @layer components {
-  /* "Help Us Grow" entry button: a gentle double-thump heartbeat with a soft
-     red glow on the heart. Long pause between beats so it reads as alive
-     rather than as an alarm.
-     Both animations live in one shorthand on purpose — two classes each
-     setting `animation` would override one another, leaving only one running.
-     The class goes on the icon, so the button keeps its Tailwind shadow. */
-  .heartbeat {
-    animation: heartbeat-pulse 2.6s ease-in-out infinite,
-      heartbeat-glow 2.6s ease-in-out infinite;
-    transform-origin: center;
-  }
-
   @keyframes heartbeat-pulse {
     0%, 28%, 100% { transform: scale(1); }
     8% { transform: scale(1.2); }
@@ -70,14 +113,5 @@
     0%, 28%, 100% { filter: drop-shadow(0 0 1px rgba(239, 68, 68, 0.25)); }
     8% { filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.85)); }
     22% { filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.55)); }
-  }
-
-  /* Respect the OS "reduce motion" setting: keep the heart and a static glow,
-     drop the movement. */
-  @media (prefers-reduced-motion: reduce) {
-    .heartbeat {
-      animation: none !important;
-      filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.45));
-    }
   }
 }

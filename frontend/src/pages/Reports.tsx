@@ -525,7 +525,7 @@ export function Reports() {
               </div>
             </div>
             <Tooltip text="Green bar fill represents the backup success rate" className="block">
-              <div className="overflow-hidden h-4 mb-4 text-xs flex rounded bg-gray-200 dark:bg-gray-700">
+              <div className="overflow-hidden h-4 mb-4 text-xs flex rounded-sm bg-gray-200 dark:bg-gray-700">
                 <div
                   style={{
                     width: `${reportData.totalBackups > 0

@@ -136,7 +136,7 @@ export function UpdateNotification() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-md">
-      <div className="bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-lg shadow-2xl p-4 border-2 border-white/20">
+      <div className="bg-linear-to-br from-blue-600 to-purple-600 text-white rounded-lg shadow-2xl p-4 border-2 border-white/20">
         <div className="flex items-start gap-3">
           <div className="p-2 bg-white/20 rounded-lg">
             <Download className="h-5 w-5" />
@@ -146,7 +146,7 @@ export function UpdateNotification() {
               <h3 className="font-bold text-lg">Update Available</h3>
               <button
                 onClick={handleDismiss}
-                className="p-1 hover:bg-white/20 rounded transition-colors"
+                className="p-1 hover:bg-white/20 rounded-sm transition-colors"
                 title="Dismiss"
               >
                 <X className="h-4 w-4" />
@@ -174,8 +174,8 @@ export function UpdateNotification() {
             )}
 
             {updateError && (
-              <div className="flex items-center gap-2 mb-2 text-xs text-red-200 bg-red-900/40 rounded px-2 py-1">
-                <AlertCircle className="h-3 w-3 flex-shrink-0" />
+              <div className="flex items-center gap-2 mb-2 text-xs text-red-200 bg-red-900/40 rounded-sm px-2 py-1">
+                <AlertCircle className="h-3 w-3 shrink-0" />
                 {updateError}
               </div>
             )}

@@ -61,7 +61,7 @@ function StateBadge({ kind, state }: { kind: 'backup' | 'replication' | 'recover
 
 function Section({ title, children, actions }: { title: string; children: React.ReactNode; actions?: React.ReactNode }) {
   return (
-    <div className="rounded-lg bg-white shadow dark:bg-gray-800">
+    <div className="rounded-lg bg-white shadow-sm dark:bg-gray-800">
       <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
         <div className="flex gap-2">{actions}</div>

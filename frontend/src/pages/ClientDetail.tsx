@@ -302,7 +302,7 @@ export function ClientDetail() {
         {/* Download Client Software for THIS Client. Scoped per endpoint by the
             API, so anyone who can see this endpoint can install an agent on it —
             the installer carries only this endpoint's key. */}
-        <div className="card bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+        <div className="card bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
           <div className="flex items-center gap-3 mb-4">
             <Download className="h-6 w-6 text-green-600 dark:text-green-400" />
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -327,7 +327,7 @@ export function ClientDetail() {
                     setShowAuthKey(!showAuthKey);
                   }}
                   disabled={loadingAuthKey}
-                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded text-sm flex items-center gap-2"
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-sm text-sm flex items-center gap-2"
                 >
                   {loadingAuthKey ? (
                     <>
@@ -348,7 +348,7 @@ export function ClientDetail() {
                 </button>
               </div>
               {showAuthKey && authKey && (
-                <code className="block px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono text-gray-900 dark:text-gray-100 break-all">
+                <code className="block px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-sm text-xs font-mono text-gray-900 dark:text-gray-100 break-all">
                   {authKey}
                 </code>
               )}
@@ -376,7 +376,7 @@ export function ClientDetail() {
                 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200'
                 : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
             }`}>
-              <p className="text-sm break-words">{installerMessage.text}</p>
+              <p className="text-sm wrap-break-word">{installerMessage.text}</p>
             </div>
           )}
 
@@ -551,8 +551,8 @@ export function ClientDetail() {
                 : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
             }`}>
               {backupMessage.type === 'success'
-                ? <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                : <XCircle className="h-4 w-4 flex-shrink-0" />}
+                ? <CheckCircle className="h-4 w-4 shrink-0" />
+                : <XCircle className="h-4 w-4 shrink-0" />}
               {backupMessage.text}
             </div>
           )}
@@ -639,7 +639,7 @@ export function ClientDetail() {
                 <button
                   onClick={handleDeleteSelected}
                   disabled={deletingSelected}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white text-sm font-medium disabled:opacity-50"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-sm bg-red-600 hover:bg-red-700 text-white text-sm font-medium disabled:opacity-50"
                 >
                   {deletingSelected ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                   Delete {selectedBackupIds.size} selected
@@ -679,7 +679,7 @@ export function ClientDetail() {
               <div className="flex items-center gap-3 px-4 py-1 text-xs text-gray-500 dark:text-gray-400">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 accent-primary-600"
+                  className="h-4 w-4 rounded-sm border-gray-300 accent-primary-600"
                   checked={displayBackups.length > 0 && displayBackups.every(b => selectedBackupIds.has(Number(b.id)))}
                   onChange={e => {
                     if (e.target.checked) {
@@ -710,7 +710,7 @@ export function ClientDetail() {
                       {isAdmin && (
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 accent-primary-600"
+                        className="h-4 w-4 rounded-sm border-gray-300 accent-primary-600"
                         checked={isSelected}
                         onChange={e => {
                           setSelectedBackupIds(prev => {
@@ -756,18 +756,18 @@ export function ClientDetail() {
                           <span className="text-xs text-red-600 dark:text-red-400 font-medium">Delete?</span>
                           <button
                             onClick={() => handleDeleteBackup(backupId, !!backup.image)}
-                            className="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                            className="px-2 py-1 text-xs rounded-sm bg-red-600 text-white hover:bg-red-700"
                           >Yes</button>
                           <button
                             onClick={() => setConfirmDeleteId(null)}
-                            className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300"
+                            className="px-2 py-1 text-xs rounded-sm bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300"
                           >No</button>
                         </div>
                       ) : (
                         <button
                           onClick={() => setConfirmDeleteId(backupId)}
                           disabled={isDeleting || deletingSelected}
-                          className="flex items-center gap-1 px-2 py-1.5 rounded text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-colors disabled:opacity-50 text-xs font-medium"
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-sm text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-colors disabled:opacity-50 text-xs font-medium"
                           title="Delete this backup"
                         >
                           {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}

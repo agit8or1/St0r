@@ -185,7 +185,7 @@ export function Profile() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+          <div className="p-3 bg-linear-to-br from-blue-500 to-purple-600 rounded-xl">
             <User className="h-8 w-8 text-white" />
           </div>
           <div>
@@ -375,14 +375,14 @@ export function Profile() {
                   </p>
                   <div className="flex items-center gap-2">
                     <Tooltip text="TOTP secret — paste into your authenticator app manually" className="flex-1">
-                      <code className="flex-1 p-2 bg-gray-900 text-green-400 rounded font-mono text-sm break-all">
+                      <code className="flex-1 p-2 bg-gray-900 text-green-400 rounded-sm font-mono text-sm break-all">
                         {secret}
                       </code>
                     </Tooltip>
                     <Tooltip text="Copy the secret key to clipboard">
                       <button
                         onClick={copySecret}
-                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-sm"
                         title="Copy secret"
                       >
                         <Copy className="h-4 w-4" />

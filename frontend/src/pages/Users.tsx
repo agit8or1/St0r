@@ -280,7 +280,7 @@ export function Users() {
                         <Tooltip text="Edit user details and permissions">
                           <button
                             onClick={() => handleEditUser(user)}
-                            className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                            className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-sm"
                           >
                             <Edit className="h-4 w-4" />
                           </button>
@@ -288,7 +288,7 @@ export function Users() {
                         <Tooltip text="Delete this user account permanently">
                           <button
                             onClick={() => handleDelete(user.id)}
-                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -305,7 +305,7 @@ export function Users() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               {editingUser ? 'Edit User' : 'Add New User'}
@@ -353,7 +353,7 @@ export function Users() {
                   id="isAdmin"
                   checked={formData.isAdmin}
                   onChange={(e) => setFormData({ ...formData, isAdmin: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className="h-4 w-4 rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <label htmlFor="isAdmin" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   Administrator
@@ -372,7 +372,7 @@ export function Users() {
                       No customers defined yet — create one on the Customers page first.
                     </p>
                   ) : (
-                    <div className="max-h-40 space-y-1 overflow-y-auto rounded border border-gray-200 dark:border-gray-700 p-2">
+                    <div className="max-h-40 space-y-1 overflow-y-auto rounded-sm border border-gray-200 dark:border-gray-700 p-2">
                       {customers.map((customer) => (
                         <label key={customer.id} className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
                           <input
@@ -386,7 +386,7 @@ export function Users() {
                                   : formData.customerIds.filter((id) => id !== customer.id)
                               })
                             }
-                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            className="h-4 w-4 rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500"
                           />
                           {customer.name}
                           {customer.company && (

@@ -315,7 +315,7 @@ export function Replication() {
 
         {error && (
           <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
+            <AlertCircle className="h-4 w-4 shrink-0" /> {error}
           </div>
         )}
 
@@ -577,31 +577,31 @@ export function Replication() {
                           <div className="flex items-center gap-1">
                             <Tooltip text="Trigger an immediate replication run to this target">
                               <button onClick={() => handleRunNow(target.id)} disabled={runningId === target.id || isRunning}
-                                className="rounded p-1.5 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                                className="rounded-sm p-1.5 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20">
                                 {(runningId === target.id || isRunning) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                               </button>
                             </Tooltip>
                             <Tooltip text="Test SSH/rsync connectivity to this target">
                               <button onClick={() => handleTest(target.id)}
-                                className="rounded p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
+                                className="rounded-sm p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
                                 <CheckCircle className="h-4 w-4" />
                               </button>
                             </Tooltip>
                             <Tooltip text="Edit target host, credentials, and options">
                               <button onClick={() => { setEditTarget(target); setShowTargetModal(true); }}
-                                className="rounded p-1.5 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                className="rounded-sm p-1.5 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 <Settings2 className="h-4 w-4" />
                               </button>
                             </Tooltip>
                             <Tooltip text="View full run history for this target">
                               <button onClick={() => navigate(`/replication/targets/${target.id}`)}
-                                className="rounded p-1.5 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                className="rounded-sm p-1.5 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 <ChevronRight className="h-4 w-4" />
                               </button>
                             </Tooltip>
                             <Tooltip text="Permanently delete this target and its run history">
                               <button onClick={() => handleDelete(target.id)} disabled={deletingId === target.id}
-                                className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                className="rounded-sm p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
                                 {deletingId === target.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                               </button>
                             </Tooltip>
@@ -745,7 +745,7 @@ export function Replication() {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={!!settingsForm.pause_during_active_backup}
                     onChange={e => setSettingsForm({ ...settingsForm, pause_during_active_backup: e.target.checked })}
-                    className="rounded text-primary-600" />
+                    className="rounded-sm text-primary-600" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Pause during active backup</span>
                 </label>
               </Tooltip>
@@ -753,7 +753,7 @@ export function Replication() {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={!!settingsForm.default_verify_after_sync}
                     onChange={e => setSettingsForm({ ...settingsForm, default_verify_after_sync: e.target.checked })}
-                    className="rounded text-primary-600" />
+                    className="rounded-sm text-primary-600" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Default: verify after sync</span>
                 </label>
               </Tooltip>
@@ -761,7 +761,7 @@ export function Replication() {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={!!settingsForm.default_checksum_verify}
                     onChange={e => setSettingsForm({ ...settingsForm, default_checksum_verify: e.target.checked })}
-                    className="rounded text-primary-600" />
+                    className="rounded-sm text-primary-600" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Default: checksum verify</span>
                 </label>
               </Tooltip>
@@ -852,7 +852,7 @@ export function Replication() {
                       </div>
                       <Tooltip text="Remove this alert channel">
                         <button onClick={() => handleDeleteChannel(ch.id)}
-                          className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                          className="rounded-sm p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </Tooltip>
@@ -864,7 +864,7 @@ export function Replication() {
 
             <div className="card py-4 px-6">
               <div className="flex items-start gap-3">
-                <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                 <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                   <p>Alerts are sent on: failed runs, stale targets, and recovery events.</p>
                   <p>Rate limited to one alert per 10 minutes per target+event combination.</p>
@@ -923,7 +923,7 @@ function PathListEditor({
             className="input flex-1 text-xs font-mono" />
           <Tooltip text="Remove this entry">
             <button type="button" onClick={() => onChange(paths.filter((_, j) => j !== i))}
-              className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+              className="rounded-sm p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
               <Trash2 className="h-3 w-3" />
             </button>
           </Tooltip>
