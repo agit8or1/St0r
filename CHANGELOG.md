@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.135] - 2026-11-19
+
+### Changed
+- Backend dependency updates (minor/patch): `nodemailer` 10.3.1 → 10.6.0, `jsonwebtoken` 9.0.2 → 9.0.3, `winston` 3.18.3 → 3.19.0, `cors` 2.8.5 → 2.8.6, `express-validator` 7.3.0 → 7.3.2, `@types/multer`, `@types/ssh2` and `tsx` ([#36](https://github.com/agit8or1/St0r/pull/36)).
+- Frontend dependency updates (minor/patch): `react-router-dom` 7.18.3 → 7.18.5, `postcss` 8.5.33, `eslint-plugin-react-refresh` 0.5.8 ([#31](https://github.com/agit8or1/St0r/pull/31)).
+- Development tooling: `typescript-eslint` 8.73.0 with a fixed `minimatch` ([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)). Not shipped in releases.
+- Dependabot alerts, security updates and weekly grouped version updates are enabled for the repository (`.github/dependabot.yml`).
+
 ## [3.2.134] - 2026-11-19
 
 ### Fixed

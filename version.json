@@ -1,9 +1,9 @@
 {
-  "version": "3.2.134",
+  "version": "3.2.135",
   "releaseDate": "2026-11-19",
   "changelog": [
-    "Alerts page: rule changes are now saved and survive a reload (issue #27).",
-    "Alert rules are evaluated on the server and notify by e-mail (Settings → Email & Alerts) and/or Pushover.",
-    "Test button per rule to check notification delivery."
+    "Dependency updates: nodemailer 10.6, jsonwebtoken 9.0.3, winston 3.19, cors 2.8.6, express-validator 7.3.2, react-router-dom 7.18.5.",
+    "Development tooling: typescript-eslint and minimatch updated (GHSA-g3hv-75wg-m249).",
+    "Dependabot alerts, security updates and weekly version updates enabled for the repository."
   ]
 }
