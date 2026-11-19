@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.136] - 2026-11-19
+
+### Changed
+- **Backend upgraded to Express 5** ([#43](https://github.com/agit8or1/St0r/pull/43)). Routes were moved to Express 5's path syntax: the SPA fallback `*` is now `/{*splat}`, and the optional `/api/storage/server/:serverId?` is now `/api/storage/server{/:serverId}`. Request bodies sent with `Content-Encoding: br` (Brotli) are now decoded; a malformed one is rejected with 400, and an unknown encoding is still rejected with 415.
+- **Agent 1.1.1: upgraded to Express 5** ([#30](https://github.com/agit8or1/St0r/pull/30)). No API changes. Remote agents are offered the update on the **Servers** page.
+- Development dependencies: `@types/node` 26 (backend, agent), `@types/bcrypt` 6, `eslint` 10 (frontend). Not shipped.
+- Dependabot no longer proposes TypeScript major versions until `typescript-eslint` supports TypeScript 7.
+
 ## [3.2.135] - 2026-11-19
 
 ### Changed

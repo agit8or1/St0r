@@ -1,9 +1,9 @@
 {
-  "version": "3.2.135",
+  "version": "3.2.136",
   "releaseDate": "2026-11-19",
   "changelog": [
-    "Dependency updates: nodemailer 10.6, jsonwebtoken 9.0.3, winston 3.19, cors 2.8.6, express-validator 7.3.2, react-router-dom 7.18.5.",
-    "Development tooling: typescript-eslint and minimatch updated (GHSA-g3hv-75wg-m249).",
-    "Dependabot alerts, security updates and weekly version updates enabled for the repository."
+    "Backend and agent upgraded to Express 5.",
+    "Agent 1.1.1 (Express 5); remote agents are offered the update on the Servers page.",
+    "Development dependency updates: @types/node 26, @types/bcrypt 6, eslint 10."
   ]
 }
