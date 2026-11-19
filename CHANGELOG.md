@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.137] - 2026-11-19
+
+### Changed
+- **Backend: `helmet` 7 → 8** ([#48](https://github.com/agit8or1/St0r/pull/48)). The `Strict-Transport-Security` max-age is now one year (was 180 days). The Content-Security-Policy is unchanged.
+- **Backend: `dotenv` 16 → 18** ([#45](https://github.com/agit8or1/St0r/pull/45)). `.env` parsing is unchanged (verified against the real file and quoting/comment/multi-line edge cases); loading stays silent.
+- **Agent 1.1.2: `dotenv` 16 → 18** ([#28](https://github.com/agit8or1/St0r/pull/28)). No API changes. Remote agents are offered the update on the **Servers** page.
+- **Frontend: built with Vite 8** and `@vitejs/plugin-react` 6 ([#49](https://github.com/agit8or1/St0r/pull/49)). The CSS has the same selectors; breakpoints are written in media-query range syntax (`width>=640px`), supported by all current browsers.
+- **Frontend: `date-fns` 3 → 4** ([#34](https://github.com/agit8or1/St0r/pull/34)). Date and "time ago" formatting is unchanged (verified in several time zones).
+- Removed the unused `@types/sqlite3` stub; `sqlite3` ships its own types.
+
 ## [3.2.136] - 2026-11-19
 
 ### Changed

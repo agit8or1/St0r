@@ -1,9 +1,9 @@
 {
-  "version": "3.2.136",
+  "version": "3.2.137",
   "releaseDate": "2026-11-19",
   "changelog": [
-    "Backend and agent upgraded to Express 5.",
-    "Agent 1.1.1 (Express 5); remote agents are offered the update on the Servers page.",
-    "Development dependency updates: @types/node 26, @types/bcrypt 6, eslint 10."
+    "Backend: helmet 8 (HSTS max-age now one year) and dotenv 18.",
+    "Agent 1.1.2 (dotenv 18); remote agents are offered the update on the Servers page.",
+    "Frontend built with Vite 8; date-fns 4."
   ]
 }
