@@ -1,0 +1,48 @@
+# Routine dependency updates. Security updates are enabled separately in the
+# repository settings and are opened as soon as an advisory is published.
+#
+# Minor and patch bumps are grouped into one PR per package each week to keep
+# the noise down; major versions get their own PRs so breaking changes are
+# reviewed on their own.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /agent
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      agent-minor-patch:
+        update-types: [minor, patch]
+
+  # Workflow actions are pinned to commit SHAs; Dependabot keeps the SHA and
+  # the version comment in step.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
