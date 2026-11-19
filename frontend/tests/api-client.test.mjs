@@ -59,8 +59,10 @@ test('POST, PATCH and DELETE send JSON bodies', async () => {
   assert.equal(JSON.parse(last().body).newName, 'new-name');
   assert.equal(JSON.parse(last().body).serverId, undefined); // undefined fields are dropped, as with axios
   // removeClient sends its body on a DELETE, which axios did through config.data.
-  await api.removeClient(7, 3);
-  assert.deepEqual([last().method, last().path, JSON.parse(last().body)], ['DELETE', '/api/urbackup/clients/7', { serverId: 3 }]);
+  await api.removeClient(7, false);
+  assert.deepEqual([last().method, last().path, JSON.parse(last().body)], ['DELETE', '/api/urbackup/clients/7', { deleteData: false }]);
+  await api.removeClient(7);
+  assert.deepEqual(JSON.parse(last().body), { deleteData: true });
   await api.logout();
   assert.deepEqual([last().method, last().body], ['POST', '']);
 });
