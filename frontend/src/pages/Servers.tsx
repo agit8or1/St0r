@@ -219,7 +219,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
           <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Add Remote Server</h2>
-            <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+            <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
           </div>
           <div className="p-6">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">How would you like to install the St0r agent on the remote server?</p>
@@ -227,7 +227,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
               {methods.map(m => (
                 <button key={m.id} onClick={() => { setMethod(m.id); setStep('details'); }}
                   className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all text-left group">
-                  <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 flex-shrink-0 group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors">
+                  <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 shrink-0 group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors">
                     {m.icon}
                   </div>
                   <div>
@@ -250,7 +250,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
           <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Install Command</h2>
-            <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+            <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
           </div>
           <div className="p-6 space-y-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -267,12 +267,12 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
             </div>
             {fqdnWarning && (
               <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700 text-sm text-yellow-800 dark:text-yellow-200">
-                <svg className="h-4 w-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                <svg className="h-4 w-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
                 <span>No FQDN configured — this command uses <code className="font-mono">localhost</code> and won't work on a remote server. Go to <strong>Settings → Client Installer</strong> and set your Server Hostname / FQDN first, then regenerate the command.</span>
               </div>
             )}
             <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300">
-              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
               <span>This command expires in 24 hours. Once the agent is running, the server card will show as online automatically.</span>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -302,7 +302,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
         <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
           <div className="flex items-center gap-3">
             {!server && (
-              <button onClick={() => setStep('method')} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+              <button onClick={() => setStep('method')} className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
             )}
@@ -310,7 +310,7 @@ function ServerModal({ server, onClose, onSaved }: ServerModalProps) {
               {server ? 'Edit Server' : titles[method]}
             </h2>
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
         </div>
 
         <div className="p-6 space-y-4">
@@ -436,7 +436,7 @@ function LogModal({ title, log, inProgress, onClose }: { title: string; log: str
             {inProgress && <span className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400"><Loader className="h-3 w-3 animate-spin" /> Running...</span>}
             {!inProgress && log && <span className="text-xs text-green-600 dark:text-green-400">Complete</span>}
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
         </div>
         <pre ref={logRef} className="p-4 h-80 overflow-y-auto bg-gray-950 text-green-400 text-xs font-mono whitespace-pre-wrap rounded-b-xl">
           {log || 'Waiting for output...'}
@@ -663,7 +663,7 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className={`p-2 rounded-lg flex-shrink-0 ${server.is_local ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-gray-100 dark:bg-gray-700'}`}>
+          <div className={`p-2 rounded-lg shrink-0 ${server.is_local ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-gray-100 dark:bg-gray-700'}`}>
             <Server className={`h-5 w-5 ${server.is_local ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
           </div>
           <div className="min-w-0">
@@ -681,22 +681,22 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <button onClick={fetchMetrics} disabled={loadingMetrics} title="Refresh metrics"
-            className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
+            className="p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
             <RefreshCw className={`h-4 w-4 ${loadingMetrics ? 'animate-spin' : ''}`} />
           </button>
           {user?.isAdmin && !server.is_local && (
             <>
-              <button onClick={onEdit} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
+              <button onClick={onEdit} className="p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
                 <Edit3 className="h-4 w-4" />
               </button>
-              <button onClick={onDelete} className="p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+              <button onClick={onDelete} className="p-2 rounded-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
                 <Trash2 className="h-4 w-4" />
               </button>
             </>
           )}
-          <button onClick={() => setExpanded(v => !v)} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
+          <button onClick={() => setExpanded(v => !v)} className="p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         </div>
@@ -735,7 +735,7 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
                     placeholder="Paste API key from /etc/stor-agent/config.json" />
                   <input className="input text-sm font-mono flex-1 min-w-0" value={manualFingerprint} onChange={e => setManualFingerprint(e.target.value)}
                     placeholder="TLS fingerprint printed by the installer" />
-                  <button onClick={registerManualKey} className="btn btn-primary text-sm flex-shrink-0">Register</button>
+                  <button onClick={registerManualKey} className="btn btn-primary text-sm shrink-0">Register</button>
                 </div>
               )}
               {showInstallCmd && installCmd && (
@@ -778,7 +778,7 @@ function ServerCard({ server, onEdit, onDelete, onRefresh }: ServerCardProps) {
                 </div>
               )}
               {showInstallCmd && installCmd && server.agent_installed && server.agent_tls_fingerprint && (
-                <code className="block mt-2 text-xs bg-gray-950 text-green-400 font-mono break-all rounded p-2">{installCmd}</code>
+                <code className="block mt-2 text-xs bg-gray-950 text-green-400 font-mono break-all rounded-sm p-2">{installCmd}</code>
               )}
               {installError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{installError}</p>}
             </div>
@@ -923,7 +923,7 @@ export function Servers() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
+            <div className="p-3 bg-linear-to-br from-blue-500 to-indigo-600 rounded-xl">
               <Server className="h-8 w-8 text-white" />
             </div>
             <div>
@@ -942,7 +942,7 @@ export function Servers() {
         {user?.isAdmin && servers.some(s => !s.is_local) === false && !loading && (
           <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
             <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Add Remote Servers</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">

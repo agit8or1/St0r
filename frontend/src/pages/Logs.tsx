@@ -234,7 +234,7 @@ export function Logs() {
                     log.level.toLowerCase() === 'info' ? 'INFO — normal operational message' :
                     'DEBUG — detailed diagnostic information'
                   }>
-                    <span className={`rounded px-2 py-1 text-xs font-semibold ${getLevelColor(log.level)}`}>
+                    <span className={`rounded-sm px-2 py-1 text-xs font-semibold ${getLevelColor(log.level)}`}>
                       {log.level.toUpperCase()}
                     </span>
                   </Tooltip>

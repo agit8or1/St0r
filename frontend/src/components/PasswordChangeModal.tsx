@@ -61,7 +61,7 @@ export function PasswordChangeModal({ onPasswordChanged }: PasswordChangeModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
       <div className="w-full max-w-md mx-4">
         <div className="card relative">
           {/* Header */}
@@ -82,7 +82,7 @@ export function PasswordChangeModal({ onPasswordChanged }: PasswordChangeModalPr
           {/* Warning */}
           <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 rounded-lg">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
               <div className="text-sm text-orange-800 dark:text-orange-200">
                 <p className="font-semibold mb-1">Security Notice</p>
                 <p>You are currently using the default password. Please choose a strong, unique password to secure your account.</p>
@@ -93,7 +93,7 @@ export function PasswordChangeModal({ onPasswordChanged }: PasswordChangeModalPr
           {/* Error message */}
           {error && (
             <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-400">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <AlertCircle className="h-4 w-4 shrink-0" />
               {error}
             </div>
           )}

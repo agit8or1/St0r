@@ -173,7 +173,7 @@ export function VolumeSelector({ clientId, onSelect, onClose, existingVolumes }:
                           : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
                       }`}
                     >
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         {isSelected ? (
                           <div className="h-12 w-12 rounded-full bg-orange-500 flex items-center justify-center">
                             <Check className="h-6 w-6 text-white" />

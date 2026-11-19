@@ -209,7 +209,7 @@ export function ReplicationTargetDetail() {
                   {expandedRun === run.id && (
                     <div className="border-t dark:border-gray-700 px-3 py-3 bg-gray-50 dark:bg-gray-900/40">
                       {run.error_message && (
-                        <div className="mb-2 rounded bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs text-red-700 dark:text-red-300">
+                        <div className="mb-2 rounded-sm bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs text-red-700 dark:text-red-300">
                           Error: {run.error_message}
                         </div>
                       )}
@@ -225,7 +225,7 @@ export function ReplicationTargetDetail() {
                         const log = detail?.details_json?.log || run.details_json?.log;
                         if (!log) return <p className="text-xs text-gray-400">No log available</p>;
                         return (
-                          <pre className="text-xs font-mono text-gray-700 dark:text-gray-300 bg-gray-900/5 dark:bg-gray-900/60 rounded p-2 overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap">
+                          <pre className="text-xs font-mono text-gray-700 dark:text-gray-300 bg-gray-900/5 dark:bg-gray-900/60 rounded-sm p-2 overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap">
                             {log}
                           </pre>
                         );

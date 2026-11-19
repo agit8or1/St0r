@@ -23,7 +23,7 @@ export function Logo({ className = '', size = 'md', showText = true }: LogoProps
         viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="flex-shrink-0"
+        className="shrink-0"
       >
         {/* Outer circle gradient */}
         <defs>

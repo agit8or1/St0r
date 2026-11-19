@@ -141,7 +141,7 @@ export function BareMetalRestore() {
         </div>
 
         {/* Download Restore CD/USB Tool */}
-        <div className="card bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+        <div className="card bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
           <div className="flex items-start gap-4">
             <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-3">
               <Usb className="h-8 w-8 text-blue-600 dark:text-blue-400" />
@@ -194,7 +194,7 @@ export function BareMetalRestore() {
 
           <div className="space-y-4">
             <div className="flex gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
                 1
               </div>
               <div>
@@ -202,7 +202,7 @@ export function BareMetalRestore() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Download the UrBackup Restore CD ISO and use Rufus (Windows) or dd (Linux/Mac) to create a bootable USB drive.
                 </p>
-                <code className="block mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+                <code className="block mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-sm text-xs">
                   # Linux/Mac example:<br />
                   sudo dd if=urbackup-restore.iso of=/dev/sdX bs=4M status=progress
                 </code>
@@ -210,7 +210,7 @@ export function BareMetalRestore() {
             </div>
 
             <div className="flex gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
                 2
               </div>
               <div>
@@ -222,7 +222,7 @@ export function BareMetalRestore() {
             </div>
 
             <div className="flex gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
                 3
               </div>
               <div>
@@ -234,7 +234,7 @@ export function BareMetalRestore() {
             </div>
 
             <div className="flex gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
                 4
               </div>
               <div>
@@ -246,7 +246,7 @@ export function BareMetalRestore() {
             </div>
 
             <div className="flex gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
                 5
               </div>
               <div>
@@ -255,7 +255,7 @@ export function BareMetalRestore() {
                   Select the target disk and start the restore process. The system will overwrite the target disk with the backed-up image.
                 </p>
                 <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex gap-2">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
                   <p className="text-sm text-yellow-800 dark:text-yellow-200">
                     <strong>Warning:</strong> All data on the target disk will be erased during the restore process.
                   </p>
@@ -323,7 +323,7 @@ export function BareMetalRestore() {
 
             {hiddenCount > 0 && (
               <div className="mb-4 flex gap-2 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 p-3">
-                <AlertCircle className="h-5 w-5 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />
+                <AlertCircle className="h-5 w-5 shrink-0 text-yellow-600 dark:text-yellow-400" />
                 <p className="text-sm text-yellow-800 dark:text-yellow-200">
                   <strong>
                     {hiddenCount} image backup{hiddenCount === 1 ? '' : 's'} hidden.

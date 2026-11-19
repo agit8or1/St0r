@@ -258,7 +258,7 @@ export function FileBrowser() {
           <div className="card">
             <div className="flex flex-col lg:flex-row lg:gap-8">
               {/* Left: Calendar */}
-              <div className="flex-shrink-0 lg:w-72">
+              <div className="shrink-0 lg:w-72">
                 {/* Month nav */}
                 <div className="flex items-center justify-between mb-4">
                   <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
@@ -293,7 +293,7 @@ export function FileBrowser() {
                         className={[
                           'relative flex flex-col items-center justify-center rounded-lg h-9 w-full text-sm font-medium transition-all',
                           isSelected
-                            ? 'bg-primary-600 dark:bg-primary-500 text-white shadow-sm'
+                            ? 'bg-primary-600 dark:bg-primary-500 text-white shadow-xs'
                             : hasBackups
                               ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 cursor-pointer'
                               : 'text-gray-300 dark:text-gray-600 cursor-default',
@@ -314,11 +314,11 @@ export function FileBrowser() {
                 {/* Legend */}
                 <div className="mt-4 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                   <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-3 rounded-sm bg-primary-100 dark:bg-primary-900/40 border border-primary-300 dark:border-primary-700" />
+                    <span className="inline-block w-3 h-3 rounded-xs bg-primary-100 dark:bg-primary-900/40 border border-primary-300 dark:border-primary-700" />
                     Has backup
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-3 rounded-sm ring-2 ring-primary-500" />
+                    <span className="inline-block w-3 h-3 rounded-xs ring-2 ring-primary-500" />
                     Today
                   </span>
                 </div>
@@ -352,7 +352,7 @@ export function FileBrowser() {
                                 ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
                                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/40',
                             ].join(' ')}>
-                            <div className={`p-2.5 rounded-lg flex-shrink-0 ${isActive ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                            <div className={`p-2.5 rounded-lg shrink-0 ${isActive ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-gray-100 dark:bg-gray-700'}`}>
                               {backup.incremental
                                 ? <ChevronDown className={`h-5 w-5 ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'}`} />
                                 : <Archive className={`h-5 w-5 ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'}`} />
@@ -364,10 +364,10 @@ export function FileBrowser() {
                                   {formatTime(backup.backuptime)}
                                 </span>
                                 {backup.incremental && (
-                                  <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded">Incremental</span>
+                                  <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-sm">Incremental</span>
                                 )}
                                 {backup.archived && (
-                                  <span className="text-xs px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded">Archived</span>
+                                  <span className="text-xs px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-sm">Archived</span>
                                 )}
                               </div>
                               <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -375,7 +375,7 @@ export function FileBrowser() {
                                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatDate(backup.backuptime)}</span>
                               </div>
                             </div>
-                            {isActive && <span className="text-xs font-medium text-primary-600 dark:text-primary-400 flex-shrink-0">Browsing</span>}
+                            {isActive && <span className="text-xs font-medium text-primary-600 dark:text-primary-400 shrink-0">Browsing</span>}
                           </button>
                         );
                       })}
@@ -393,9 +393,9 @@ export function FileBrowser() {
             {/* Toolbar */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 min-w-0">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0">Files</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 shrink-0">Files</h2>
                 {currentPath !== '/' && (
-                  <button onClick={navigateUp} className="btn btn-secondary flex items-center gap-1 text-sm flex-shrink-0">
+                  <button onClick={navigateUp} className="btn btn-secondary flex items-center gap-1 text-sm shrink-0">
                     <ArrowLeft className="h-4 w-4" /> Up
                   </button>
                 )}
@@ -403,7 +403,7 @@ export function FileBrowser() {
                   {currentPath}
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 {selectedFiles.size > 0 && (
                   <>
                     <span className="text-sm text-gray-500 dark:text-gray-400">{selectedFiles.size} selected</span>
@@ -448,7 +448,7 @@ export function FileBrowser() {
                       isSelected ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
                     }`}>
                       {/* Checkbox */}
-                      <button onClick={() => toggleSelect(file.path)} className="flex-shrink-0 text-gray-400">
+                      <button onClick={() => toggleSelect(file.path)} className="shrink-0 text-gray-400">
                         {isSelected
                           ? <CheckSquare className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                           : <Square className="h-5 w-5" />}
@@ -456,8 +456,8 @@ export function FileBrowser() {
 
                       {/* Icon */}
                       {file.isDir
-                        ? <FolderOpen className="h-5 w-5 text-yellow-500 dark:text-yellow-400 flex-shrink-0" />
-                        : <File className="h-5 w-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />}
+                        ? <FolderOpen className="h-5 w-5 text-yellow-500 dark:text-yellow-400 shrink-0" />
+                        : <File className="h-5 w-5 text-gray-400 dark:text-gray-500 shrink-0" />}
 
                       {/* Name + meta */}
                       <div className="flex-1 min-w-0">
@@ -476,7 +476,7 @@ export function FileBrowser() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {file.isDir ? (
                           <>
                             <button onClick={() => setCurrentPath(file.path)}

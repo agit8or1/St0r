@@ -39,7 +39,7 @@ export function Documentation() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+          <div className="p-3 bg-linear-to-br from-blue-500 to-purple-600 rounded-xl">
             <BookOpen className="h-8 w-8 text-white" />
           </div>
           <div>
@@ -114,7 +114,7 @@ export function Documentation() {
                   <span className="text-xs text-gray-400">Using curl:</span>
                   <button
                     onClick={() => copyToClipboard(installCommand, 'curl')}
-                    className="p-1 hover:bg-gray-800 rounded"
+                    className="p-1 hover:bg-gray-800 rounded-sm"
                   >
                     {copiedCommand === 'curl' ? (
                       <Check className="h-4 w-4 text-green-400" />
@@ -133,7 +133,7 @@ export function Documentation() {
                   <span className="text-xs text-gray-400">Or using wget:</span>
                   <button
                     onClick={() => copyToClipboard(wgetCommand, 'wget')}
-                    className="p-1 hover:bg-gray-800 rounded"
+                    className="p-1 hover:bg-gray-800 rounded-sm"
                   >
                     {copiedCommand === 'wget' ? (
                       <Check className="h-4 w-4 text-green-400" />
@@ -150,7 +150,7 @@ export function Documentation() {
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                 <div>
                   <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Upgrade Detection</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -164,23 +164,23 @@ export function Documentation() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">What Gets Installed</h3>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400">Node.js 20.x (if not already installed)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400">MariaDB database server</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400">Nginx web server</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400">St0r application (frontend & backend)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400">systemd service for automatic startup</span>
                 </li>
               </ul>
@@ -293,7 +293,7 @@ export function Documentation() {
 
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-blue-600 dark:text-blue-400">1</span>
                 </div>
                 <div>
@@ -305,7 +305,7 @@ export function Documentation() {
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-blue-600 dark:text-blue-400">2</span>
                 </div>
                 <div>
@@ -317,7 +317,7 @@ export function Documentation() {
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-blue-600 dark:text-blue-400">3</span>
                 </div>
                 <div>
@@ -329,7 +329,7 @@ export function Documentation() {
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-blue-600 dark:text-blue-400">4</span>
                 </div>
                 <div>
@@ -579,7 +579,7 @@ export function Documentation() {
                   'Click Run Now on any target to start an immediate replication',
                 ].map((step, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0 text-sm font-bold text-blue-600 dark:text-blue-400">
+                    <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0 text-sm font-bold text-blue-600 dark:text-blue-400">
                       {i + 1}
                     </div>
                     <span className="text-gray-600 dark:text-gray-400 pt-0.5">{step}</span>
@@ -608,11 +608,11 @@ export function Documentation() {
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                 <div>
                   <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Encrypted Credential Storage</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    SSH private keys and passwords are stored AES-256-GCM encrypted in the database. The encryption key is derived from <code className="bg-gray-900 text-green-400 px-1 rounded">APP_SECRET_KEY</code> in the backend <code className="bg-gray-900 text-green-400 px-1 rounded">.env</code>.
+                    SSH private keys and passwords are stored AES-256-GCM encrypted in the database. The encryption key is derived from <code className="bg-gray-900 text-green-400 px-1 rounded-sm">APP_SECRET_KEY</code> in the backend <code className="bg-gray-900 text-green-400 px-1 rounded-sm">.env</code>.
                   </p>
                 </div>
               </div>
@@ -662,7 +662,7 @@ export function Documentation() {
                   'Enter the 6-digit code to confirm and activate',
                 ].map((step, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0 text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                    <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center shrink-0 text-sm font-bold text-indigo-600 dark:text-indigo-400">
                       {i + 1}
                     </div>
                     <span className="text-gray-600 dark:text-gray-400 pt-0.5">{step}</span>
@@ -675,23 +675,23 @@ export function Documentation() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Security Defaults</h3>
               <ul className="space-y-2 ml-4">
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400 text-sm">JWT tokens stored in HttpOnly cookies (not localStorage)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400 text-sm">bcrypt password hashing</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400 text-sm">helmet.js security headers on all API responses</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400 text-sm">Rate limiting on authentication endpoints</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <span className="text-gray-600 dark:text-gray-400 text-sm">AES-256-GCM encrypted SSH credentials at rest</span>
                 </li>
               </ul>
@@ -732,7 +732,7 @@ export function Documentation() {
                 The About page shows your installed UrBackup server version alongside the latest available release from GitHub. If an upgrade is available, click <strong>Upgrade UrBackup</strong> to run an apt-based upgrade with live terminal output.
               </p>
               <div className="space-y-2 ml-4">
-                <p className="text-gray-600 dark:text-gray-400 text-sm">• Runs <code className="bg-gray-900 text-green-400 px-1 rounded">apt-get install --only-upgrade urbackup-server</code> in the background</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">• Runs <code className="bg-gray-900 text-green-400 px-1 rounded-sm">apt-get install --only-upgrade urbackup-server</code> in the background</p>
                 <p className="text-gray-600 dark:text-gray-400 text-sm">• Live log output streamed to the browser during upgrade</p>
                 <p className="text-gray-600 dark:text-gray-400 text-sm">• UrBackup service restarts automatically after a successful upgrade</p>
               </div>
@@ -755,7 +755,7 @@ export function Documentation() {
                 <li>1. Verify the UrBackup server is running</li>
                 <li>2. Check that the database is accessible at /var/urbackup/backup_server.db</li>
                 <li>3. Confirm UrBackup API credentials in .env file</li>
-                <li>4. Test local API: <code className="bg-gray-900 text-green-400 px-2 py-0.5 rounded">curl http://localhost:55414</code></li>
+                <li>4. Test local API: <code className="bg-gray-900 text-green-400 px-2 py-0.5 rounded-sm">curl http://localhost:55414</code></li>
               </ul>
             </div>
 
@@ -775,7 +775,7 @@ export function Documentation() {
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">If storage statistics show 0:</p>
               <ul className="space-y-1 ml-4 text-sm text-gray-600 dark:text-gray-400">
                 <li>1. Wait a few minutes for data collection</li>
-                <li>2. Check server logs: <code className="bg-gray-900 text-green-400 px-2 py-0.5 rounded">sudo journalctl -u urbackup-gui -n 50</code></li>
+                <li>2. Check server logs: <code className="bg-gray-900 text-green-400 px-2 py-0.5 rounded-sm">sudo journalctl -u urbackup-gui -n 50</code></li>
                 <li>3. Verify UrBackup server API is accessible</li>
                 <li>4. Check user permissions on UrBackup server</li>
               </ul>
@@ -785,15 +785,15 @@ export function Documentation() {
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Service Management</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Useful commands:</p>
               <div className="space-y-2">
-                <div className="bg-gray-900 dark:bg-gray-950 rounded p-2">
+                <div className="bg-gray-900 dark:bg-gray-950 rounded-sm p-2">
                   <code className="text-xs text-green-400">sudo systemctl status urbackup-gui</code>
                   <p className="text-xs text-gray-400 mt-1">Check service status</p>
                 </div>
-                <div className="bg-gray-900 dark:bg-gray-950 rounded p-2">
+                <div className="bg-gray-900 dark:bg-gray-950 rounded-sm p-2">
                   <code className="text-xs text-green-400">sudo systemctl restart urbackup-gui</code>
                   <p className="text-xs text-gray-400 mt-1">Restart the backend service</p>
                 </div>
-                <div className="bg-gray-900 dark:bg-gray-950 rounded p-2">
+                <div className="bg-gray-900 dark:bg-gray-950 rounded-sm p-2">
                   <code className="text-xs text-green-400">sudo systemctl restart nginx</code>
                   <p className="text-xs text-gray-400 mt-1">Restart the web server</p>
                 </div>
@@ -809,7 +809,7 @@ export function Documentation() {
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800">
+        <div className="card bg-linear-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-blue-600 rounded-lg">
               <Terminal className="h-6 w-6 text-white" />

@@ -248,13 +248,13 @@ export function Customers() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="rounded-full bg-primary-100 dark:bg-primary-900/40 p-2 flex-shrink-0">
+                        <div className="rounded-full bg-primary-100 dark:bg-primary-900/40 p-2 shrink-0">
                           <Users className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{customer.name}</h3>
-                            <span className={`flex-shrink-0 inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${
+                            <span className={`shrink-0 inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${
                               customer.is_active !== false
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
                                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
@@ -269,12 +269,12 @@ export function Customers() {
                             </div>
                           )}
                           <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            {customer.email && <span className="flex items-center gap-1 truncate"><Mail className="h-3 w-3 flex-shrink-0" />{customer.email}</span>}
-                            {customer.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3 flex-shrink-0" />{customer.phone}</span>}
+                            {customer.email && <span className="flex items-center gap-1 truncate"><Mail className="h-3 w-3 shrink-0" />{customer.email}</span>}
+                            {customer.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3 shrink-0" />{customer.phone}</span>}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                           <HardDrive className="h-3 w-3" />{customer.client_count || 0}
                         </span>
@@ -296,8 +296,8 @@ export function Customers() {
                             const info = getClientInfo(cc.client_name);
                             return (
                               <li key={cc.id} className="flex items-center gap-2 px-4 py-2">
-                                <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${info?.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                                <HardDrive className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${info?.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                <HardDrive className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                                 <span className="text-xs font-medium text-gray-800 dark:text-gray-200 flex-1 truncate">{cc.client_name}</span>
                                 {info?.ip && <span className="text-xs text-gray-400 font-mono">{info.ip}</span>}
                               </li>
@@ -311,7 +311,7 @@ export function Customers() {
                         <button onClick={() => openEdit(customer)} className="flex-1 btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs flex items-center justify-center gap-1">
                           <Edit className="h-3.5 w-3.5" /> Edit / Manage Clients
                         </button>
-                        <button onClick={() => setConfirmDelete(customer)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
+                        <button onClick={() => setConfirmDelete(customer)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -325,7 +325,7 @@ export function Customers() {
                       <button onClick={() => openEdit(customer)} className="flex-1 btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs flex items-center justify-center gap-1">
                         <Edit className="h-3.5 w-3.5" /> Edit / Manage Clients
                       </button>
-                      <button onClick={() => setConfirmDelete(customer)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
+                      <button onClick={() => setConfirmDelete(customer)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -345,7 +345,7 @@ export function Customers() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingCustomer.id ? 'Edit Customer' : 'New Customer'}
               </h2>
-              <button onClick={closeModal} className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+              <button onClick={closeModal} className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700">
                 <X className="h-4 w-4 text-gray-500" />
               </button>
             </div>
@@ -381,7 +381,7 @@ export function Customers() {
                 <textarea value={editingCustomer.notes || ''} onChange={e => setEditingCustomer({ ...editingCustomer, notes: e.target.value })} className="input" rows={2} placeholder="Additional notes" />
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="is_active" checked={editingCustomer.is_active !== false} onChange={e => setEditingCustomer({ ...editingCustomer, is_active: e.target.checked })} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                <input type="checkbox" id="is_active" checked={editingCustomer.is_active !== false} onChange={e => setEditingCustomer({ ...editingCustomer, is_active: e.target.checked })} className="h-4 w-4 rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500" />
                 <label htmlFor="is_active" className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer">Active</label>
               </div>
 
@@ -403,10 +403,10 @@ export function Customers() {
                           const info = getClientInfo(cc.client_name);
                           return (
                             <li key={cc.id} className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800/50">
-                              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${info?.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${info?.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
                               <span className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1 truncate">{cc.client_name}</span>
                               {info?.ip && <span className="text-xs text-gray-400 font-mono">{info.ip}</span>}
-                              <button onClick={() => setConfirmRemoveClient({ cc })} disabled={!isAdmin} className="p-1 text-red-400 hover:text-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 disabled:cursor-not-allowed">
+                              <button onClick={() => setConfirmRemoveClient({ cc })} disabled={!isAdmin} className="p-1 text-red-400 hover:text-red-600 rounded-sm hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-30 disabled:cursor-not-allowed">
                                 <X className="h-3.5 w-3.5" />
                               </button>
                             </li>
@@ -435,9 +435,9 @@ export function Customers() {
                               onClick={() => toggleClientAdd(client.name)}
                             >
                               {checked
-                                ? <CheckSquare className="h-4 w-4 text-primary-600 dark:text-primary-400 flex-shrink-0" />
-                                : <Square className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-                              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${client.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                ? <CheckSquare className="h-4 w-4 text-primary-600 dark:text-primary-400 shrink-0" />
+                                : <Square className="h-4 w-4 text-gray-400 shrink-0" />}
+                              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${client.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
                               <span className="text-sm text-gray-900 dark:text-gray-100 flex-1 truncate">{client.name}</span>
                               {client.ip && <span className="text-xs text-gray-400 font-mono">{client.ip}</span>}
                             </li>

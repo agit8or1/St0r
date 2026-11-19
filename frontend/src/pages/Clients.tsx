@@ -27,7 +27,7 @@ function StorageLimitCell({ storage, limitStatus, onEdit, editable }: {
         <span className="text-gray-600 dark:text-gray-400 text-sm">{usedStr}</span>
         {editable && (
           <Tooltip text="Set a storage limit for this endpoint">
-            <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+            <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-700">
               <Edit2 className="h-3 w-3 text-gray-400" />
             </button>
           </Tooltip>
@@ -61,17 +61,17 @@ function StorageLimitCell({ storage, limitStatus, onEdit, editable }: {
       </div>
       {(status === 'warning') && (
         <Tooltip text="Storage usage is approaching the limit">
-          <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
+          <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 shrink-0" />
         </Tooltip>
       )}
       {(status === 'critical' || status === 'exceeded') && (
         <Tooltip text="Storage limit exceeded or critically full">
-          <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+          <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
         </Tooltip>
       )}
       {editable && (
         <Tooltip text="Edit storage limit">
-          <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+          <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-700">
             <Edit2 className="h-3 w-3 text-gray-400" />
           </button>
         </Tooltip>
@@ -320,7 +320,7 @@ export function Clients() {
           const warn = warnings.filter(s => s.status === 'warning');
           return (
             <div className={`flex items-start gap-2 px-3 py-2 rounded-lg text-sm ${critical.length > 0 ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800' : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800'}`}>
-              {critical.length > 0 ? <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" /> : <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+              {critical.length > 0 ? <XCircle className="h-4 w-4 shrink-0 mt-0.5" /> : <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />}
               <span>
                 {critical.length > 0 && <><strong>{critical.map(s => s.name).join(', ')}</strong> {critical.length === 1 ? 'has' : 'have'} exceeded or critically exceeded storage limits. </>}
                 {warn.length > 0 && <><strong>{warn.map(s => s.name).join(', ')}</strong> {warn.length === 1 ? 'is' : 'are'} approaching storage limits.</>}
@@ -333,16 +333,16 @@ export function Clients() {
         {loadError && (
           <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
             <div className="flex items-start gap-3">
-              <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <XCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-red-700 dark:text-red-300">Failed to load endpoints</p>
                 <p className="mt-1 text-xs text-red-600 dark:text-red-400 font-mono break-all">{loadError}</p>
                 <p className="mt-2 text-xs text-red-600 dark:text-red-400">
-                  Common cause: St0r cannot read <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">/var/urbackup/backup_server.db</code>.
-                  Run: <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">sudo chmod 644 /var/urbackup/backup_server.db</code> or add the service user to the <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">urbackup</code> group.
+                  Common cause: St0r cannot read <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded-sm">/var/urbackup/backup_server.db</code>.
+                  Run: <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded-sm">sudo chmod 644 /var/urbackup/backup_server.db</code> or add the service user to the <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded-sm">urbackup</code> group.
                 </p>
               </div>
-              <button onClick={loadData} className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 flex-shrink-0">
+              <button onClick={loadData} className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 shrink-0">
                 <RefreshCw className="h-3.5 w-3.5" /> Retry
               </button>
             </div>
@@ -407,7 +407,7 @@ export function Clients() {
                         <td className="px-3 py-2">
                           {mapping?.customer_name ? (
                             <div className="flex items-center gap-1">
-                              <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                              <Users className="h-3 w-3 text-gray-400 shrink-0" />
                               <span className="text-xs text-primary-600 dark:text-primary-400">{mapping.customer_name}</span>
                             </div>
                           ) : (

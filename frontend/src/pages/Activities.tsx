@@ -248,8 +248,8 @@ export function Activities() {
             {showClearConfirm ? (
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-600">
                 <span className="text-sm text-orange-800 dark:text-orange-200">Stop stuck jobs?</span>
-                <button onClick={handleClearStaleJobs} className="px-2 py-1 text-xs rounded bg-orange-600 text-white hover:bg-orange-700">Yes</button>
-                <button onClick={() => setShowClearConfirm(false)} className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300">No</button>
+                <button onClick={handleClearStaleJobs} className="px-2 py-1 text-xs rounded-sm bg-orange-600 text-white hover:bg-orange-700">Yes</button>
+                <button onClick={() => setShowClearConfirm(false)} className="px-2 py-1 text-xs rounded-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300">No</button>
               </div>
             ) : clearStaleResult ? (
               <span className="text-sm text-green-700 dark:text-green-300 px-3 py-2">
@@ -283,7 +283,7 @@ export function Activities() {
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-4">
-          <div className="card bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
+          <div className="card bg-linear-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-blue-600 rounded-xl"><ActivityIcon className="h-6 w-6 text-white" /></div>
               <div>
@@ -292,7 +292,7 @@ export function Activities() {
               </div>
             </div>
           </div>
-          <div className="card bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+          <div className="card bg-linear-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-green-600 rounded-xl"><CheckCircle className="h-6 w-6 text-white" /></div>
               <div>
@@ -301,7 +301,7 @@ export function Activities() {
               </div>
             </div>
           </div>
-          <div className="card bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20">
+          <div className="card bg-linear-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-red-600 rounded-xl"><XCircle className="h-6 w-6 text-white" /></div>
               <div>
@@ -310,7 +310,7 @@ export function Activities() {
               </div>
             </div>
           </div>
-          <div className="card bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+          <div className="card bg-linear-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-purple-600 rounded-xl"><HardDrive className="h-6 w-6 text-white" /></div>
               <div>
@@ -324,7 +324,7 @@ export function Activities() {
         {/* Filters */}
         <div className="card">
           <div className="flex flex-wrap items-center gap-4">
-            <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+            <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
 
             {/* Status */}
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -337,7 +337,7 @@ export function Activities() {
                 <button key={val} onClick={() => setStatusFilter(val)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                     statusFilter === val
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-xs'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                   }`}>{label}</button>
               ))}
@@ -351,7 +351,7 @@ export function Activities() {
                 <button key={val} onClick={() => setActivityType(val)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                     activityType === val
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-xs'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                   }`}>{label}</button>
               ))}
@@ -363,7 +363,7 @@ export function Activities() {
             <select
               value={selectedClient}
               onChange={e => setSelectedClient(e.target.value)}
-              className="px-3 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
             >
               <option value="all">All Clients</option>
               {uniqueClients.map(c => <option key={c} value={c}>{c}</option>)}
@@ -375,7 +375,7 @@ export function Activities() {
                 <button key={val} onClick={() => setDateRange(val)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                     dateRange === val
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-xs'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                   }`}>{label}</button>
               ))}
@@ -388,7 +388,7 @@ export function Activities() {
           <div className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
             cancelNotify.ok ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
           }`}>
-            {cancelNotify.ok ? <CheckCircle className="h-4 w-4 flex-shrink-0" /> : <XCircle className="h-4 w-4 flex-shrink-0" />}
+            {cancelNotify.ok ? <CheckCircle className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
             {cancelNotify.msg}
           </div>
         )}
@@ -429,7 +429,7 @@ export function Activities() {
                       </div>
                       <div className="flex items-center gap-3">
                         {isPaused && (
-                          <span className="flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 rounded">
+                          <span className="flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 rounded-sm">
                             <Pause className="h-3 w-3" />Paused
                           </span>
                         )}
@@ -451,10 +451,10 @@ export function Activities() {
 
                     <div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                       <div
-                        className="h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 relative overflow-hidden"
+                        className="h-2.5 rounded-full bg-linear-to-r from-blue-500 to-blue-600 transition-all duration-500 relative overflow-hidden"
                         style={{ width: `${Math.min(pcdone, 100)}%` }}
                       >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                        <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
                       </div>
                     </div>
 
@@ -551,12 +551,12 @@ export function Activities() {
                     // A restore with no finish time is still running — don't paint it
                     // green as though it had succeeded.
                     const statusIcon = hasErrors
-                      ? <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                      ? <XCircle className="h-4 w-4 text-red-500 shrink-0" />
                       : hasWarnings
-                      ? <AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                      ? <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
                       : isRestoreRunning
-                      ? <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                      : <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />;
+                      ? <Clock className="h-4 w-4 text-blue-500 shrink-0" />
+                      : <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />;
 
                     const rowBg = hasErrors
                       ? 'bg-red-50/40 dark:bg-red-900/5 hover:bg-red-50 dark:hover:bg-red-900/10'
@@ -585,7 +585,7 @@ export function Activities() {
                                   <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{clientName}</p>
                                   {customerName && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{customerName}</p>}
                                 </div>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0">
                                   {backuptime ? formatDate(backuptime) : ''}
                                 </span>
                               </div>
@@ -597,7 +597,7 @@ export function Activities() {
                                 {warnings > 0 && <span className="flex items-center gap-0.5 text-xs font-medium text-yellow-600 dark:text-yellow-400"><AlertTriangle className="h-3 w-3" />{warnings}</span>}
                               </div>
                             </div>
-                            {logId && <ChevronDown className={`h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />}
+                            {logId && <ChevronDown className={`h-4 w-4 text-gray-400 shrink-0 mt-0.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />}
                           </div>
 
                           {/* Desktop layout */}
@@ -632,14 +632,14 @@ export function Activities() {
                             <div className="flex items-center gap-1.5">
                               {errors > 0 && (
                                 <Tooltip text={`${errors} error${errors !== 1 ? 's' : ''}`}>
-                                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded">
+                                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-sm">
                                     <XCircle className="h-3 w-3" />{errors}
                                   </span>
                                 </Tooltip>
                               )}
                               {warnings > 0 && (
                                 <Tooltip text={`${warnings} warning${warnings !== 1 ? 's' : ''}`}>
-                                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 rounded">
+                                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 rounded-sm">
                                     <AlertTriangle className="h-3 w-3" />{warnings}
                                   </span>
                                 </Tooltip>
@@ -663,12 +663,12 @@ export function Activities() {
                                     entry.severity === 1 ? 'text-yellow-700 dark:text-yellow-400' :
                                     'text-gray-600 dark:text-gray-400'
                                   }`}>
-                                    <span className="flex-shrink-0 w-4 mt-0.5">
+                                    <span className="shrink-0 w-4 mt-0.5">
                                       {entry.severity === 2 ? <XCircle className="h-3 w-3" /> :
                                        entry.severity === 1 ? <AlertTriangle className="h-3 w-3" /> :
                                        <Info className="h-3 w-3" />}
                                     </span>
-                                    <span className="break-words whitespace-pre-wrap leading-relaxed">{entry.message}</span>
+                                    <span className="wrap-break-word whitespace-pre-wrap leading-relaxed">{entry.message}</span>
                                   </div>
                                 ))}
                                 {logDetail[logId].entries.length === 0 && (
