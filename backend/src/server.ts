@@ -184,7 +184,8 @@ app.use('/api', (req, res) => {
 });
 
 // SPA fallback — serve index.html for all non-API routes
-app.get('*', (req, res) => {
+// Express 5 path syntax: a named wildcard, optional so '/' matches too.
+app.get('/{*splat}', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(resolve(frontendDist, 'index.html'));
 });

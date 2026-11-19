@@ -38,7 +38,7 @@ router.get('/list', (req: Request, res: Response) => {
 });
 
 // Download a specific documentation file
-router.get('/download/:filename', (req: Request, res: Response) => {
+router.get('/download/:filename', (req: Request<{ filename: string }>, res: Response) => {
   try {
     const { filename } = req.params;
 
