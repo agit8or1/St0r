@@ -15,6 +15,11 @@ updates:
     groups:
       backend-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # typescript-eslint 8.x only supports TypeScript < 6.1. Keep every package
+      # on the same compiler; lift this when typescript-eslint supports 7.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /frontend
@@ -25,6 +30,11 @@ updates:
     groups:
       frontend-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # typescript-eslint 8.x only supports TypeScript < 6.1. Keep every package
+      # on the same compiler; lift this when typescript-eslint supports 7.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /agent
@@ -35,6 +45,11 @@ updates:
     groups:
       agent-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # typescript-eslint 8.x only supports TypeScript < 6.1. Keep every package
+      # on the same compiler; lift this when typescript-eslint supports 7.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   # Workflow actions are pinned to commit SHAs; Dependabot keeps the SHA and
   # the version comment in step.
