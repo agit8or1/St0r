@@ -27,7 +27,7 @@
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
-    "dotenv": "^16.3.1",
+    "dotenv": "^18.0.10",
     "express": "^5.3.0",
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.3.2",
