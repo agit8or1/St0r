@@ -1,9 +1,8 @@
 {
-  "version": "3.2.138",
+  "version": "3.2.139",
   "releaseDate": "2026-11-20",
   "changelog": [
-    "Removing an endpoint now deletes its backup data too (optionally right away), using UrBackup's own removal.",
-    "UrBackup server updates are checked and installed automatically each night (About page to configure).",
-    "The St0r version is shown at the bottom of the sidebar."
+    "Frontend: React 19 and lucide-react 1.x.",
+    "Frontend: Tailwind CSS 4. Pages look the same; dropdowns now have a white background."
   ]
 }

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.139] - 2026-11-20
+
+### Changed
+- **Frontend: React 18 → 19 and `lucide-react` 0.303 → 1.x** ([#42](https://github.com/agit8or1/St0r/pull/42)). No visible changes.
+- **Frontend: Tailwind CSS 3 → 4** ([#51](https://github.com/agit8or1/St0r/pull/51)). Every page was compared against 3.2.138 in light and dark mode. Pages look the same, except that dropdowns now have a white background instead of grey and reds are slightly brighter. Tailwind 3's font stacks are kept: Tailwind 4's defaults made text render with very wide spaces and digits in Chrome on Linux.
+
 ## [3.2.138] - 2026-11-20
 
 ### Fixed

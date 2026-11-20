@@ -436,7 +436,7 @@ export function About() {
               <div>
                 <p className="font-medium text-gray-900 dark:text-gray-100 mb-2">Frontend</p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  React 18, TypeScript, Vite, TailwindCSS, React Router
+                  React 19, TypeScript, Vite, Tailwind CSS 4, React Router
                 </p>
               </div>
               <div>
