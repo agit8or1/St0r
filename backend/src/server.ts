@@ -246,6 +246,8 @@ async function ensureTables() {
   await ensureAlertTables();
   const { ensureSettingsTable } = await import('./services/urbackupAutoUpdate.js');
   await ensureSettingsTable();
+  const { ensureEndpointStateTables } = await import('./services/endpointDisabledStore.js');
+  await ensureEndpointStateTables();
 }
 
 // Where the generated first-run password is written for the installer to read.

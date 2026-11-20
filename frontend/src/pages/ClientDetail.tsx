@@ -21,11 +21,13 @@ import {
   Eye,
   EyeOff,
   Trash2,
+  Pause,
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { BackupSchedule } from '../components/BackupSchedule';
 import { Tooltip } from '../components/Tooltip';
+import { DeleteEndpointDialog, DisableEndpointDialog } from '../components/EndpointDialogs';
 import { api, linuxInstallerFilename } from '../services/api';
 import type { Client, Backup } from '../types';
 import { formatBytes, formatTimeAgo, formatTimestamp, formatDuration } from '../utils/format';
@@ -52,6 +54,8 @@ export function ClientDetail() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [selectedBackupIds, setSelectedBackupIds] = useState<Set<number>>(new Set());
   const [deletingSelected, setDeletingSelected] = useState(false);
+  const [endpointDialog, setEndpointDialog] = useState<'delete' | 'toggle' | null>(null);
+  const [endpointNotice, setEndpointNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadClientData = useCallback(async () => {
     try {
@@ -275,7 +279,23 @@ export function ClientDetail() {
               {formatTimeAgo(client.lastseen || 0)}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
+            {isAdmin && (
+              <Tooltip text={client.disabled ? 'Enable: resume backups' : 'Disable: stop new backups, keep existing ones'}>
+                <button onClick={() => setEndpointDialog('toggle')} className="btn btn-secondary flex items-center gap-2">
+                  {client.disabled ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                  {client.disabled ? 'Enable' : 'Disable'}
+                </button>
+              </Tooltip>
+            )}
+            {isAdmin && (
+              <Tooltip text="Delete this endpoint and all of its backups">
+                <button onClick={() => setEndpointDialog('delete')} className="btn btn-danger flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </button>
+              </Tooltip>
+            )}
             {isAdmin && (
               <Tooltip text="Configure backup settings for this endpoint">
                 <button
@@ -298,6 +318,30 @@ export function ClientDetail() {
             </Tooltip>
           </div>
         </div>
+
+        {endpointNotice && (
+          <div className={`rounded-lg px-4 py-3 text-sm ${
+            endpointNotice.type === 'success'
+              ? 'bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+              : 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+          }`}>
+            {endpointNotice.text}
+          </div>
+        )}
+        {client.disabled && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4">
+            <Pause className="h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" />
+            <div className="text-sm text-amber-800 dark:text-amber-200">
+              <p className="font-semibold">
+                {client.disabled_reason === 'customer' ? 'Disabled with its customer' : 'This endpoint is disabled'}
+              </p>
+              <p className="mt-1">
+                No new backups run and it raises no alerts. Its existing backups are kept and can be browsed and restored.
+                {isAdmin && ' Click Enable to resume backups.'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Download Client Software for THIS Client. Scoped per endpoint by the
             API, so anyone who can see this endpoint can install an agent on it —
@@ -515,7 +559,7 @@ export function ClientDetail() {
             </div>
           </div>
 
-          {(client.bytes_used_files || client.bytes_used_images) && (
+          {!!(client.bytes_used_files || client.bytes_used_images) && (
             <div className="card">
               <div className="flex items-center gap-3">
                 <HardDrive className="h-8 w-8 text-orange-600" />
@@ -563,7 +607,7 @@ export function ClientDetail() {
                 <Tooltip text={client?.no_backup_paths ? 'Disabled — client has no backup paths configured' : 'Start a full file backup now — backs up all selected paths'} className="flex-1">
                   <button
                     onClick={() => handleStartBackup('file', false)}
-                    disabled={!!startingBackup || !!client?.no_backup_paths}
+                    disabled={!!startingBackup || !!client?.no_backup_paths || !!client?.disabled}
                     className="btn btn-primary w-full flex items-center justify-center gap-2"
                   >
                     {startingBackup === 'file-full' ? (
@@ -577,7 +621,7 @@ export function ClientDetail() {
                 <Tooltip text={client?.no_backup_paths ? 'Disabled — client has no backup paths configured' : 'Start an incremental file backup — only backs up changed files'} className="flex-1">
                   <button
                     onClick={() => handleStartBackup('file', true)}
-                    disabled={!!startingBackup || !!client?.no_backup_paths}
+                    disabled={!!startingBackup || !!client?.no_backup_paths || !!client?.disabled}
                     className="btn btn-secondary w-full flex items-center justify-center gap-2"
                   >
                     {startingBackup === 'file-incr' ? (
@@ -597,7 +641,7 @@ export function ClientDetail() {
                 <Tooltip text="Start a full disk image backup — captures the entire drive" className="flex-1">
                   <button
                     onClick={() => handleStartBackup('image', false)}
-                    disabled={!!startingBackup}
+                    disabled={!!startingBackup || !!client?.disabled}
                     className="btn btn-primary w-full flex items-center justify-center gap-2"
                   >
                     {startingBackup === 'image-full' ? (
@@ -611,7 +655,7 @@ export function ClientDetail() {
                 <Tooltip text="Start an incremental image backup — only captures changed blocks" className="flex-1">
                   <button
                     onClick={() => handleStartBackup('image', true)}
-                    disabled={!!startingBackup}
+                    disabled={!!startingBackup || !!client?.disabled}
                     className="btn btn-secondary w-full flex items-center justify-center gap-2"
                   >
                     {startingBackup === 'image-incr' ? (
@@ -784,6 +828,25 @@ export function ClientDetail() {
           </>
         )}
       </div>
+      {endpointDialog === 'delete' && (
+        <DeleteEndpointDialog
+          endpoint={{ id: client.id, name: client.name }}
+          onClose={() => setEndpointDialog(null)}
+          onDeleted={() => {}}
+          notify={(type, text) => (type === 'success'
+            ? navigate('/clients', { state: { notice: { type, text } } })
+            : setEndpointNotice({ type, text }))}
+        />
+      )}
+      {endpointDialog === 'toggle' && (
+        <DisableEndpointDialog
+          endpoint={{ id: client.id, name: client.name }}
+          enable={!!client.disabled}
+          onClose={() => setEndpointDialog(null)}
+          onChanged={loadClientData}
+          notify={(type, text) => setEndpointNotice({ type, text })}
+        />
+      )}
     </Layout>
   );
 }

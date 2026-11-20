@@ -45,7 +45,7 @@ export async function getUserScope(
     rows = await query<any[]>(
       `SELECT cu.customer_id, cc.client_name
          FROM customer_users cu
-         JOIN customers c ON c.id = cu.customer_id AND c.is_active = 1
+         JOIN customers c ON c.id = cu.customer_id AND c.is_active = 1 AND c.disabled = 0
          LEFT JOIN customer_clients cc ON cc.customer_id = cu.customer_id
         WHERE cu.user_id = ?`,
       [user.userId]

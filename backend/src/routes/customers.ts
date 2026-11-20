@@ -3,6 +3,7 @@ import { pool } from '../config/database.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { scopeOf, isClientVisible, invalidateScopeCache } from '../middleware/scope.js';
 import { logger } from '../utils/logger.js';
+import { audit } from '../utils/audit.js';
 
 const router = Router();
 
@@ -119,6 +120,36 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// Disable / enable a customer (admin only). Disabling pauses the backups of
+// every endpoint assigned to it and hides them from the customer's own
+// accounts; enabling resumes only the endpoints the customer's disabling
+// paused (one disabled by hand stays disabled).
+router.post('/:id/disable', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { disableCustomer } = await import('../services/endpointState.js');
+    const result = await disableCustomer(Number(req.params.id), (req as any).user?.username);
+    invalidateScopeCache();
+    audit(req as any, 'customer.disable', { customerId: Number(req.params.id), endpoints: result.changed, failed: result.failed.length });
+    res.json({ success: result.failed.length === 0, ...result });
+  } catch (error: any) {
+    logger.error('Failed to disable customer:', error);
+    res.status(error?.status === 404 ? 404 : 500).json({ error: error?.status === 404 ? 'Customer not found' : 'Failed to disable customer' });
+  }
+});
+
+router.post('/:id/enable', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { enableCustomer } = await import('../services/endpointState.js');
+    const result = await enableCustomer(Number(req.params.id));
+    invalidateScopeCache();
+    audit(req as any, 'customer.enable', { customerId: Number(req.params.id), endpoints: result.changed, failed: result.failed.length });
+    res.json({ success: result.failed.length === 0, ...result });
+  } catch (error: any) {
+    logger.error('Failed to enable customer:', error);
+    res.status(error?.status === 404 ? 404 : 500).json({ error: error?.status === 404 ? 'Customer not found' : 'Failed to enable customer' });
+  }
+});
+
 // Delete customer (soft delete, admin only)
 router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
@@ -183,6 +214,12 @@ router.post('/:id/clients', authenticate, requireAdmin, async (req, res) => {
 
     const insertResult = result as any;
     invalidateScopeCache();
+    try {
+      const { applyCustomerState } = await import('../services/endpointState.js');
+      await applyCustomerState(Number(req.params.id), String(client_name), (req as any).user?.username);
+    } catch (err) {
+      logger.error(`Could not disable ${client_name} with its disabled customer:`, err);
+    }
     res.status(201).json({
       id: insertResult.insertId,
       customer_id: req.params.id,
@@ -200,6 +237,10 @@ router.post('/:id/clients', authenticate, requireAdmin, async (req, res) => {
 // Remove client from customer (admin only)
 router.delete('/:customerId/clients/:clientId', authenticate, requireAdmin, async (req, res) => {
   try {
+    const [assigned] = await pool.query(
+      'SELECT client_name FROM customer_clients WHERE customer_id = ? AND id = ?',
+      [req.params.customerId, req.params.clientId]
+    );
     const [result] = await pool.query(
       'DELETE FROM customer_clients WHERE customer_id = ? AND id = ?',
       [req.params.customerId, req.params.clientId]
@@ -212,6 +253,23 @@ router.delete('/:customerId/clients/:clientId', authenticate, requireAdmin, asyn
     }
 
     invalidateScopeCache();
+    // Leaving a disabled customer resumes backups it paused for that reason.
+    const name = (assigned as any[])[0]?.client_name;
+    if (name) {
+      try {
+        const [rows] = await pool.query(
+          "SELECT client_id FROM endpoint_disabled WHERE reason = 'customer' AND customer_id = ? AND client_name = ?",
+          [req.params.customerId, name]
+        );
+        const row = (rows as any[])[0];
+        if (row) {
+          const { enableEndpoint } = await import('../services/endpointState.js');
+          await enableEndpoint(Number(row.client_id));
+        }
+      } catch (err) {
+        logger.error(`Could not enable ${name} after removing it from its customer:`, err);
+      }
+    }
     res.json({ message: 'Client removed from customer successfully' });
   } catch (error) {
     logger.error('Failed to remove client from customer:', error);

@@ -14,6 +14,8 @@ import {
   getUsage,
   addClient,
   removeClient,
+  disableClient,
+  enableClient,
   getClientAuthkey,
   updateClientName,
   regenerateClientKey,
@@ -42,6 +44,8 @@ router.get('/clients/:clientId/backups', getBackups);
 router.get('/clients/:clientId/authkey', requireAdmin, getClientAuthkey);
 router.post('/clients', requireAdmin, addClient);
 router.delete('/clients/:clientId', requireAdmin, removeClient);
+router.post('/clients/:clientId/disable', requireAdmin, disableClient);
+router.post('/clients/:clientId/enable', requireAdmin, enableClient);
 router.patch('/clients/:clientId/name', requireAdmin, updateClientName);
 router.post('/clients/:clientId/regenerate-key', requireAdmin, regenerateClientKey);
 router.get('/activities', getActivities);

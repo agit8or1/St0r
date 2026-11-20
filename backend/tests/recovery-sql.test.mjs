@@ -223,3 +223,20 @@ test('drill input is validated: a boot drill on real hardware cannot carry simul
   assert.equal((await call(mod.ctrl.createDrill, admin, { body: { kind: 'boot', name: 'b', client_name: 'clientA', hypervisor_id: hv.id, boot_config: { profile: 'windows-uefi', service: 'a;rm -rf /' } } })).code, 400);
   assert.equal((await call(mod.ctrl.createDrill, admin, { body: { kind: 'file', name: 'f', client_name: 'clientA', schedule_type: 'cron', cron_expression: 'every day' } })).code, 400);
 });
+
+test('accounts of a disabled customer lose sight of its endpoints until it is enabled', { skip }, async () => {
+  const { getUserScope, invalidateScopeCache } = await import('../dist/middleware/scope.js');
+  invalidateScopeCache();
+  assert.deepEqual([...(await getUserScope(customer)).clientNames], ['clienta']);
+  await mod.db.query('UPDATE customers SET disabled = 1 WHERE id = 5');
+  invalidateScopeCache();
+  try {
+    const scope = await getUserScope(customer);
+    assert.deepEqual([...scope.clientNames], []);
+    assert.deepEqual(scope.customerIds, []);
+  } finally {
+    await mod.db.query('UPDATE customers SET disabled = 0 WHERE id = 5');
+    invalidateScopeCache();
+  }
+  assert.deepEqual([...(await getUserScope(customer)).clientNames], ['clienta']);
+});

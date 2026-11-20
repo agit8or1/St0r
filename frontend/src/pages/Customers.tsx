@@ -3,7 +3,7 @@ import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import {
   Users, Plus, Edit, Trash2, Save, X, HardDrive, Phone, Mail, Building,
-  ChevronDown, ChevronUp, CheckSquare, Square,
+  ChevronDown, ChevronUp, CheckSquare, Square, Pause, Play,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Customer, Client, CustomerClient } from '../types';
@@ -36,6 +36,9 @@ export function Customers() {
   // Delete confirm
   const [confirmDelete, setConfirmDelete] = useState<Customer | null>(null);
   const [confirmRemoveClient, setConfirmRemoveClient] = useState<{ cc: CustomerClient } | null>(null);
+  const [confirmToggle, setConfirmToggle] = useState<Customer | null>(null);
+  const [toggling, setToggling] = useState(false);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -147,6 +150,41 @@ export function Customers() {
     }
   };
 
+  // ---------- Disable / enable customer ----------
+
+  const handleToggle = async () => {
+    if (!confirmToggle) return;
+    const enable = !!confirmToggle.disabled;
+    setToggling(true);
+    try {
+      const result = enable ? await api.enableCustomer(confirmToggle.id) : await api.disableCustomer(confirmToggle.id);
+      const n = result.changed.length;
+      const endpoints = `${n} endpoint${n === 1 ? '' : 's'}`;
+      let text = enable
+        ? `${confirmToggle.name} enabled. Backups resumed on ${endpoints}.`
+        : `${confirmToggle.name} disabled. Backups paused on ${endpoints}.`;
+      if (result.failed.length) text += ` Could not change: ${result.failed.map(f => f.name).join(', ')}.`;
+      setNotice({ type: result.failed.length ? 'error' : 'success', text });
+      loadData();
+    } catch (err: any) {
+      setNotice({ type: 'error', text: err?.response?.data?.error || `Failed to ${enable ? 'enable' : 'disable'} ${confirmToggle.name}.` });
+    } finally {
+      setToggling(false);
+      setConfirmToggle(null);
+    }
+  };
+
+  const toggleButton = (customer: Customer) => (
+    <button
+      onClick={() => setConfirmToggle(customer)}
+      title={customer.disabled ? 'Enable: resume its endpoints\' backups' : 'Disable: pause its endpoints\' backups'}
+      className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs flex items-center justify-center gap-1"
+    >
+      {customer.disabled ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+      {customer.disabled ? 'Enable' : 'Disable'}
+    </button>
+  );
+
   // ---------- Bulk add clients ----------
 
   const toggleClientAdd = (name: string) => {
@@ -224,6 +262,19 @@ export function Customers() {
           )}
         </div>
 
+        {notice && (
+          <div className={`flex items-start justify-between gap-3 rounded-lg px-4 py-3 text-sm ${
+            notice.type === 'success'
+              ? 'bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+              : 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+          }`}>
+            <span>{notice.text}</span>
+            <button onClick={() => setNotice(null)} aria-label="Dismiss" className="shrink-0 opacity-70 hover:opacity-100">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* List */}
         {loading ? <Loading /> : customers.length === 0 ? (
           <div className="card text-center py-12">
@@ -255,11 +306,11 @@ export function Customers() {
                           <div className="flex items-center gap-2">
                             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{customer.name}</h3>
                             <span className={`shrink-0 inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${
-                              customer.is_active !== false
+                              !customer.disabled
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
                             }`}>
-                              {customer.is_active !== false ? 'Active' : 'Inactive'}
+                              {!customer.disabled ? 'Active' : 'Disabled'}
                             </span>
                           </div>
                           {customer.company && (
@@ -299,6 +350,7 @@ export function Customers() {
                                 <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${info?.online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
                                 <HardDrive className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                                 <span className="text-xs font-medium text-gray-800 dark:text-gray-200 flex-1 truncate">{cc.client_name}</span>
+                                {info?.disabled && <span className="text-xs text-amber-700 dark:text-amber-300">Disabled</span>}
                                 {info?.ip && <span className="text-xs text-gray-400 font-mono">{info.ip}</span>}
                               </li>
                             );
@@ -311,6 +363,7 @@ export function Customers() {
                         <button onClick={() => openEdit(customer)} className="flex-1 btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs flex items-center justify-center gap-1">
                           <Edit className="h-3.5 w-3.5" /> Edit / Manage Clients
                         </button>
+                        {toggleButton(customer)}
                         <button onClick={() => setConfirmDelete(customer)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -325,6 +378,7 @@ export function Customers() {
                       <button onClick={() => openEdit(customer)} className="flex-1 btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs flex items-center justify-center gap-1">
                         <Edit className="h-3.5 w-3.5" /> Edit / Manage Clients
                       </button>
+                      {toggleButton(customer)}
                       <button onClick={() => setConfirmDelete(customer)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -379,10 +433,6 @@ export function Customers() {
               <div>
                 <label className="label">Notes</label>
                 <textarea value={editingCustomer.notes || ''} onChange={e => setEditingCustomer({ ...editingCustomer, notes: e.target.value })} className="input" rows={2} placeholder="Additional notes" />
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="is_active" checked={editingCustomer.is_active !== false} onChange={e => setEditingCustomer({ ...editingCustomer, is_active: e.target.checked })} className="h-4 w-4 rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500" />
-                <label htmlFor="is_active" className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer">Active</label>
               </div>
 
               {/* ── Client management — only when editing existing customer ── */}
@@ -480,11 +530,41 @@ export function Customers() {
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">Delete customer?</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              <strong>{confirmDelete.name}</strong> and all endpoint assignments will be permanently deleted.
+              <strong>{confirmDelete.name}</strong> and its endpoint assignments will be permanently deleted. The endpoints
+              and their backups are not deleted.
             </p>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setConfirmDelete(null)} className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm">Cancel</button>
               <button onClick={handleDelete} className="btn bg-red-600 hover:bg-red-700 text-white text-sm">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Disable / enable customer confirm ── */}
+      {confirmToggle && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => !toggling && setConfirmToggle(null)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              {confirmToggle.disabled ? 'Enable' : 'Disable'} customer?
+            </h3>
+            {confirmToggle.disabled ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Enable <strong>{confirmToggle.name}</strong>? Backups resume on the endpoints that were paused when it was
+                disabled, and its user accounts can see them again. Endpoints you disabled individually stay disabled.
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Disable <strong>{confirmToggle.name}</strong>? Backups pause on all {confirmToggle.client_count || 0} of its
+                endpoints and they raise no alerts. Its user accounts can no longer see them.{' '}
+                <strong>Existing backups are kept.</strong>
+              </p>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirmToggle(null)} disabled={toggling} className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm">Cancel</button>
+              <button onClick={handleToggle} disabled={toggling} className="btn btn-primary text-sm disabled:opacity-60">
+                {toggling ? 'Saving…' : confirmToggle.disabled ? 'Enable' : 'Disable'}
+              </button>
             </div>
           </div>
         </div>

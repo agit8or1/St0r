@@ -49,6 +49,10 @@ export interface Client {
   no_backup_paths?: boolean;
   file_backups_disabled?: boolean;
   image_backups_disabled?: boolean;
+  /** Backups paused in St0r ("Disable"); its existing backups are kept. */
+  disabled?: boolean;
+  disabled_reason?: 'manual' | 'customer' | null;
+  disabled_at?: string | null;
 }
 
 export interface Activity {
@@ -93,6 +97,9 @@ export interface Customer {
   address?: string;
   notes?: string;
   is_active: boolean;
+  /** Disabled: its endpoints' backups are paused and its accounts can't see them. */
+  disabled?: boolean | number;
+  disabled_at?: string | null;
   client_count?: number;
   user_count?: number;
   created_at?: string;

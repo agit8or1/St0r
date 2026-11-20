@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { HardDrive, Search, Settings, Users, ChevronUp, ChevronDown, AlertTriangle, XCircle, Edit2, RefreshCw } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { HardDrive, Search, Settings, Users, ChevronUp, ChevronDown, AlertTriangle, XCircle, Edit2, RefreshCw, Pause, Play, Trash2, X } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { ClientManagementModal } from '../components/ClientManagementModal';
+import { DeleteEndpointDialog, DisableEndpointDialog, EndpointRef } from '../components/EndpointDialogs';
 import { Tooltip } from '../components/Tooltip';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -90,11 +91,18 @@ export function Clients() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline' | 'failed'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline' | 'failed' | 'disabled'>('all');
   const [selectedCustomer, setSelectedCustomer] = useState<number | 'all'>('all');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<EndpointRef | null>(null);
+  const [pendingToggle, setPendingToggle] = useState<{ endpoint: EndpointRef; enable: boolean } | null>(null);
+  const location = useLocation();
+  // A deletion made on the endpoint's own page reports back here.
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(
+    (location.state as any)?.notice ?? null
+  );
   const [storageLimitStatuses, setStorageLimitStatuses] = useState<Map<string, StorageLimitStatus>>(new Map());
   const [limitModal, setLimitModal] = useState<{ client: Client } | null>(null);
   const [limitInput, setLimitInput] = useState('');
@@ -223,6 +231,7 @@ export function Clients() {
       result = result.filter(c =>
         filterStatus === 'online' ? c.online :
         filterStatus === 'offline' ? !c.online :
+        filterStatus === 'disabled' ? !!c.disabled :
         (hasFileProblem(c) || hasImageProblem(c))
       );
     }
@@ -244,10 +253,12 @@ export function Clients() {
     return result;
   }, [clients, searchQuery, filterStatus, selectedCustomer, sortField, sortOrder, clientCustomers]);
 
-  const hasFileProblem = (c: Client) => !c.file_backups_disabled && (!c.file_ok || !(c as any).lastbackup);
-  const hasImageProblem = (c: Client) => !c.image_backups_disabled && (!(c as any).lastbackup_image || !c.image_ok);
+  // A disabled endpoint's backups are paused on purpose: not a failure.
+  const hasFileProblem = (c: Client) => !c.disabled && !c.file_backups_disabled && (!c.file_ok || !(c as any).lastbackup);
+  const hasImageProblem = (c: Client) => !c.disabled && !c.image_backups_disabled && (!(c as any).lastbackup_image || !c.image_ok);
   const onlineCount = clients.filter(c => c.online).length;
   const failedCount = clients.filter(c => hasFileProblem(c) || hasImageProblem(c)).length;
+  const disabledCount = clients.filter(c => c.disabled).length;
 
   const SortIcon = ({ field }: { field: SortField }) => (
     sortField === field
@@ -264,10 +275,11 @@ export function Clients() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Endpoints</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {clients.length} total · {onlineCount} online · {failedCount} failed
+              {disabledCount > 0 && <> · {disabledCount} disabled</>}
             </p>
           </div>
           {isAdmin && (
-            <Tooltip text="Add or remove endpoints from UrBackup">
+            <Tooltip text="Add endpoints, view their keys, rename or delete them">
               <button onClick={() => setIsManageModalOpen(true)} className="btn bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-sm">
                 <Settings className="h-4 w-4" />
                 Manage
@@ -275,6 +287,19 @@ export function Clients() {
             </Tooltip>
           )}
         </div>
+
+        {notice && (
+          <div className={`flex items-start justify-between gap-3 rounded-lg px-4 py-3 text-sm ${
+            notice.type === 'success'
+              ? 'bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+              : 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+          }`}>
+            <span>{notice.text}</span>
+            <button onClick={() => setNotice(null)} aria-label="Dismiss" className="shrink-0 opacity-70 hover:opacity-100">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Filter bar */}
         <div className="flex flex-wrap gap-2 items-center">
@@ -289,7 +314,7 @@ export function Clients() {
             />
           </div>
           <div className="flex gap-1">
-            {(['all', 'online', 'offline', 'failed'] as const).map(s => (
+            {(['all', 'online', 'offline', 'failed', 'disabled'] as const).map(s => (
               <button key={s} onClick={() => setFilterStatus(s)}
                 className={`px-3 py-1.5 text-sm rounded font-medium transition-colors ${
                   filterStatus === s
@@ -378,6 +403,7 @@ export function Clients() {
                       Status <SortIcon field="status" />
                     </th>
                     <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Last Seen</th>
+                    {isAdmin && <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -388,7 +414,7 @@ export function Clients() {
                       <tr
                         key={client.id}
                         onClick={() => navigate(`/clients/${encodeURIComponent(client.name)}`)}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors ${client.disabled ? 'opacity-60' : ''}`}
                       >
                         {/* Online dot */}
                         <td className="px-3 py-2">
@@ -398,7 +424,7 @@ export function Clients() {
                         </td>
                         {/* Name */}
                         <td className="px-3 py-2">
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{client.name}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">{client.name}</span>
                           {client.client_version_string && (
                             <div className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-0.5">{client.client_version_string}</div>
                           )}
@@ -408,7 +434,7 @@ export function Clients() {
                           {mapping?.customer_name ? (
                             <div className="flex items-center gap-1">
                               <Users className="h-3 w-3 text-gray-400 shrink-0" />
-                              <span className="text-xs text-primary-600 dark:text-primary-400">{mapping.customer_name}</span>
+                              <span className="text-xs text-primary-600 dark:text-primary-400 whitespace-nowrap">{mapping.customer_name}</span>
                             </div>
                           ) : (
                             <span className="text-xs text-gray-400">—</span>
@@ -448,6 +474,14 @@ export function Clients() {
                               <span className={`h-1.5 w-1.5 rounded-full ${client.online ? 'bg-green-500' : 'bg-gray-400'}`} />
                               {client.online ? 'Online' : 'Offline'}
                             </span>
+                            {client.disabled && (
+                              <Tooltip text={client.disabled_reason === 'customer' ? 'Disabled with its customer: no new backups run' : 'Disabled: no new backups run'}>
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium w-fit bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                                  <Pause className="h-3 w-3" />
+                                  Disabled
+                                </span>
+                              </Tooltip>
+                            )}
                             <div className="flex gap-1">
                               <Tooltip text={client.file_backups_disabled ? 'File backups are disabled for this endpoint' : hasFileProblem(client) ? 'File backup has a problem' : 'File backup is OK'}>
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -466,6 +500,30 @@ export function Clients() {
                         <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
                           {client.lastseen ? formatTimeAgo(client.lastseen) : '—'}
                         </td>
+                        {isAdmin && (
+                          <td className="px-3 py-2 whitespace-nowrap text-right" onClick={e => e.stopPropagation()}>
+                            <div className="inline-flex gap-1">
+                              <Tooltip text={client.disabled ? 'Enable: resume backups' : 'Disable: stop new backups, keep existing ones'} position="left">
+                                <button
+                                  onClick={() => setPendingToggle({ endpoint: { id: client.id, name: client.name }, enable: !!client.disabled })}
+                                  aria-label={`${client.disabled ? 'Enable' : 'Disable'} ${client.name}`}
+                                  className="p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
+                                >
+                                  {client.disabled ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                                </button>
+                              </Tooltip>
+                              <Tooltip text="Delete the endpoint and all of its backups" position="left">
+                                <button
+                                  onClick={() => setPendingDelete({ id: client.id, name: client.name })}
+                                  aria-label={`Delete ${client.name}`}
+                                  className="p-1.5 rounded-md bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-300"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </Tooltip>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -478,6 +536,24 @@ export function Clients() {
           </div>
         )}
       </div>
+
+      {pendingDelete && (
+        <DeleteEndpointDialog
+          endpoint={pendingDelete}
+          onClose={() => setPendingDelete(null)}
+          onDeleted={loadData}
+          notify={(type, text) => setNotice({ type, text })}
+        />
+      )}
+      {pendingToggle && (
+        <DisableEndpointDialog
+          endpoint={pendingToggle.endpoint}
+          enable={pendingToggle.enable}
+          onClose={() => setPendingToggle(null)}
+          onChanged={loadData}
+          notify={(type, text) => setNotice({ type, text })}
+        />
+      )}
 
       <ClientManagementModal
         isOpen={isManageModalOpen}
