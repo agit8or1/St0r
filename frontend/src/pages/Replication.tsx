@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,7 +27,7 @@ const STATUS_DESCRIPTIONS: Record<string, string> = {
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg: Record<string, { cls: string; icon: JSX.Element }> = {
+  const cfg: Record<string, { cls: string; icon: React.JSX.Element }> = {
     success: { cls: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', icon: <CheckCircle className="h-3 w-3" /> },
     running: { cls: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', icon: <Loader2 className="h-3 w-3 animate-spin" /> },
     failed: { cls: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300', icon: <AlertCircle className="h-3 w-3" /> },
@@ -268,7 +269,7 @@ export function Replication() {
     return max === null ? lag : Math.max(max, lag);
   }, null as number | null);
 
-  const tabs: { id: Tab; label: string; icon: JSX.Element; tip: string }[] = [
+  const tabs: { id: Tab; label: string; icon: React.JSX.Element; tip: string }[] = [
     { id: 'overview', label: 'Overview', icon: <GitBranch className="h-4 w-4" />, tip: 'Health summary and recent run history' },
     { id: 'targets', label: 'Targets', icon: <Settings2 className="h-4 w-4" />, tip: 'Manage DR destination servers' },
     { id: 'settings', label: 'Settings', icon: <Settings2 className="h-4 w-4" />, tip: 'Global replication schedule and options' },

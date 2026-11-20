@@ -13,7 +13,7 @@ export function Tooltip({ text, children, position = 'top', className = '' }: To
   const { tooltipsEnabled } = useTooltips();
   const [visible, setVisible] = useState(false);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hoveringRef = useRef(false);
 
   const show = useCallback((e: React.MouseEvent) => {
