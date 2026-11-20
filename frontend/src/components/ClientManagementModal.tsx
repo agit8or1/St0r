@@ -30,6 +30,7 @@ export function ClientManagementModal({
   const [regeneratingKey, setRegeneratingKey] = useState<string | null>(null);
   const [modalMessage, setModalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [pendingRemove, setPendingRemove] = useState<{ id: number | string; name: string } | null>(null);
+  const [deleteDataNow, setDeleteDataNow] = useState(true);
   const [pendingRegenKey, setPendingRegenKey] = useState<{ id: number | string; name: string } | null>(null);
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export function ClientManagementModal({
   };
 
   const handleRemoveClient = async (clientId: number | string, clientName: string) => {
+    setDeleteDataNow(true);
     setPendingRemove({ id: clientId, name: clientName });
   };
 
@@ -75,9 +77,14 @@ export function ClientManagementModal({
     setPendingRemove(null);
     setDeleting(String(id));
     try {
-      await api.removeClient(id);
+      const result = await api.removeClient(id, deleteDataNow);
       onClientRemoved();
-      showMsg('success', `Client "${name}" marked for removal. All backups will be removed.`);
+      if (result.purge.status === 'started' || result.purge.status === 'running') {
+        showMsg('success', `"${name}" removed. Its backups are being deleted now; this can take a while for large backups.`);
+      } else {
+        // Not a failure: UrBackup's nightly cleanup deletes the data. Keep the reason on screen.
+        setModalMessage({ type: 'success', text: `"${name}" removed. Its backups will be deleted at UrBackup's nightly cleanup: ${result.purge.reason}.` });
+      }
     } catch (error) {
       console.error('Failed to remove client:', error);
       showMsg('error', 'Failed to remove client. Please try again.');
@@ -200,12 +207,32 @@ export function ClientManagementModal({
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Remove Client</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to remove "{pendingRemove.name}"? This will also delete all backups for this client.
+            <p className="text-gray-600 dark:text-gray-400 mb-3">
+              Remove "{pendingRemove.name}"? <strong>All of its file and image backups are permanently deleted</strong> from
+              backup storage. This cannot be undone.
             </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Uninstall the UrBackup client on the endpoint too. While it is still connected, UrBackup keeps its data
+              until it goes offline.
+            </p>
+            <label className="flex items-start gap-2 mb-6 text-sm text-gray-800 dark:text-gray-200">
+              <input
+                type="checkbox"
+                checked={deleteDataNow}
+                onChange={(e) => setDeleteDataNow(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <span>
+                Delete the backup data now
+                <span className="block text-xs text-gray-500 dark:text-gray-400">
+                  Otherwise it is deleted at UrBackup's nightly cleanup. Deleting now also runs the normal retention
+                  cleanup for all endpoints.
+                </span>
+              </span>
+            </label>
             <div className="flex gap-3 justify-end">
               <button onClick={() => setPendingRemove(null)} className="btn btn-secondary">Cancel</button>
-              <button onClick={doRemoveClient} className="btn bg-red-600 text-white hover:bg-red-700">Remove</button>
+              <button onClick={doRemoveClient} className="btn bg-red-600 text-white hover:bg-red-700">Remove and delete backups</button>
             </div>
           </div>
         </div>

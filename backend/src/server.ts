@@ -244,6 +244,8 @@ async function ensureTables() {
   `);
   const { ensureAlertTables } = await import('./services/alertRules.js');
   await ensureAlertTables();
+  const { ensureSettingsTable } = await import('./services/urbackupAutoUpdate.js');
+  await ensureSettingsTable();
 }
 
 // Where the generated first-run password is written for the installer to read.
@@ -358,6 +360,10 @@ async function startServer() {
     // Alert rules from the Alerts page — evaluate and notify (issue #27)
     const { alertMonitor } = await import('./services/alertRules.js');
     alertMonitor.start();
+
+    // Daily automatic UrBackup server package update
+    const { urbackupAutoUpdater } = await import('./services/urbackupAutoUpdate.js');
+    urbackupAutoUpdater.start();
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);

@@ -346,27 +346,29 @@ export async function addClient(req: AuthRequest, res: Response): Promise<void> 
   }
 }
 
+/**
+ * Remove an endpoint. Flags it in UrBackup so its cleanup deletes all of its
+ * backups and folders; with `deleteData: true` (the default) that cleanup is
+ * started now when it is safe, otherwise it runs at the nightly cleanup.
+ */
 export async function removeClient(req: AuthRequest, res: Response): Promise<void> {
+  const clientId = parseInt(String(req.params.clientId), 10);
+  if (!Number.isFinite(clientId) || clientId <= 0) {
+    res.status(400).json({ error: 'Client ID is required' });
+    return;
+  }
+  const deleteDataNow = req.body?.deleteData !== false;
   try {
-    const { clientId } = req.params;
-
-    if (!clientId) {
-      res.status(400).json({ error: 'Client ID is required' });
-      return;
-    }
-
-    const service = await getService();
-
-    if (!service) {
-      res.status(404).json({ error: 'Server not found' });
-      return;
-    }
-
-    const result = await service.removeClient(clientId);
-    res.json({ success: result, clientId });
-  } catch (error) {
+    const { markForRemoval, purgeNow } = await import('../services/clientRemoval.js');
+    const name = await markForRemoval(clientId);
+    audit(req, 'client.remove', { clientId, name, deleteDataNow });
+    const purge = deleteDataNow
+      ? await purgeNow()
+      : { status: 'deferred' as const, reason: 'the data is removed at the next nightly cleanup' };
+    res.json({ success: true, clientId: String(clientId), name, purge });
+  } catch (error: any) {
     logger.error('Failed to remove client:', error);
-    res.status(500).json({ error: 'Failed to remove client' });
+    res.status(error?.status === 404 ? 404 : 500).json({ error: error?.status === 404 ? 'Client not found' : 'Failed to remove client' });
   }
 }
 
