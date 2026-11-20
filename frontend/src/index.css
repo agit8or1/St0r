@@ -3,6 +3,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  /* Tailwind 3's font stacks. Tailwind 4's start with named fonts (-apple-system,
+     Roboto, ...) and no system-ui, so on Linux without those fonts Chrome can
+     fall through to Noto Color Emoji, which draws spaces and digits extra wide. */
+  --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
   --color-primary-200: #bfdbfe;
