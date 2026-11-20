@@ -91,8 +91,12 @@ test('malformed compressed bodies get a controlled 4xx', async t => {
   const headers = { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' };
   await assertControlledError(await post(server.url + '/api/no-such-route', Buffer.from('not gzip at all'), headers), 400);
   await assertControlledError(await post(server.url + '/api/no-such-route', gzipSync('{"a":1}').subarray(0, 12), headers), 400);
+  // Express 5's body-parser decodes Brotli, so a bogus br body is malformed (400)...
   await assertControlledError(await post(server.url + '/api/no-such-route', Buffer.from('{}'),
-    { 'Content-Type': 'application/json', 'Content-Encoding': 'br' }), 415);
+    { 'Content-Type': 'application/json', 'Content-Encoding': 'br' }), 400);
+  // ...and an encoding it does not know is still refused as unsupported.
+  await assertControlledError(await post(server.url + '/api/no-such-route', Buffer.from('{}'),
+    { 'Content-Type': 'application/json', 'Content-Encoding': 'x-unknown' }), 415);
   await server.assertAlive();
 });
 

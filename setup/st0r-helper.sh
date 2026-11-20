@@ -99,7 +99,24 @@ case "$ACTION" in
   urbackup-server-update)
     EXPECT=0 nargs "$@"
     start_unit urbackup-server-pkg-update /var/log/urbackup-server-update.log \
-      /bin/bash -c 'export DEBIAN_FRONTEND=noninteractive; apt-get update -q 2>&1 && apt-get install -y --only-upgrade urbackup-server 2>&1 && systemctl restart urbackupsrv && echo "SUCCESS: UrBackup server updated and restarted" || echo "FAILED: UrBackup server update failed"'
+      /bin/bash -c '
+        export DEBIAN_FRONTEND=noninteractive
+        ver() { dpkg-query -W -f="\${Version}" urbackup-server 2>/dev/null; }
+        before=$(ver)
+        echo "Installed: ${before:-none}"
+        if ! apt-get update -q 2>&1 || ! apt-get install -y --only-upgrade urbackup-server 2>&1; then
+          echo "FAILED: UrBackup server update failed"; exit 1
+        fi
+        after=$(ver)
+        # Restart only when the package changed: a restart drops client sessions
+        # and interrupts running backups for nothing.
+        if [ "$before" = "$after" ]; then
+          echo "SUCCESS: UrBackup server is up to date ($after)"
+        elif systemctl restart urbackupsrv; then
+          echo "SUCCESS: UrBackup server updated from $before to $after and restarted"
+        else
+          echo "FAILED: UrBackup server updated to $after but did not restart"; exit 1
+        fi'
     ;;
 
   os-update)

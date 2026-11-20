@@ -1,6 +1,6 @@
 {
   "name": "urbackup-gui-frontend",
-  "version": "3.2.135",
+  "version": "3.2.138",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "clsx": "^2.0.0",
-    "date-fns": "^3.0.6",
+    "date-fns": "^4.4.0",
     "lucide-react": "^1.76.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -22,7 +22,7 @@
     "@eslint/js": "^9.39.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^6.3.0",
     "autoprefixer": "^10.4.16",
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -32,6 +32,6 @@
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.72.1",
-    "vite": "^7.3.7"
+    "vite": "^8.3.8"
   }
 }

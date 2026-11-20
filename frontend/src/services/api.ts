@@ -38,6 +38,13 @@ interface RequestConfig {
 }
 
 // Shaped like the axios errors callers already read: err.response?.status / .data?.error
+export interface RemoveClientResult {
+  success: boolean;
+  clientId: string;
+  name: string;
+  purge: { status: 'started' } | { status: 'running' } | { status: 'deferred'; reason: string };
+}
+
 export class HttpError extends Error {
   constructor(message: string, public response?: { status: number; data: any }) {
     super(message);
@@ -260,9 +267,13 @@ class ApiService {
     return response.data;
   }
 
-  async removeClient(clientId: number | string, serverId?: number): Promise<{ success: boolean; clientId: string }> {
-    const response = await this.api.delete<{ success: boolean; clientId: string }>(`/urbackup/clients/${clientId}`, {
-      data: { serverId },
+  /**
+   * Remove an endpoint and all of its backups. With deleteData (default) the
+   * data is deleted now when that is safe; otherwise at UrBackup's nightly cleanup.
+   */
+  async removeClient(clientId: number | string, deleteData = true): Promise<RemoveClientResult> {
+    const response = await this.api.delete<RemoveClientResult>(`/urbackup/clients/${clientId}`, {
+      data: { deleteData },
     });
     return response.data;
   }

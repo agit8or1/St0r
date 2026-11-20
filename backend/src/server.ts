@@ -184,7 +184,8 @@ app.use('/api', (req, res) => {
 });
 
 // SPA fallback — serve index.html for all non-API routes
-app.get('*', (req, res) => {
+// Express 5 path syntax: a named wildcard, optional so '/' matches too.
+app.get('/{*splat}', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(resolve(frontendDist, 'index.html'));
 });
@@ -243,6 +244,8 @@ async function ensureTables() {
   `);
   const { ensureAlertTables } = await import('./services/alertRules.js');
   await ensureAlertTables();
+  const { ensureSettingsTable } = await import('./services/urbackupAutoUpdate.js');
+  await ensureSettingsTable();
 }
 
 // Where the generated first-run password is written for the installer to read.
@@ -357,6 +360,10 @@ async function startServer() {
     // Alert rules from the Alerts page — evaluate and notify (issue #27)
     const { alertMonitor } = await import('./services/alertRules.js');
     alertMonitor.start();
+
+    // Daily automatic UrBackup server package update
+    const { urbackupAutoUpdater } = await import('./services/urbackupAutoUpdate.js');
+    urbackupAutoUpdater.start();
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);

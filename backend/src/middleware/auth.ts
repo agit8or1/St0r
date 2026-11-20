@@ -4,7 +4,9 @@ import { logger } from '../utils/logger.js';
 import { findUserById } from '../models/user.js';
 import type { UserScope } from './scope.js';
 
-export interface AuthRequest extends Request {
+// Route params are always plain strings here: no route uses a wildcard
+// segment, which is the only case Express 5 types as string[].
+export interface AuthRequest extends Request<Record<string, string>> {
   user?: JWTPayload;
   scope?: UserScope;
 }
