@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Logo } from '../components/Logo';
 import { HelpUsGrowButton } from '../components/HelpUsGrowButton';
 import { Info, ExternalLink, Download, CheckCircle, AlertCircle, Loader, RefreshCw, FileText } from 'lucide-react';
+import { UrBackupAutoUpdatePanel } from '../components/UrBackupAutoUpdatePanel';
 
 /**
  * Compare two semantic version strings
@@ -661,6 +662,7 @@ export function About() {
                 )}
               </div>
             )}
+            <UrBackupAutoUpdatePanel />
           </div>
         </div>
 

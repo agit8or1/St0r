@@ -1,9 +1,9 @@
 {
-  "version": "3.2.136",
-  "releaseDate": "2026-11-19",
+  "version": "3.2.138",
+  "releaseDate": "2026-11-20",
   "changelog": [
-    "Backend and agent upgraded to Express 5.",
-    "Agent 1.1.1 (Express 5); remote agents are offered the update on the Servers page.",
-    "Development dependency updates: @types/node 26, @types/bcrypt 6, eslint 10."
+    "Removing an endpoint now deletes its backup data too (optionally right away), using UrBackup's own removal.",
+    "UrBackup server updates are checked and installed automatically each night (About page to configure).",
+    "The St0r version is shown at the bottom of the sidebar."
   ]
 }

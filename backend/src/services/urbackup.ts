@@ -1462,20 +1462,28 @@ export class UrBackupService {
     }
   }
 
-  async removeClient(clientId: string | number) {
-    try {
-      logger.info(`Removing client with ID: ${clientId}`);
-      const numericId = typeof clientId === 'string' ? parseInt(clientId) : clientId;
-      // Use direct DB deletion — the UrBackup HTTP API requires an authenticated
-      // session cookie and silently no-ops without it (delete_pending stays 0).
-      const result = await this.dbService.removeClient(numericId);
-      logger.info(`Client ${clientId} removed successfully`);
-      return result;
-    } catch (error: any) {
-      logger.error(`Failed to remove client ${clientId}:`, error.message);
-      throw new Error(`Failed to remove client: ${error.message}`);
-    }
+  /**
+   * Flag a client for removal the way UrBackup's own web UI does
+   * (a=status, remove_client=<id>): sets clients.delete_pending = 1. UrBackup's
+   * cleanup then deletes its backups, database rows and folders. Never delete
+   * the client row directly: cleanup finds the backups through it, so a
+   * missing row leaves the backup files on disk (see services/clientRemoval.ts).
+   */
+  async markClientForRemoval(clientId: string | number) {
+    const id = parseInt(String(clientId), 10);
+    if (!Number.isFinite(id) || id <= 0) throw new Error('Invalid client id');
+    logger.info(`Flagging client ${id} for removal`);
+    await this.apiCall('status', { remove_client: String(id) });
+    this.statusCache = null;
+    return { success: true };
   }
+
+  /** UrBackup's live status for every client, including ones flagged for removal. */
+  async getLiveStatus(): Promise<{ id: number; name: string; online: boolean }[]> {
+    const result = await this.apiCall('status', {});
+    return (result?.status || []).map((c: any) => ({ id: Number(c.id), name: c.name, online: c.online === true }));
+  }
+
 
   async deleteBackup(backupId: string | number, isImage: boolean) {
     const numericId = typeof backupId === 'string' ? parseInt(backupId) : backupId;
