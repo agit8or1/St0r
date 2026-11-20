@@ -274,7 +274,7 @@ export function Settings() {
     }
 
     return (
-      <div key={key} className="space-y-2">
+      <div key={key} className="flex flex-col gap-2">
         <label className="label">
           {label}
           {description && (
@@ -452,7 +452,7 @@ export function Settings() {
 
           {tab === 'backup' && !loading && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
                 Default File Backup Settings
               </h2>
               <div className="grid gap-6 md:grid-cols-2">
@@ -488,7 +488,7 @@ export function Settings() {
 
           {tab === 'email' && !loading && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
                 Email Configuration
               </h2>
               <div className="grid gap-6 md:grid-cols-2">
@@ -525,7 +525,7 @@ export function Settings() {
 
           {tab === 'client' && !loading && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
                 <ServerIcon className="inline h-6 w-6 mr-2" />
                 Client Installer Configuration
               </h2>
@@ -534,7 +534,7 @@ export function Settings() {
               </p>
 
               <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <label className="label">
                     Server Hostname / FQDN
                     <span className="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
@@ -550,7 +550,7 @@ export function Settings() {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <label className="label">
                     Server Port
                     <span className="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
