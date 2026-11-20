@@ -43,6 +43,7 @@ export async function removeStorRecords(clientId: number, clientName: string): P
     ['DELETE FROM client_status_cache WHERE client_name = ? OR client_id = ?', [clientName, clientId]],
     ['DELETE FROM alert_state WHERE alert_key LIKE ?', [`%:${clientName.replace(/[\\%_]/g, '\\$&')}`]],
     ['UPDATE recovery_drills SET enabled = 0 WHERE client_name = ?', [clientName]],
+    ['DELETE FROM endpoint_disabled WHERE client_id = ?', [clientId]],
   ];
   for (const [sql, params] of steps) {
     try {

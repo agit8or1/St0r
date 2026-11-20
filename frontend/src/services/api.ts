@@ -45,6 +45,12 @@ export interface RemoveClientResult {
   purge: { status: 'started' } | { status: 'running' } | { status: 'deferred'; reason: string };
 }
 
+export interface CustomerStateResult {
+  success: boolean;
+  changed: string[];
+  failed: { name: string; error: string }[];
+}
+
 export class HttpError extends Error {
   constructor(message: string, public response?: { status: number; data: any }) {
     super(message);
@@ -278,6 +284,16 @@ class ApiService {
     return response.data;
   }
 
+  async disableClient(clientId: number | string): Promise<{ success: boolean; changed: boolean }> {
+    const response = await this.api.post(`/urbackup/clients/${clientId}/disable`);
+    return response.data;
+  }
+
+  async enableClient(clientId: number | string): Promise<{ success: boolean; changed: boolean }> {
+    const response = await this.api.post(`/urbackup/clients/${clientId}/enable`);
+    return response.data;
+  }
+
   async getClientAuthkey(clientId: number | string, serverId?: number): Promise<{ authkey: string; clientId: string }> {
     const response = await this.api.get<{ authkey: string; clientId: string }>(`/urbackup/clients/${clientId}/authkey`, {
       params: serverId ? { serverId } : undefined,
@@ -360,6 +376,16 @@ class ApiService {
 
   async deleteCustomer(id: number): Promise<void> {
     await this.api.delete(`/customers/${id}`);
+  }
+
+  async disableCustomer(id: number): Promise<CustomerStateResult> {
+    const response = await this.api.post<CustomerStateResult>(`/customers/${id}/disable`);
+    return response.data;
+  }
+
+  async enableCustomer(id: number): Promise<CustomerStateResult> {
+    const response = await this.api.post<CustomerStateResult>(`/customers/${id}/enable`);
+    return response.data;
   }
 
   async getCustomerClients(customerId: number): Promise<CustomerClient[]> {

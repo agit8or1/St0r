@@ -173,6 +173,7 @@ export function evaluateRules(
     switch (rule.type) {
       case 'backup_failure':
         for (const c of clients) {
+          if (c.disabled) continue; // backups paused on purpose
           // Only backup types that are actually enabled count (issue #14); a
           // client fails when every enabled type is not OK.
           const checks: boolean[] = [];
@@ -189,6 +190,7 @@ export function evaluateRules(
       case 'client_offline': {
         const hours = rule.threshold ?? 24;
         for (const c of clients) {
+          if (c.disabled) continue; // backups paused on purpose
           if (c.online) continue;
           const lastseen = typeof c.lastseen === 'number' ? c.lastseen : null;
           if (lastseen !== null && now - lastseen < hours * HOUR) continue;
@@ -216,6 +218,7 @@ export function evaluateRules(
       case 'backup_old': {
         const days = rule.threshold ?? 7;
         for (const c of clients) {
+          if (c.disabled) continue; // backups paused on purpose
           const times: number[] = [];
           if (!c.file_backups_disabled && typeof c.lastbackup === 'number') times.push(c.lastbackup);
           if (!c.image_backups_disabled && typeof c.lastbackup_image === 'number') times.push(c.lastbackup_image);

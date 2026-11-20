@@ -228,6 +228,17 @@ export async function startBackup(req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    {
+      const { getDisabledEndpoints } = await import('../services/endpointDisabledStore.js');
+      const disabled = [...(await getDisabledEndpoints()).values()].find(d =>
+        (clientId && Number(d.client_id) === Number(clientId)) ||
+        (clientName && String(d.client_name).toLowerCase() === String(clientName).toLowerCase()));
+      if (disabled) {
+        res.status(409).json({ error: `${disabled.client_name} is disabled. Enable it to start backups.` });
+        return;
+      }
+    }
+
     let result;
 
     if (backupType === 'file') {
@@ -369,6 +380,43 @@ export async function removeClient(req: AuthRequest, res: Response): Promise<voi
   } catch (error: any) {
     logger.error('Failed to remove client:', error);
     res.status(error?.status === 404 ? 404 : 500).json({ error: error?.status === 404 ? 'Client not found' : 'Failed to remove client' });
+  }
+}
+
+function parseClientId(req: AuthRequest, res: Response): number | null {
+  const clientId = parseInt(String(req.params.clientId), 10);
+  if (!Number.isFinite(clientId) || clientId <= 0) {
+    res.status(400).json({ error: 'Client ID is required' });
+    return null;
+  }
+  return clientId;
+}
+
+export async function disableClient(req: AuthRequest, res: Response): Promise<void> {
+  const clientId = parseClientId(req, res);
+  if (clientId === null) return;
+  try {
+    const { disableEndpoint } = await import('../services/endpointState.js');
+    const changed = await disableEndpoint(clientId, { reason: 'manual', by: req.user?.username });
+    audit(req, 'client.disable', { clientId, changed });
+    res.json({ success: true, changed });
+  } catch (error: any) {
+    logger.error('Failed to disable client:', error);
+    res.status(error?.status === 404 ? 404 : 500).json({ error: error?.status === 404 ? 'Client not found' : `Failed to disable client: ${error?.message || error}` });
+  }
+}
+
+export async function enableClient(req: AuthRequest, res: Response): Promise<void> {
+  const clientId = parseClientId(req, res);
+  if (clientId === null) return;
+  try {
+    const { enableEndpoint } = await import('../services/endpointState.js');
+    const changed = await enableEndpoint(clientId);
+    audit(req, 'client.enable', { clientId, changed });
+    res.json({ success: true, changed });
+  } catch (error: any) {
+    logger.error('Failed to enable client:', error);
+    res.status(500).json({ error: `Failed to enable client: ${error?.message || error}` });
   }
 }
 

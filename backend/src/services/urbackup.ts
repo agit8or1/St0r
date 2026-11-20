@@ -548,8 +548,13 @@ export class UrBackupService {
     // backups turned off should not be reported as "Failed". Best-effort —
     // defaults to "not disabled" if the settings DB can't be read.
     const enablement = await this.dbService.getBackupEnablement().catch(() => new Map());
+    // Endpoints St0r has disabled (backups paused). Best-effort like the above.
+    const disabledMap = await import('./endpointDisabledStore.js')
+      .then(m => m.getDisabledEndpoints())
+      .catch(() => new Map<number, any>());
     const withEnablement = (c: any, api?: any) => {
       const e = enablement.get(Number(c.id));
+      const d = disabledMap.get(Number(c.id));
       // UrBackup's status API resolves group/global inheritance server-side and
       // reports file_disabled/image_disabled directly (the same flags its own web
       // UI shows as "Disabled"). Those are authoritative; the settings-DB heuristic
@@ -561,6 +566,9 @@ export class UrBackupService {
         ...c,
         file_backups_disabled: apiFileDisabled || (e?.file_backups_disabled ?? false),
         image_backups_disabled: apiImageDisabled || (e?.image_backups_disabled ?? false),
+        disabled: !!d,
+        disabled_reason: d ? d.reason : null,
+        disabled_at: d ? d.disabled_at : null,
       };
     };
 
@@ -1265,7 +1273,11 @@ export class UrBackupService {
     }
   }
 
-  async setClientSettings(clientId: string, newSettings: any) {
+  /**
+   * `uses` overrides the `.use` bitmask per key (default 2, the endpoint's own
+   * value); re-enabling an endpoint uses it to put inherited settings back.
+   */
+  async setClientSettings(clientId: string, newSettings: any, uses: Record<string, string> = {}) {
     try {
       const session = await this.login();
 
@@ -1367,7 +1379,7 @@ export class UrBackupService {
           //   4 = c_use_value_client. For a per-client override to actually push to the client,
           //   use=2 (home bit). use=1 told the client to read .group, which is empty for per-client
           //   settings — that's why path saves silently failed before.
-          saveParams.set(`${key}.use`, '2');
+          saveParams.set(`${key}.use`, uses[key] ?? '2');
         }
       }
 
