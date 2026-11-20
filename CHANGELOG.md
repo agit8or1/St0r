@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.138] - 2026-11-20
+
+### Fixed
+- **Removing an endpoint now deletes its backup data** ([#52](https://github.com/agit8or1/St0r/pull/52)). St0r used to delete the endpoint's row from UrBackup's database directly; UrBackup's cleanup finds backups through that row, so the backup files stayed on disk forever. Endpoints are now flagged through UrBackup's own `remove_client` API, and UrBackup's cleanup deletes every file and image backup, their database rows and the endpoint's folders. Installs that removed endpoints with older versions can reclaim the leftovers with **Remove unknown** (`urbackupsrv remove-unknown`).
+- The **Update UrBackup** action no longer restarts UrBackup when nothing was upgraded (a restart drops client connections).
+
+### Added
+- **"Delete the backup data now"** option when removing an endpoint (on by default). It runs UrBackup's cleanup immediately if the endpoint is offline and no backup is running; otherwise the data is deleted in the nightly cleanup. The cleanup also applies normal retention for all endpoints. St0r's own records for the endpoint (customer assignment, storage limit, managed mode, alert state) are removed and its recovery drills are disabled.
+- **Automatic UrBackup server updates.** Once a day (04:00-07:00 by default) St0r installs a newer `urbackup-server` package if one is available, waiting while backups run. Turn it off, change the hour and see the last result on the **About** page.
+- The St0r version is shown at the bottom of the sidebar (links to **About**).
+
 ## [3.2.137] - 2026-11-19
 
 ### Changed

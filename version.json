@@ -1,9 +1,9 @@
 {
-  "version": "3.2.137",
-  "releaseDate": "2026-11-19",
+  "version": "3.2.138",
+  "releaseDate": "2026-11-20",
   "changelog": [
-    "Backend: helmet 8 (HSTS max-age now one year) and dotenv 18.",
-    "Agent 1.1.2 (dotenv 18); remote agents are offered the update on the Servers page.",
-    "Frontend built with Vite 8; date-fns 4."
+    "Removing an endpoint now deletes its backup data too (optionally right away), using UrBackup's own removal.",
+    "UrBackup server updates are checked and installed automatically each night (About page to configure).",
+    "The St0r version is shown at the bottom of the sidebar."
   ]
 }
