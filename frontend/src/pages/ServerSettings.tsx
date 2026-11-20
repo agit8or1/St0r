@@ -311,7 +311,7 @@ export default function ServerSettings() {
                 type="checkbox"
                 checked={value === true || value === 'true'}
                 onChange={(e) => updateSetting(key, e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded-sm"
               />
             </Tooltip>
           </div>
@@ -337,7 +337,7 @@ export default function ServerSettings() {
               id={key}
               value={value || ''}
               onChange={(e) => updateSetting(key, e.target.value)}
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-xs py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             >
               {options.map(opt => (
                 <option key={opt} value={opt}>{opt}</option>
@@ -360,7 +360,7 @@ export default function ServerSettings() {
             type={type}
             value={value !== null && value !== undefined ? value : ''}
             onChange={(e) => updateSetting(key, type === 'number' ? parseInt(e.target.value) || 0 : e.target.value)}
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-xs py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           />
         </Tooltip>
       </div>
@@ -376,7 +376,7 @@ export default function ServerSettings() {
           <Tooltip text="Return to the previous page">
             <button
               onClick={() => navigate(-1)}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-xs text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <ArrowLeftIcon className="h-4 w-4 mr-2" />
               Back
@@ -395,7 +395,7 @@ export default function ServerSettings() {
       {message && (
         <div className={`rounded-md p-4 ${message.type === 'success' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
           <div className="flex">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               {message.type === 'success' ? (
                 <CheckCircleIcon className="h-5 w-5 text-green-400" />
               ) : (
@@ -488,7 +488,7 @@ export default function ServerSettings() {
           {/* Warning Banner */}
           <div className="rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-4">
             <div className="flex">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />
               </div>
               <div className="ml-3">
@@ -506,7 +506,7 @@ export default function ServerSettings() {
           </div>
 
           {/* Create Backup */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 flex items-center justify-between">
+          <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Create New Backup</h2>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -517,7 +517,7 @@ export default function ServerSettings() {
               <button
                 onClick={createBackup}
                 disabled={creatingBackup}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-xs text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creatingBackup ? (
                   <><ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />Creating...</>
@@ -529,7 +529,7 @@ export default function ServerSettings() {
           </div>
 
           {/* Backups List */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-medium text-gray-900 dark:text-white">Saved Backups</h2>
@@ -571,7 +571,7 @@ export default function ServerSettings() {
                         <Tooltip text="Download this backup file">
                           <button
                             onClick={() => downloadBackup(backup.name)}
-                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                           >
                             <CloudArrowDownIcon className="h-4 w-4 mr-1" />
                             Download
@@ -580,7 +580,7 @@ export default function ServerSettings() {
                         <Tooltip text="Restore database from this backup">
                           <button
                             onClick={() => setRestoringFilename(backup.name)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-sm text-white bg-blue-600 hover:bg-blue-700"
                           >
                             <ArrowPathIcon className="h-4 w-4 mr-1" />
                             Restore
@@ -589,7 +589,7 @@ export default function ServerSettings() {
                         <Tooltip text="Permanently delete this backup file">
                           <button
                             onClick={() => deleteBackup(backup.name)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-sm text-white bg-red-600 hover:bg-red-700"
                           >
                             <TrashIcon className="h-4 w-4" />
                           </button>
@@ -603,10 +603,10 @@ export default function ServerSettings() {
           </div>
 
           {/* Upload & Restore */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
             <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-1">Upload &amp; Restore</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Upload a <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">.sql.gz</code> or <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">.sql</code> backup file from your computer to restore the database.
+              Upload a <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded-sm">.sql.gz</code> or <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded-sm">.sql</code> backup file from your computer to restore the database.
             </p>
             <div className="flex items-center space-x-3">
               <label className="flex-1">
@@ -620,7 +620,7 @@ export default function ServerSettings() {
               <button
                 onClick={handleUploadRestore}
                 disabled={!uploadFile || uploadRestoring}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-xs text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {uploadRestoring ? (
                   <><ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />Restoring...</>
@@ -642,7 +642,7 @@ export default function ServerSettings() {
       {activeTab === 'general' && (
         <div className="space-y-6">
           {settingsLoading ? (
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-12 text-center">
               <ArrowPathIcon className="h-12 w-12 mx-auto text-gray-400 animate-spin" />
               <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading settings...</p>
             </div>
@@ -674,7 +674,7 @@ export default function ServerSettings() {
                         <button
                           onClick={() => setShowSaveConfirm(true)}
                           disabled={saveLoading}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-xs text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {saveLoading ? (
                             <>
@@ -695,7 +695,7 @@ export default function ServerSettings() {
               )}
 
               {/* Backup Settings */}
-              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow-xs rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Backup Storage</h2>
                   <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">Configure backup storage locations</p>
@@ -708,7 +708,7 @@ export default function ServerSettings() {
               </div>
 
               {/* Performance Settings */}
-              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow-xs rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Performance</h2>
                   <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">Control concurrent operations and resource usage</p>
@@ -720,7 +720,7 @@ export default function ServerSettings() {
               </div>
 
               {/* Speed Settings */}
-              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow-xs rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Speed Limits</h2>
                   <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">Set bandwidth limits for local and internet backups</p>
@@ -732,7 +732,7 @@ export default function ServerSettings() {
               </div>
 
               {/* Client Management */}
-              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow-xs rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Client Management</h2>
                   <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">Configure client software distribution</p>
@@ -744,7 +744,7 @@ export default function ServerSettings() {
               </div>
 
               {/* Maintenance */}
-              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow-xs rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Maintenance</h2>
                   <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">Schedule cleanup and database backup operations</p>
@@ -757,7 +757,7 @@ export default function ServerSettings() {
               </div>
 
               {/* All Other Settings */}
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                 <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-lg font-medium text-gray-900 dark:text-white">Advanced Settings</h2>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -787,7 +787,7 @@ export default function ServerSettings() {
                                 type="checkbox"
                                 checked={value === true || value === 'true'}
                                 onChange={(e) => updateSetting(key, e.target.checked)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded-sm"
                               />
                               <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">
                                 {value === true || value === 'true' ? 'Enabled' : 'Disabled'}
@@ -798,7 +798,7 @@ export default function ServerSettings() {
                               type="number"
                               value={value || 0}
                               onChange={(e) => updateSetting(key, parseInt(e.target.value) || 0)}
-                              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                             />
                           ) : typeof value === 'object' ? (
                             <div className="text-xs text-gray-500 dark:text-gray-400 italic py-1.5">
@@ -809,7 +809,7 @@ export default function ServerSettings() {
                               type="text"
                               value={value || ''}
                               onChange={(e) => updateSetting(key, e.target.value)}
-                              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                             />
                           )}
                         </div>
@@ -826,7 +826,7 @@ export default function ServerSettings() {
       {activeTab === 'internet' && (
         <div className="space-y-6">
           {settingsLoading ? (
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-12 text-center">
               <ArrowPathIcon className="h-12 w-12 mx-auto text-gray-400 animate-spin" />
               <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading settings...</p>
             </div>
@@ -858,7 +858,7 @@ export default function ServerSettings() {
                         <button
                           onClick={() => setShowSaveConfirm(true)}
                           disabled={saveLoading}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-xs text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {saveLoading ? (
                             <>
@@ -879,8 +879,8 @@ export default function ServerSettings() {
               )}
 
               {/* Internet Mode Configuration */}
-              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 shadow-xs rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="px-6 py-4 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Internet Mode Configuration</h2>
                   <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                     Configure how clients connect to this server over the internet
@@ -893,7 +893,7 @@ export default function ServerSettings() {
               </div>
 
               {/* All Settings */}
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                 <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-lg font-medium text-gray-900 dark:text-white">All Server Settings</h2>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -913,7 +913,7 @@ export default function ServerSettings() {
                               type="checkbox"
                               checked={value === true || value === 'true'}
                               onChange={(e) => updateSetting(key, e.target.checked)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded-sm"
                             />
                             <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">
                               {value === true || value === 'true' ? 'Enabled' : 'Disabled'}
@@ -924,7 +924,7 @@ export default function ServerSettings() {
                             type="number"
                             value={value || 0}
                             onChange={(e) => updateSetting(key, parseInt(e.target.value) || 0)}
-                            className="block w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="block w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                           />
                         ) : typeof value === 'object' ? (
                           <div className="text-xs text-gray-500 dark:text-gray-400 italic py-1.5">
@@ -935,7 +935,7 @@ export default function ServerSettings() {
                             type="text"
                             value={value || ''}
                             onChange={(e) => updateSetting(key, e.target.value)}
-                            className="block w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="block w-full border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                           />
                         )}
                       </div>
@@ -966,17 +966,17 @@ export default function ServerSettings() {
           </div>
 
           {storageLoading ? (
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-12 text-center">
               <ArrowPathIcon className="h-12 w-12 mx-auto text-gray-400 animate-spin" />
               <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading storage data...</p>
             </div>
           ) : storageData.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-12 text-center">
               <UsersIcon className="h-12 w-12 mx-auto text-gray-400" />
               <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">No customer data found. Add customers in the Customers page.</p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900/50">
                   <tr>
@@ -995,7 +995,7 @@ export default function ServerSettings() {
                       <tr key={cust.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${cust.id === -1 ? 'bg-yellow-50/30 dark:bg-yellow-900/10' : ''}`}>
                         <td className="px-6 py-4">
                           <div className="flex items-center">
-                            <UsersIcon className={`h-5 w-5 mr-3 flex-shrink-0 ${cust.id === -1 ? 'text-yellow-400' : 'text-blue-400'}`} />
+                            <UsersIcon className={`h-5 w-5 mr-3 shrink-0 ${cust.id === -1 ? 'text-yellow-400' : 'text-blue-400'}`} />
                             <div>
                               <div className="text-sm font-medium text-gray-900 dark:text-white">{cust.name}</div>
                               {cust.company && <div className="text-xs text-gray-500 dark:text-gray-400">{cust.company}</div>}

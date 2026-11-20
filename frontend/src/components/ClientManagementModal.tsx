@@ -201,7 +201,7 @@ export function ClientManagementModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       {/* Remove client confirm */}
       {pendingRemove && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60">
@@ -220,7 +220,7 @@ export function ClientManagementModal({
                 type="checkbox"
                 checked={deleteDataNow}
                 onChange={(e) => setDeleteDataNow(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                className="mt-0.5 h-4 w-4 rounded-sm border-gray-300 text-red-600 focus:ring-red-500"
               />
               <span>
                 Delete the backup data now
@@ -352,7 +352,7 @@ export function ClientManagementModal({
                                 type="text"
                                 value={editedName}
                                 onChange={(e) => setEditedName(e.target.value)}
-                                className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                                className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                                 autoFocus
                                 onKeyPress={(e) => {
                                   if (e.key === 'Enter') {
@@ -364,14 +364,14 @@ export function ClientManagementModal({
                               />
                               <button
                                 onClick={() => handleSaveEdit(client.id, client.name)}
-                                className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm"
+                                className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-sm text-sm"
                                 title="Save"
                               >
                                 <Save className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={handleCancelEdit}
-                                className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm"
+                                className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-sm text-sm"
                                 title="Cancel"
                               >
                                 <X className="h-4 w-4" />
@@ -385,7 +385,7 @@ export function ClientManagementModal({
                                 </span>
                                 <button
                                   onClick={() => handleStartEdit(client)}
-                                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400"
+                                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-sm text-gray-600 dark:text-gray-400"
                                   title="Edit name"
                                 >
                                   <Edit2 className="h-3 w-3" />
@@ -447,7 +447,7 @@ export function ClientManagementModal({
                             Authentication Key:
                           </div>
                           <div className="flex items-center gap-2 mb-3">
-                            <code className="flex-1 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono text-gray-900 dark:text-gray-100 break-all">
+                            <code className="flex-1 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-sm text-xs font-mono text-gray-900 dark:text-gray-100 break-all">
                               {authkey}
                             </code>
                             <button
@@ -474,7 +474,7 @@ export function ClientManagementModal({
                             <button
                               onClick={() => handleRegenerateKey(client.id, client.name)}
                               disabled={regeneratingKey === clientIdStr}
-                              className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white rounded text-xs font-medium transition-colors flex items-center gap-2"
+                              className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white rounded-sm text-xs font-medium transition-colors flex items-center gap-2"
                             >
                               {regeneratingKey === clientIdStr ? (
                                 <>

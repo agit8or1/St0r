@@ -667,7 +667,7 @@ export function BackupSchedule({ clientId }: BackupScheduleProps) {
 
             <button
               onClick={() => setShowVolumeSelector(true)}
-              className="w-full py-8 px-6 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 hover:from-orange-100 hover:to-orange-200 dark:hover:from-orange-800/30 dark:hover:to-orange-700/30 border-2 border-orange-300 dark:border-orange-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+              className="w-full py-8 px-6 bg-linear-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 hover:from-orange-100 hover:to-orange-200 dark:hover:from-orange-800/30 dark:hover:to-orange-700/30 border-2 border-orange-300 dark:border-orange-700 rounded-lg transition-all shadow-xs hover:shadow-md"
             >
               <div className="flex flex-col items-center gap-3">
                 <HardDrive className="h-12 w-12 text-orange-600 dark:text-orange-400" />
@@ -730,7 +730,7 @@ export function BackupSchedule({ clientId }: BackupScheduleProps) {
                               type="checkbox"
                               checked={path.flags.includes(flag)}
                               onChange={() => togglePathFlag(index, flag)}
-                              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 mr-1"
+                              className="rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500 mr-1"
                             />
                             <span className="text-gray-700 dark:text-gray-300">{flag}</span>
                           </label>
@@ -758,7 +758,7 @@ export function BackupSchedule({ clientId }: BackupScheduleProps) {
 
             <button
               onClick={() => setShowPathSelector(true)}
-              className="w-full py-8 px-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800/30 dark:hover:to-green-700/30 border-2 border-green-300 dark:border-green-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+              className="w-full py-8 px-6 bg-linear-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800/30 dark:hover:to-green-700/30 border-2 border-green-300 dark:border-green-700 rounded-lg transition-all shadow-xs hover:shadow-md"
             >
               <div className="flex flex-col items-center gap-3">
                 <FolderSearch className="h-12 w-12 text-green-600 dark:text-green-400" />

@@ -267,14 +267,14 @@ export function Settings() {
               console.log(`Checkbox ${key} changed to:`, e.target.checked);
               updateSetting(key, e.target.checked ? true : false);
             }}
-            className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-0.5"
+            className="h-5 w-5 rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500 mt-0.5"
           />
         </div>
       );
     }
 
     return (
-      <div key={key} className="space-y-2">
+      <div key={key} className="flex flex-col gap-2">
         <label className="label">
           {label}
           {description && (
@@ -443,7 +443,7 @@ export function Settings() {
                     type="checkbox"
                     checked={tooltipsEnabled}
                     onChange={toggleTooltips}
-                    className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-0.5"
+                    className="h-5 w-5 rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500 mt-0.5"
                   />
                 </div>
               </div>
@@ -452,7 +452,7 @@ export function Settings() {
 
           {tab === 'backup' && !loading && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
                 Default File Backup Settings
               </h2>
               <div className="grid gap-6 md:grid-cols-2">
@@ -488,7 +488,7 @@ export function Settings() {
 
           {tab === 'email' && !loading && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
                 Email Configuration
               </h2>
               <div className="grid gap-6 md:grid-cols-2">
@@ -525,7 +525,7 @@ export function Settings() {
 
           {tab === 'client' && !loading && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
                 <ServerIcon className="inline h-6 w-6 mr-2" />
                 Client Installer Configuration
               </h2>
@@ -534,7 +534,7 @@ export function Settings() {
               </p>
 
               <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <label className="label">
                     Server Hostname / FQDN
                     <span className="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
@@ -550,7 +550,7 @@ export function Settings() {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <label className="label">
                     Server Port
                     <span className="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
@@ -583,13 +583,13 @@ export function Settings() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Security</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Control which origins can make requests to the St0r API.</p>
                 <label className="flex items-start gap-4 cursor-pointer group">
-                  <div className="flex-shrink-0 mt-0.5">
+                  <div className="shrink-0 mt-0.5">
                     <button
                       type="button"
                       role="switch"
                       aria-checked={clientSettings.corsLock}
                       onClick={() => setClientSettings(prev => ({ ...prev, corsLock: !prev.corsLock }))}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
                         clientSettings.corsLock ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
                       }`}
                     >
@@ -697,12 +697,12 @@ export function Settings() {
                           Or manually enter this secret key:
                         </p>
                         <div className="flex items-center gap-2">
-                          <code className="flex-1 p-2 bg-gray-900 text-green-400 rounded font-mono text-sm break-all">
+                          <code className="flex-1 p-2 bg-gray-900 text-green-400 rounded-sm font-mono text-sm break-all">
                             {secret}
                           </code>
                           <button
                             onClick={copySecret}
-                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-sm"
                             title="Copy secret"
                           >
                             <Copy className="h-4 w-4" />

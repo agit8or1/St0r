@@ -84,7 +84,7 @@ export function RecoveryReport() {
         {!report && !error && <Loader2 className="h-6 w-6 animate-spin text-gray-400" />}
         {report && (
           <>
-            <div className="rounded-lg bg-white p-6 shadow print:shadow-none dark:bg-gray-800">
+            <div className="rounded-lg bg-white p-6 shadow-sm print:shadow-none dark:bg-gray-800">
               <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-gray-100"><ShieldCheck className="h-5 w-5 text-green-600" />Recovery verification report — {report.client_name}</h1>
               <p className="text-sm text-gray-500">Last {report.period_days} days · generated {new Date(report.generated_at).toLocaleString()}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-4">
@@ -99,7 +99,7 @@ export function RecoveryReport() {
                 The clone and all temporary data are removed afterwards.
               </p>
             </div>
-            <div className="rounded-lg bg-white p-6 shadow print:shadow-none dark:bg-gray-800">
+            <div className="rounded-lg bg-white p-6 shadow-sm print:shadow-none dark:bg-gray-800">
               <h2 className="mb-3 text-base font-semibold text-gray-900 dark:text-gray-100">Actual restores</h2>
               <RunsTable runs={report.actual} />
             </div>

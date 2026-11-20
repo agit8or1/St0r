@@ -147,7 +147,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto bg-black bg-opacity-60 p-3 sm:p-6 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto bg-black/60 p-3 sm:p-6 backdrop-blur-xs"
       onClick={onClose}
       role="presentation"
     >
@@ -161,17 +161,17 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
         className="my-auto flex max-h-[calc(100vh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800 sm:max-h-[calc(100vh-3rem)]"
       >
         {/* Header */}
-        <div className="relative flex-shrink-0 bg-gradient-to-r from-rose-500 to-pink-600 px-5 py-5 sm:px-7 sm:py-6">
+        <div className="relative shrink-0 bg-linear-to-r from-rose-500 to-pink-600 px-5 py-5 sm:px-7 sm:py-6">
           <button
             ref={closeRef}
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-3 top-3 rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white"
+            className="absolute right-3 top-3 rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/15 hover:text-white focus:outline-hidden focus:ring-2 focus:ring-white"
           >
             <X className="h-5 w-5" />
           </button>
           <div className="flex items-start gap-3 pr-10">
-            <Heart className="mt-0.5 h-8 w-8 flex-shrink-0 fill-current text-white" />
+            <Heart className="mt-0.5 h-8 w-8 shrink-0 fill-current text-white" />
             <div>
               <h2 id="help-us-grow-title" className="text-xl font-bold leading-snug text-white sm:text-2xl">
                 Love what we&rsquo;re building? Help us grow.
@@ -210,7 +210,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
             className="rounded-xl border-2 border-rose-200 bg-rose-50/60 p-4 dark:border-rose-800 dark:bg-rose-900/15 sm:p-5"
           >
             <div className="mb-2 flex items-center gap-2">
-              <Share2 className="h-5 w-5 flex-shrink-0 text-rose-600 dark:text-rose-400" />
+              <Share2 className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
               <h3
                 id="grow-share-heading"
                 className="text-base font-bold text-gray-900 dark:text-gray-100"
@@ -225,7 +225,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
 
             <button
               onClick={() => handleNativeShare(THIS_PROJECT.name, shareMessage, THIS_PROJECT.url, 'share-primary')}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-base font-semibold text-white shadow-xs transition-colors hover:bg-rose-700 focus:outline-hidden focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
             >
               {copied === 'share-primary' ? <Check className="h-5 w-5" /> : <Share2 className="h-5 w-5" />}
               {copied === 'share-primary' ? 'Message copied!' : 'Share This Project'}
@@ -240,14 +240,14 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
               <button
                 onClick={() => handleCopy('link', THIS_PROJECT.url)}
                 aria-label={`Copy link to ${THIS_PROJECT.name}`}
-                className="flex items-center justify-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-500 dark:border-rose-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-rose-900/30"
+                className="flex items-center justify-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-rose-100 focus:outline-hidden focus:ring-2 focus:ring-rose-500 dark:border-rose-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-rose-900/30"
               >
                 {copied === 'link' ? <Check className="h-4 w-4 text-green-600 dark:text-green-400" /> : <LinkIcon className="h-4 w-4" />}
                 {copyLabel('link', 'Copy Link', 'Link copied!')}
               </button>
               <button
                 onClick={() => handleCopy('message', shareMessage)}
-                className="flex items-center justify-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-500 dark:border-rose-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-rose-900/30"
+                className="flex items-center justify-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-rose-100 focus:outline-hidden focus:ring-2 focus:ring-rose-500 dark:border-rose-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-rose-900/30"
               >
                 {copied === 'message' ? <Check className="h-4 w-4 text-green-600 dark:text-green-400" /> : <ClipboardCopy className="h-4 w-4" />}
                 {copyLabel('message', 'Copy Ready-to-Post Message', 'Message copied!')}
@@ -317,7 +317,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
               </p>
               <button
                 onClick={() => handleCopy('network', NETWORK_SHARE_MESSAGE)}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               >
                 {copied === 'network' ? <Check className="h-4 w-4 text-green-600 dark:text-green-400" /> : <ClipboardCopy className="h-4 w-4" />}
                 {copyLabel('network', 'Copy Network Message', 'Message copied!')}
@@ -328,7 +328,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
           {/* 3. GitHub */}
           <section aria-labelledby="grow-github-heading" className="rounded-xl border border-gray-200 p-4 dark:border-gray-700 sm:p-5">
             <div className="mb-1 flex items-center gap-2">
-              <Star className="h-5 w-5 flex-shrink-0 fill-current text-yellow-500" />
+              <Star className="h-5 w-5 shrink-0 fill-current text-yellow-500" />
               <h3 id="grow-github-heading" className="text-base font-bold text-gray-900 dark:text-gray-100">
                 Star &amp; explore on GitHub
               </h3>
@@ -341,7 +341,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
               {THIS_PROJECT.repoUrl && (
                 <button
                   onClick={() => openExternal(THIS_PROJECT.repoUrl!)}
-                  className="flex items-center justify-center gap-2 rounded-xl border-2 border-yellow-300 bg-yellow-50 px-4 py-2.5 text-sm font-semibold text-gray-900 transition-colors hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-500 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-gray-100 dark:hover:bg-yellow-900/40"
+                  className="flex items-center justify-center gap-2 rounded-xl border-2 border-yellow-300 bg-yellow-50 px-4 py-2.5 text-sm font-semibold text-gray-900 transition-colors hover:bg-yellow-100 focus:outline-hidden focus:ring-2 focus:ring-yellow-500 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-gray-100 dark:hover:bg-yellow-900/40"
                 >
                   <Star className="h-4 w-4 fill-current text-yellow-500" />
                   Star This Project
@@ -350,7 +350,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
               )}
               <button
                 onClick={() => openExternal(GITHUB.orgUrl)}
-                className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               >
                 <Github className="h-4 w-4" />
                 Explore Our GitHub
@@ -363,7 +363,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
           {GITHUB.sponsorUrl && (
             <section aria-labelledby="grow-sponsor-heading" className="rounded-xl border border-gray-200 p-4 dark:border-gray-700 sm:p-5">
               <div className="mb-1 flex items-center gap-2">
-                <Heart className="h-5 w-5 flex-shrink-0 fill-current text-pink-600 dark:text-pink-400" />
+                <Heart className="h-5 w-5 shrink-0 fill-current text-pink-600 dark:text-pink-400" />
                 <h3 id="grow-sponsor-heading" className="text-base font-bold text-gray-900 dark:text-gray-100">
                   Sponsor development
                 </h3>
@@ -374,7 +374,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
               </p>
               <button
                 onClick={() => openExternal(GITHUB.sponsorUrl!)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-pink-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-pink-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-pink-700 focus:outline-hidden focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
               >
                 <Heart className="h-4 w-4 fill-current" />
                 Sponsor Development
@@ -386,7 +386,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
           {/* 5. Support our business */}
           <section aria-labelledby="grow-business-heading" className="rounded-xl border border-gray-200 p-4 dark:border-gray-700 sm:p-5">
             <div className="mb-1 flex items-center gap-2">
-              <Briefcase className="h-5 w-5 flex-shrink-0 text-primary-600 dark:text-primary-400" />
+              <Briefcase className="h-5 w-5 shrink-0 text-primary-600 dark:text-primary-400" />
               <h3 id="grow-business-heading" className="text-base font-bold text-gray-900 dark:text-gray-100">
                 Support our business
               </h3>
@@ -398,7 +398,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
             <div className="grid gap-2 sm:grid-cols-2">
               <button
                 onClick={() => openExternal(BUSINESS.url)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                className="flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700 focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
               >
                 Visit {BUSINESS.name}
                 <ExternalLink className="h-3.5 w-3.5 text-white/70" />
@@ -407,7 +407,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
                 onClick={() =>
                   handleNativeShare(BUSINESS.name, projectShortShare(BUSINESS), BUSINESS.url, 'share-business')
                 }
-                className="flex items-center justify-center gap-2 rounded-xl border border-primary-300 bg-white px-4 py-2.5 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-primary-700 dark:bg-gray-800 dark:text-primary-300 dark:hover:bg-primary-900/30"
+                className="flex items-center justify-center gap-2 rounded-xl border border-primary-300 bg-white px-4 py-2.5 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-50 focus:outline-hidden focus:ring-2 focus:ring-primary-500 dark:border-primary-700 dark:bg-gray-800 dark:text-primary-300 dark:hover:bg-primary-900/30"
               >
                 {copied === 'share-business' ? <Check className="h-4 w-4 text-green-600 dark:text-green-400" /> : <Share2 className="h-4 w-4" />}
                 {copied === 'share-business' ? 'Message copied!' : `Share ${BUSINESS.name}`}
@@ -416,7 +416,7 @@ export function HelpUsGrowModal({ open, onClose }: HelpUsGrowModalProps) {
             {BUSINESS.secondary && (
               <button
                 onClick={() => openExternal(BUSINESS.secondary!.url)}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-gray-600 underline-offset-2 transition-colors hover:text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500 dark:text-gray-400 dark:hover:text-primary-300"
+                className="mt-3 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-gray-600 underline-offset-2 transition-colors hover:text-primary-700 hover:underline focus:outline-hidden focus:ring-2 focus:ring-primary-500 dark:text-gray-400 dark:hover:text-primary-300"
               >
                 <Facebook className="h-4 w-4" />
                 {BUSINESS.secondary.label}
@@ -448,7 +448,7 @@ function ShareNetworkButton({
     <button
       onClick={onClick}
       aria-label={`Share on ${label}`}
-      className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+      className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
     >
       {icon}
       {label}
@@ -493,14 +493,14 @@ function ProjectCard({
         <button
           onClick={() => openExternal(project.url)}
           aria-label={`Visit ${project.name}`}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
         >
           Visit
           <ExternalLink className="h-3.5 w-3.5 text-gray-400" />
         </button>
         <button
           onClick={() => onShare(project.name, projectShortShare(project), project.url, shareKey)}
-          className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
+          className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
         >
           {copied === shareKey ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
           {copied === shareKey ? 'Message copied!' : `Share ${project.name}`}
@@ -508,7 +508,7 @@ function ProjectCard({
         <button
           onClick={() => onCopy(copyKey, project.url)}
           aria-label={`Copy link to ${project.name}`}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
         >
           {copied === copyKey ? <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" /> : <LinkIcon className="h-3.5 w-3.5" />}
           {copied === copyKey ? 'Link copied!' : 'Copy Link'}

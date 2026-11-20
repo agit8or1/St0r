@@ -132,7 +132,7 @@ export function DirectoryBrowser({ clientId, onSelect, selectedPath }: Directory
                 e.stopPropagation();
                 toggleNode(node, currentPath);
               }}
-              className="flex-shrink-0"
+              className="shrink-0"
             >
               {node.loading ? (
                 <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
@@ -149,7 +149,7 @@ export function DirectoryBrowser({ clientId, onSelect, selectedPath }: Directory
             className="flex items-center gap-2 flex-1 min-w-0"
             onClick={() => onSelect(node.path)}
           >
-            <Icon className="h-4 w-4 flex-shrink-0 text-primary-600 dark:text-primary-400" />
+            <Icon className="h-4 w-4 shrink-0 text-primary-600 dark:text-primary-400" />
             <span className="text-sm font-mono truncate">{node.name}</span>
           </div>
         </div>

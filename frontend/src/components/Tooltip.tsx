@@ -66,7 +66,7 @@ export function Tooltip({ text, children, position = 'top', className = '' }: To
             pointerEvents: 'none',
           }}
         >
-          <div className="bg-gray-800 text-white text-xs rounded px-2 py-1.5 shadow-lg leading-snug max-w-[260px] text-center whitespace-normal">
+          <div className="bg-gray-800 text-white text-xs rounded-sm px-2 py-1.5 shadow-lg leading-snug max-w-[260px] text-center whitespace-normal">
             {text}
           </div>
         </div>,

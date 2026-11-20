@@ -219,7 +219,7 @@ export function Alerts() {
                       <Tooltip text="Mark as acknowledged — alert moves to history but stays visible">
                         <button
                           onClick={() => handleAcknowledge(alert.key)}
-                          className="px-3 py-1 text-sm rounded bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          className="px-3 py-1 text-sm rounded-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
                           Acknowledge
                         </button>
@@ -227,7 +227,7 @@ export function Alerts() {
                       <Tooltip text="Permanently dismiss this alert">
                         <button
                           onClick={() => handleDismiss(alert.key)}
-                          className="px-3 py-1 text-sm rounded bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          className="px-3 py-1 text-sm rounded-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
                           Dismiss
                         </button>
@@ -249,10 +249,10 @@ export function Alerts() {
           </div>
 
           {loadError && (
-            <div className="mb-3 p-3 rounded bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-sm">{loadError}</div>
+            <div className="mb-3 p-3 rounded-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-sm">{loadError}</div>
           )}
           {notice && (
-            <div className={`mb-3 p-3 rounded text-sm ${notice.ok ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'}`}>
+            <div className={`mb-3 p-3 rounded-sm text-sm ${notice.ok ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'}`}>
               {notice.text}
             </div>
           )}
@@ -274,7 +274,7 @@ export function Alerts() {
                       checked={rule.enabled}
                       onChange={() => handleToggleRule(rule)}
                       disabled={!isAdmin}
-                      className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="h-5 w-5 rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                   </Tooltip>
                   <div className="flex-1">
@@ -317,7 +317,7 @@ export function Alerts() {
                       <Tooltip text="Send a test notification over this rule's channels">
                         <button
                           onClick={() => handleTestRule(rule)}
-                          className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                          className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-sm"
                         >
                           <Send className="h-4 w-4" />
                         </button>
@@ -326,7 +326,7 @@ export function Alerts() {
                     <Tooltip text="Edit this alert rule">
                       <button
                         onClick={() => handleEditRule(rule)}
-                        className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                        className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-sm"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
@@ -373,7 +373,7 @@ export function Alerts() {
 
       {/* Edit Rule Modal */}
       {showModal && editingRule && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Edit Alert Rule
@@ -424,7 +424,7 @@ export function Alerts() {
                     id="notifyEmail"
                     checked={editingRule.notifyEmail}
                     onChange={(e) => setEditingRule({ ...editingRule, notifyEmail: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="h-4 w-4 rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                   <label htmlFor="notifyEmail" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     Send Email Notifications
@@ -437,7 +437,7 @@ export function Alerts() {
                     id="notifyPushover"
                     checked={editingRule.notifyPushover}
                     onChange={(e) => setEditingRule({ ...editingRule, notifyPushover: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="h-4 w-4 rounded-sm border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                   <label htmlFor="notifyPushover" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     Send Pushover Notifications
@@ -447,7 +447,7 @@ export function Alerts() {
             </div>
 
             {modalError && (
-              <div className="mt-4 p-3 rounded bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-sm">{modalError}</div>
+              <div className="mt-4 p-3 rounded-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-sm">{modalError}</div>
             )}
 
             <div className="flex justify-end gap-2 mt-6">

@@ -218,7 +218,7 @@ export function Dashboard() {
             <Tooltip text="View replication targets and sync status" position="bottom">
             <div className="card py-3 px-4 cursor-pointer hover:shadow-md transition-shadow flex items-center gap-4"
               onClick={() => navigate('/replication')}>
-              <div className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 p-2 flex-shrink-0">
+              <div className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 p-2 shrink-0">
                 <GitBranch className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div className="flex-1 min-w-0">
@@ -279,7 +279,7 @@ export function Dashboard() {
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Disk Usage */}
           <Tooltip text="Go to server settings and storage configuration" position="top">
-          <div className="card py-3 px-4 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/server-settings')}>
+          <div className="card py-3 px-4 bg-linear-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/server-settings')}>
             <div className="flex items-center gap-2 mb-2">
               <div className="rounded-full bg-purple-600 p-1.5">
                 <HardDrive className="h-4 w-4 text-white" />
@@ -376,7 +376,7 @@ export function Dashboard() {
             ) : (
               <div className="space-y-2">
                 {activities.slice(0, 5).map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 px-3 py-2">
+                  <div key={activity.id} className="flex items-center justify-between rounded-sm border border-gray-200 dark:border-gray-700 px-3 py-2">
                     <div>
                       <p className="text-xs font-medium text-gray-900 dark:text-gray-100">{activity.client}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{activity.action}</p>
@@ -405,10 +405,10 @@ export function Dashboard() {
                 {clients.filter((c) => hasFileProblem(c) || hasImageProblem(c)).slice(0, 5).map((client) => (
                   <Tooltip key={client.id} text="Click to view client details and trigger a backup" position="top">
                     <div
-                      className="flex items-center justify-between rounded border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-3 py-2 cursor-pointer hover:shadow transition-shadow"
+                      className="flex items-center justify-between rounded-sm border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-3 py-2 cursor-pointer hover:shadow-sm transition-shadow"
                       onClick={() => navigate(`/clients/${encodeURIComponent(client.name)}`)}>
                       <div className="flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
                         <div>
                           <p className="text-xs font-medium text-gray-900 dark:text-gray-100">{client.name}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">Last seen: {formatTimeAgo(client.lastseen || 0)}</p>
@@ -417,14 +417,14 @@ export function Dashboard() {
                       <div className="flex gap-1">
                         {hasFileProblem(client) && (
                           <Tooltip text={!(client as any).lastbackup ? 'No file backup has ever been completed for this endpoint' : 'The most recent file backup job failed'}>
-                            <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                            <span className="rounded-sm bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
                               {!(client as any).lastbackup ? 'No File Backup' : 'File Failed'}
                             </span>
                           </Tooltip>
                         )}
                         {hasImageProblem(client) && (
                           <Tooltip text={!(client as any).lastbackup_image ? 'No image (bare-metal) backup has ever been completed for this endpoint' : 'The most recent image backup job failed'}>
-                            <span className="rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                            <span className="rounded-sm bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
                               {!(client as any).lastbackup_image ? 'No Image Backup' : 'Image Failed'}
                             </span>
                           </Tooltip>

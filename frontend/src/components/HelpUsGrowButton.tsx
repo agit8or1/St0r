@@ -29,13 +29,13 @@ export function HelpUsGrowButton({ variant = 'nav', collapseLabel = false, class
   const [open, setOpen] = useState(false);
 
   const base =
-    'group inline-flex items-center gap-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
+    'group inline-flex items-center gap-3 font-medium transition-colors focus:outline-hidden focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
 
   const variants = {
     nav:
       'w-full rounded-lg px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20',
     pill:
-      'rounded-full bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:from-rose-600 hover:to-pink-700 hover:shadow-xl',
+      'rounded-full bg-linear-to-r from-rose-500 to-pink-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:from-rose-600 hover:to-pink-700 hover:shadow-xl',
   };
 
   return (
@@ -50,7 +50,7 @@ export function HelpUsGrowButton({ variant = 'nav', collapseLabel = false, class
       >
         <Heart
           aria-hidden="true"
-          className={`heartbeat h-5 w-5 flex-shrink-0 fill-current ${
+          className={`heartbeat h-5 w-5 shrink-0 fill-current ${
             variant === 'nav' ? 'text-rose-500 dark:text-rose-400' : 'text-white'
           }`}
         />

@@ -40,11 +40,11 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden ${
         checked ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
       }`}
     >
-      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   );
 }
@@ -73,7 +73,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</p>
         {hint && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{hint}</p>}
       </div>
-      <div className="flex-shrink-0">{children}</div>
+      <div className="shrink-0">{children}</div>
     </div>
   );
 }
@@ -591,12 +591,12 @@ export function ClientSettings() {
               </Section>
 
               <Section title="Exclude Patterns" collapsible>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Files/folders matching these patterns will be skipped. Semicolon-separated wildcards (e.g. <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">*.tmp</code>, <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">C:\Windows\Temp</code>).</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Files/folders matching these patterns will be skipped. Semicolon-separated wildcards (e.g. <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded-sm">*.tmp</code>, <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded-sm">C:\Windows\Temp</code>).</p>
                 <div className="space-y-1 max-h-48 overflow-y-auto">
                   {getExcludes().length === 0
                     ? <p className="text-sm text-gray-400 italic">No exclusions configured.</p>
                     : getExcludes().map((pat, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded px-3 py-1.5">
+                      <div key={i} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-sm px-3 py-1.5">
                         {editingExcludeIdx === i ? (
                           <>
                             <input
@@ -622,11 +622,11 @@ export function ClientSettings() {
                                   if (v) { const arr = getExcludes(); arr[i] = v; setExcludes(arr); }
                                   setEditingExcludeIdx(null);
                                 }}
-                                className="text-green-600 hover:text-green-800 flex-shrink-0"
+                                className="text-green-600 hover:text-green-800 shrink-0"
                               ><Check className="h-3.5 w-3.5" /></button>
                             </Tooltip>
                             <Tooltip text="Discard this edit">
-                              <button onClick={() => setEditingExcludeIdx(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+                              <button onClick={() => setEditingExcludeIdx(null)} className="text-gray-400 hover:text-gray-600 shrink-0">
                                 <X className="h-3.5 w-3.5" />
                               </button>
                             </Tooltip>
@@ -637,11 +637,11 @@ export function ClientSettings() {
                             <Tooltip text="Edit this exclusion pattern">
                               <button
                                 onClick={() => { setEditingExcludeIdx(i); setEditingExcludeVal(pat); }}
-                                className="text-gray-400 hover:text-primary-600 flex-shrink-0"
+                                className="text-gray-400 hover:text-primary-600 shrink-0"
                               ><Pencil className="h-3 w-3" /></button>
                             </Tooltip>
                             <Tooltip text="Remove this exclusion pattern">
-                              <button onClick={() => setExcludes(getExcludes().filter((_, j) => j !== i))} className="text-red-500 hover:text-red-700 flex-shrink-0">
+                              <button onClick={() => setExcludes(getExcludes().filter((_, j) => j !== i))} className="text-red-500 hover:text-red-700 shrink-0">
                                 <Trash2 className="h-3 w-3" />
                               </button>
                             </Tooltip>
@@ -694,14 +694,14 @@ export function ClientSettings() {
                             {failedPaths.map(({ path, count }) => {
                               const alreadyExcluded = getExcludes().includes(path);
                               return (
-                                <div key={path} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded px-3 py-1.5">
+                                <div key={path} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-sm px-3 py-1.5">
                                   <span className={`flex-1 font-mono text-xs truncate ${alreadyExcluded ? 'text-gray-400 line-through' : ''}`}>{path}</span>
-                                  <span className="text-xs text-gray-400 flex-shrink-0">{count} {count === 1 ? 'error' : 'errors'}</span>
+                                  <span className="text-xs text-gray-400 shrink-0">{count} {count === 1 ? 'error' : 'errors'}</span>
                                   {!alreadyExcluded && (
                                     <Tooltip text="Add this path to the exclusion list">
                                       <button
                                         onClick={() => setExcludes([...getExcludes(), path])}
-                                        className="text-primary-600 dark:text-primary-400 hover:text-primary-800 flex-shrink-0"
+                                        className="text-primary-600 dark:text-primary-400 hover:text-primary-800 shrink-0"
                                       >
                                         <Plus className="h-3.5 w-3.5" />
                                       </button>

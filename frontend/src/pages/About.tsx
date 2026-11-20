@@ -325,7 +325,7 @@ export function About() {
 
         {/* Main About Card */}
         <div className="card">
-          <div className="p-8 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
+          <div className="p-8 bg-linear-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
             <div className="flex items-start gap-6">
               <div className="flex-1">
                 <div className="mb-3">
@@ -487,7 +487,7 @@ export function About() {
         </div>
 
         {/* Update Section */}
-        <div className={`card bg-gradient-to-br ${
+        <div className={`card bg-linear-to-br ${
           updateAvailable
             ? 'from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 border-2 border-green-200 dark:border-green-800'
             : 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800'
@@ -572,14 +572,14 @@ export function About() {
 
             {updateMessage && (
               <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                 <p className="text-sm text-blue-800 dark:text-blue-200">{updateMessage}</p>
               </div>
             )}
 
             {updateError && (
               <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
                 <p className="text-sm text-red-800 dark:text-red-200">{updateError}</p>
               </div>
             )}
@@ -597,7 +597,7 @@ export function About() {
         </div>
 
         {/* UrBackup Server Updates */}
-        <div className={`card bg-gradient-to-br ${
+        <div className={`card bg-linear-to-br ${
           ubVersion?.updateAvailable
             ? 'from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-2 border-orange-200 dark:border-orange-800'
             : 'from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 border-2 border-gray-200 dark:border-gray-700'
@@ -647,7 +647,7 @@ export function About() {
             </div>
             {ubError && (
               <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
                 <p className="text-sm text-red-800 dark:text-red-200">{ubError}</p>
               </div>
             )}
@@ -680,7 +680,7 @@ export function About() {
               <ul className="space-y-2">
                 {changelog.map((item, index) => (
                   <li key={index} className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -690,7 +690,7 @@ export function About() {
         )}
 
         {/* Installation Section */}
-        <div className="card bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800">
+        <div className="card bg-linear-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800">
           <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
             <ExternalLink className="h-5 w-5" />
             Installation
@@ -757,10 +757,10 @@ export function About() {
 
       {/* Enhanced Update Progress Modal */}
       {showProgressModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col mx-4 border border-gray-200 dark:border-gray-700">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
+            <div className="bg-linear-to-r from-blue-600 to-purple-600 p-6">
               <div className="flex items-center gap-4">
                 {updateInProgress ? (
                   <div className="relative">
@@ -800,7 +800,7 @@ export function About() {
                     className="h-full bg-white transition-all duration-500 ease-out rounded-full shadow-lg"
                     style={{ width: `${updateProgress}%` }}
                   >
-                    <div className="h-full w-full bg-gradient-to-r from-white to-blue-100 animate-pulse"></div>
+                    <div className="h-full w-full bg-linear-to-r from-white to-blue-100 animate-pulse"></div>
                   </div>
                 </div>
               </div>
@@ -813,9 +813,9 @@ export function About() {
               </div>
 
               {!updateInProgress && updateLog.includes('SUCCESS') && (
-                <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-400 dark:border-green-600 rounded-lg shadow-lg">
+                <div className="mt-4 p-4 bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-400 dark:border-green-600 rounded-lg shadow-lg">
                   <div className="flex items-center gap-3">
-                    <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400 shrink-0" />
                     <div>
                       <p className="text-green-900 dark:text-green-100 font-bold text-lg">
                         Update Successful!
@@ -829,9 +829,9 @@ export function About() {
               )}
 
               {!updateInProgress && updateLog.includes('FAILED') && (
-                <div className="mt-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-400 dark:border-red-600 rounded-lg shadow-lg">
+                <div className="mt-4 p-4 bg-linear-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-400 dark:border-red-600 rounded-lg shadow-lg">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0" />
+                    <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400 shrink-0" />
                     <div>
                       <p className="text-red-900 dark:text-red-100 font-bold text-lg">
                         Update Failed
@@ -853,7 +853,7 @@ export function About() {
                 </p>
                 <button
                   onClick={() => { window.location.href = window.location.origin + window.location.pathname + '?_refresh=' + Date.now(); }}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   <RefreshCw className="h-4 w-4" />
                   Reload Now
