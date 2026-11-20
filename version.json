@@ -1,8 +1,9 @@
 {
-  "version": "3.2.139",
+  "version": "3.2.140",
   "releaseDate": "2026-11-20",
   "changelog": [
-    "Frontend: React 19 and lucide-react 1.x.",
-    "Frontend: Tailwind CSS 4. Pages look the same; dropdowns now have a white background."
+    "Delete and Disable/Enable buttons on the Endpoints list and on each endpoint's page.",
+    "Disabling an endpoint pauses its backups and keeps the ones it has; enabling restores its schedule exactly.",
+    "Customers can be disabled: all their endpoints are paused and their accounts can't see them."
   ]
 }

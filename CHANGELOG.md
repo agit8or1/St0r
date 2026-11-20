@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.140] - 2026-11-20
+
+### Added
+- **Delete and Disable/Enable on the Endpoints list and on each endpoint's page** ([#53](https://github.com/agit8or1/St0r/pull/53)). Deleting was only reachable under **Endpoints → Manage**. Delete still removes all of the endpoint's backups, by default straight away.
+- **Disabling an endpoint** pauses its backups and keeps the ones it has. St0r makes its UrBackup backup intervals negative (UrBackup skips them) and turns off the start-backup buttons in its tray icon. Enabling restores the previous settings exactly, including which ones were inherited. A disabled endpoint can't be backed up from St0r, raises no alerts and isn't counted as failed. The Endpoints page has a **Disabled** filter.
+- **Disabling a customer** pauses all of its endpoints and hides them from the customer's accounts. Enabling it resumes only the endpoints it paused; endpoints disabled individually stay disabled. An endpoint assigned to a disabled customer is disabled with it.
+
+### Changed
+- The customer edit dialog no longer has an "Active" checkbox. Unticking it deleted the customer from the list; use **Disable** instead.
+
+### Fixed
+- The endpoint page showed a stray "0" next to its summary cards when the endpoint had no stored data.
+
 ## [3.2.139] - 2026-11-20
 
 ### Changed
