@@ -1,8 +1,9 @@
 {
-  "version": "3.2.143",
+  "version": "3.2.144",
   "releaseDate": "2026-11-21",
   "changelog": [
-    "Windows and Linux installers now remove an existing UrBackup client and its old settings first, so the endpoint's name and key are used (installing over an old client kept its old name and key).",
-    "Installer downloads from UrBackup are checked for length and retried, so a truncated installer is never handed out."
+    "New Groups page: see, create and delete UrBackup client groups, edit each group's settings, and move endpoints between groups (issue #57).",
+    "Endpoint settings show the values inherited from the group instead of St0r's defaults, and saving sends only the fields you changed so endpoints keep following their group.",
+    "The minimum number of backups kept may now equal the maximum (minimum 1 and maximum 1 keeps one)."
   ]
 }

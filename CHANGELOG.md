@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.144] - 2026-11-21
+
+### Added
+- **Groups** ([#57](https://github.com/agit8or1/St0r/issues/57)). A new **Groups** page (admins) lists UrBackup's client groups and the endpoints in each, creates and deletes groups, and edits each group's settings in the same editor as endpoint settings. The Default group's settings are the server-wide defaults. Each endpoint's settings page shows its group and can move it to another one.
+
+### Fixed
+- **Endpoint settings now show the values inherited from the endpoint's group.** For an inherited setting UrBackup sends only the group's value, which St0r ignored, showing its own built-in defaults instead (for example 10 maximum full backups when the group said 3).
+- **Saving endpoint settings no longer cuts the endpoint off from its group.** The endpoint settings page and the schedule card sent every field, so each inherited setting became an endpoint setting with the wrong value. They now send only the fields you changed. An endpoint saved this way before keeps those values until it is switched back to its group's settings in UrBackup's interface.
+
+### Changed
+- **The minimum number of backups kept may now equal the maximum**, so minimum 1 and maximum 1 keeps exactly one. A minimum above the maximum is still refused. UrBackup only uses the minimum in place of the maximum during an out-of-space cleanup.
+
 ## [3.2.143] - 2026-11-21
 
 ### Fixed
