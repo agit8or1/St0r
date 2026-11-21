@@ -12,6 +12,20 @@ interface ClientManagementModalProps {
   onClientRemoved: () => void;
 }
 
+
+// Must match backend/src/utils/clientName.ts. UrBackup doubles apostrophes in
+// new client names, and the rest are not allowed in Windows folder names.
+const FORBIDDEN_NAME_CHARS = `'"\`\\/:*?<>|`;
+
+function clientNameError(raw: string): string | null {
+  const name = raw.trim();
+  if (!name) return 'Please enter an endpoint name';
+  if (name.length > 64) return 'Endpoint names can be at most 64 characters';
+  const bad = [...new Set([...name].filter(ch => FORBIDDEN_NAME_CHARS.includes(ch)))];
+  if (bad.length) return `Endpoint names cannot contain ${bad.join(' ')}. Use letters, numbers, spaces, dashes or underscores.`;
+  if (name.endsWith('.')) return 'Endpoint names cannot end with a dot';
+  return null;
+}
 export function ClientManagementModal({
   isOpen,
   onClose,
@@ -46,8 +60,9 @@ export function ClientManagementModal({
   };
 
   const handleAddClient = async () => {
-    if (!newClientName.trim()) {
-      showMsg('error', 'Please enter a client name');
+    const nameError = clientNameError(newClientName);
+    if (nameError) {
+      showMsg('error', nameError);
       return;
     }
 
@@ -60,7 +75,8 @@ export function ClientManagementModal({
       showMsg('success', `Client "${added}" added successfully!`);
     } catch (error) {
       console.error('Failed to add client:', error);
-      showMsg('error', 'Failed to add client. Please try again.');
+      const msg = (error as any)?.response?.data?.error;
+      showMsg('error', typeof msg === 'string' && msg ? msg : 'Failed to add client. Please try again.');
     } finally {
       setAdding(false);
     }
@@ -125,6 +141,11 @@ export function ClientManagementModal({
   const handleSaveEdit = async (clientId: string | number, oldName: string) => {
     if (!editedName.trim() || editedName === oldName) {
       handleCancelEdit();
+      return;
+    }
+    const nameError = clientNameError(editedName);
+    if (nameError) {
+      showMsg('error', nameError);
       return;
     }
 
@@ -269,6 +290,11 @@ export function ClientManagementModal({
                 )}
               </button>
             </div>
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              Letters, numbers, spaces, dashes and underscores. No apostrophes or quotes. If UrBackup was already
+              installed on the computer, uninstall it and delete <code>C:\Program Files\UrBackup</code> before running
+              the new installer, or the computer keeps its old name and key.
+            </p>
           </div>
 
           {/* Existing Clients List */}

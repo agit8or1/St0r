@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.141] - 2026-11-21
+
+### Fixed
+- **Endpoint names with an apostrophe or quote no longer break the client's connection.** UrBackup's `add_client` stores "PC at Jen's" as `PC at Jen''s`, so the installed client could be rejected as an unknown client. St0r now refuses names containing `' " \` \\ / : * ? < > |`, control characters or a trailing dot, both when adding and when renaming an endpoint, and says why. Spaces are tidied and names are limited to 64 characters. Adding a name that already exists now says so instead of "Failed to add client".
+
+### Changed
+- The **Add New Client** form explains which characters are allowed, and that a computer which already had UrBackup installed must have it uninstalled and `C:\Program Files\UrBackup` deleted first. The UrBackup installer keeps an existing client's name and key, so installing over the top changes nothing.
+
 ## [3.2.140] - 2026-11-20
 
 ### Added

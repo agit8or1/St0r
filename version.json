@@ -1,9 +1,8 @@
 {
-  "version": "3.2.140",
-  "releaseDate": "2026-11-20",
+  "version": "3.2.141",
+  "releaseDate": "2026-11-21",
   "changelog": [
-    "Delete and Disable/Enable buttons on the Endpoints list and on each endpoint's page.",
-    "Disabling an endpoint pauses its backups and keeps the ones it has; enabling restores its schedule exactly.",
-    "Customers can be disabled: all their endpoints are paused and their accounts can't see them."
+    "Endpoint names with apostrophes, quotes or characters Windows folders can't hold are refused when adding or renaming; UrBackup stored \"Jen's\" as \"Jen''s\", so the client was rejected.",
+    "The Add New Client form explains that UrBackup must be uninstalled (and C:\\Program Files\\UrBackup deleted) before reinstalling on a computer that already had it."
   ]
 }
