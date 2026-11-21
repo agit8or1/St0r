@@ -7,7 +7,10 @@ import { logger } from '../utils/logger.js';
 import { openUrBackupSettingsDbReadOnly } from '../config/urbackupDb.js';
 import { UrBackupService } from '../services/urbackup.js';
 import os from 'os';
-import { existsSync } from 'fs';
+import { existsSync, createReadStream } from 'fs';
+import { stat } from 'fs/promises';
+import { pipeline } from 'stream/promises';
+import { buildWindowsWrapper, hasMakensis, linuxWrapperHeader, readInstaller } from '../services/installerWrapper.js';
 
 const router = Router();
 
@@ -124,6 +127,23 @@ async function fetchPreconfiguredInstaller(
   return { response, clientName: name };
 }
 
+// The whole installer, checked for length, with one retry: UrBackup sometimes
+// closes the connection before the last bytes arrive.
+async function fetchWholeInstaller(
+  clientId: string,
+  targetOs: 'windows' | 'linux'
+): Promise<{ inner: Buffer; clientName: string }> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const { response, clientName } = await fetchPreconfiguredInstaller(clientId, targetOs);
+      return { inner: await readInstaller(response), clientName };
+    } catch (err) {
+      if (attempt >= 2) throw err;
+      logger.warn(`Installer download from UrBackup failed, retrying: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+}
+
 // Stream a fetch Response body out through Express without buffering it in memory
 async function streamResponse(response: Response, res: ExpressResponse): Promise<void> {
   if (!response.body) {
@@ -184,19 +204,37 @@ router.get('/windows', authenticate, async (req: AuthRequest, res: ExpressRespon
     logger.info(`Windows client installer download for client ID: ${clientId}`);
 
     try {
+      // Wrapped so an existing client is removed first; otherwise it keeps its
+      // old name and key (see services/installerWrapper.ts).
+      if (await hasMakensis()) {
+        const { inner, clientName } = await fetchWholeInstaller(String(clientId), 'windows');
+        const built = await buildWindowsWrapper(inner, clientName);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="UrBackupClient-${clientId}.exe"`);
+        try {
+          const { size } = await stat(built.path);
+          res.setHeader('Content-Length', String(size));
+          await pipeline(createReadStream(built.path), res);
+        } finally {
+          await built.cleanup();
+        }
+        return;
+      }
+
       const { response } = await fetchPreconfiguredInstaller(String(clientId), 'windows');
-
-      const contentLength = response.headers.get('content-length');
-
       res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader('Content-Disposition', `attachment; filename="UrBackupClient-${clientId}.exe"`);
+      const contentLength = response.headers.get('content-length');
       if (contentLength) {
         res.setHeader('Content-Length', contentLength);
       }
-
       await streamResponse(response, res);
     } catch (error) {
       logger.error('Failed to fetch pre-configured installer:', error);
+      if (res.headersSent) {
+        res.destroy();
+        return;
+      }
       // Fallback to generic installer
       const installerPath = '/opt/urbackup-gui/installers/UrBackupClient.exe';
       if (existsSync(installerPath)) {
@@ -235,9 +273,11 @@ router.get('/linux', authenticate, async (req: AuthRequest, res: ExpressResponse
   logger.info(`Linux client installer download for client ID: ${clientId}`);
 
   try {
-    const { response, clientName } = await fetchPreconfiguredInstaller(String(clientId), 'linux');
+    const { inner, clientName } = await fetchWholeInstaller(String(clientId), 'linux');
 
-    const contentLength = response.headers.get('content-length');
+    // Removes an existing client's settings before UrBackup's installer runs
+    // (see services/installerWrapper.ts).
+    const body = Buffer.concat([Buffer.from(linuxWrapperHeader(clientName), 'utf8'), inner]);
     // UrBackup names the file "UrBackup Client (Name).sh"; spaces and parens make it
     // awkward to run, so use the client name reduced to a shell-friendly filename
     const safeName = clientName.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 64);
@@ -245,11 +285,8 @@ router.get('/linux', authenticate, async (req: AuthRequest, res: ExpressResponse
 
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    if (contentLength) {
-      res.setHeader('Content-Length', contentLength);
-    }
-
-    await streamResponse(response, res);
+    res.setHeader('Content-Length', String(body.length));
+    res.end(body);
   } catch (error) {
     logger.error('Failed to generate Linux client installer:', error);
     const detail = error instanceof Error ? error.message : String(error);

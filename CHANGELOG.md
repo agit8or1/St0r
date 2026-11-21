@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Installing over an existing UrBackup client now replaces its settings.** UrBackup's installers only apply the settings built into them (endpoint name, server, key) on a computer that has no client settings yet, so a computer that already had UrBackup kept its old name and key and was rejected as an unknown client. St0r's downloads now remove the existing client first:
+  - **Windows:** the `.exe` wraps UrBackup's installer. It stops the client, runs the existing UrBackup uninstaller silently, removes any leftover `UrBackup` folder, then runs UrBackup's installer silently. Building it needs `makensis`, which updates and new installs now install (`nsis` package); without it UrBackup's installer is served as before.
+  - **Linux:** the `.sh` stops the client and removes its settings and server identity (what `uninstall_urbackupclient` removes) before UrBackup's installer runs.
+- **Installer downloads are checked for length.** UrBackup sometimes closes the connection before the last bytes of the installer arrive, which could hand out a truncated installer. St0r now reads the whole installer, checks its size and retries once.
+
 ## [3.2.142] - 2026-11-21
 
 ### Added

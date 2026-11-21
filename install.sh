@@ -522,7 +522,7 @@ if [ "$INSTALL_STOR" = true ]; then
 
     # Install dependencies
     echo "[2/9] Installing system dependencies..."
-    apt-get install -y -qq curl gnupg2 nginx mariadb-server rsync sqlite3 openssh-client
+    apt-get install -y -qq curl gnupg2 nginx mariadb-server rsync sqlite3 openssh-client nsis
 
     # Install Node.js 20
     echo "[3/9] Installing Node.js 20..."

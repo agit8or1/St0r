@@ -308,6 +308,16 @@ as_service rm -f "$INSTALL_DIR/auto-update.sh"
 # rsync replaces the files rather than writing through them.
 as_service rsync -a "$SRC/version.json" "$SRC/VERSION" "$INSTALL_DIR/"
 
+# ── 5c. makensis, for the Windows installer St0r hands out ────────────────
+# St0r wraps UrBackup's Windows installer so an existing client is removed
+# first (backend/src/services/installerWrapper.ts). Optional: without makensis
+# UrBackup's installer is served as is.
+if ! command -v makensis >/dev/null 2>&1; then
+  echo "$(timestamp) Installing nsis (makensis)..."
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nsis 2>&1 \
+    || echo "$(timestamp) WARNING: could not install nsis; Windows installers will not remove an existing client first"
+fi
+
 # ── 6. Build backend, as the service user ─────────────────────────────────
 # npm ci installs exactly the release's signed package-lock.json (integrity
 # hashes included) and nothing newer; there is no `npm audit fix` here, since

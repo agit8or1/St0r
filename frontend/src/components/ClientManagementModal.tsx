@@ -291,9 +291,8 @@ export function ClientManagementModal({
               </button>
             </div>
             <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-              Letters, numbers, spaces, dashes and underscores. No apostrophes or quotes. If UrBackup was already
-              installed on the computer, uninstall it and delete <code>C:\Program Files\UrBackup</code> before running
-              the new installer, or the computer keeps its old name and key.
+              Letters, numbers, spaces, dashes and underscores. No apostrophes or quotes. The installer removes any
+              UrBackup client already on the computer, along with its old settings, before it installs.
             </p>
           </div>
 
