@@ -1,7 +1,8 @@
 {
-  "version": "3.2.142",
+  "version": "3.2.143",
   "releaseDate": "2026-11-21",
   "changelog": [
-    "The endpoint page shows \"Building installer\u2026\" with an animated bar while UrBackup builds the Windows or Linux installer, then the download progress; the buttons are disabled meanwhile."
+    "Windows and Linux installers now remove an existing UrBackup client and its old settings first, so the endpoint's name and key are used (installing over an old client kept its old name and key).",
+    "Installer downloads from UrBackup are checked for length and retried, so a truncated installer is never handed out."
   ]
 }
