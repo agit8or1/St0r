@@ -9,6 +9,7 @@ import { spawn } from 'child_process';
 import { runHelper } from '../utils/privileged.js';
 import { getUrBackupDb } from '../config/urbackupDb.js';
 import { scopeOf, filterByClientName, assertClientAccess } from '../middleware/scope.js';
+import { validateClientName } from '../utils/clientName.js';
 
 // Since st0r runs on the same server as UrBackup, we always use a single local service instance
 const urbackupService = new UrBackupService();
@@ -335,12 +336,12 @@ export async function getUsage(req: AuthRequest, res: Response): Promise<void> {
 
 export async function addClient(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { clientName } = req.body;
-
-    if (!clientName) {
-      res.status(400).json({ error: 'Client name is required' });
+    const checked = validateClientName(req.body?.clientName);
+    if ('error' in checked) {
+      res.status(400).json({ error: checked.error });
       return;
     }
+    const clientName = checked.name;
 
     const service = await getService();
 
@@ -353,6 +354,10 @@ export async function addClient(req: AuthRequest, res: Response): Promise<void> 
     res.json({ success: result, clientName });
   } catch (error) {
     logger.error('Failed to add client:', error);
+    if (error instanceof Error && error.message.includes('already exists')) {
+      res.status(409).json({ error: 'An endpoint with this name already exists' });
+      return;
+    }
     res.status(500).json({ error: 'Failed to add client' });
   }
 }
@@ -447,12 +452,12 @@ export async function getClientAuthkey(req: AuthRequest, res: Response): Promise
 export async function updateClientName(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { clientId } = req.params;
-    const { newName } = req.body;
-
-    if (!clientId || !newName) {
-      res.status(400).json({ error: 'Client ID and new name are required' });
+    const checked = validateClientName(req.body?.newName);
+    if (!clientId || 'error' in checked) {
+      res.status(400).json({ error: 'error' in checked ? checked.error : 'Client ID is required' });
       return;
     }
+    const newName = checked.name;
 
     const service = await getService();
 
