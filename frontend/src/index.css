@@ -106,6 +106,14 @@
   }
 }
 
+@theme {
+  --animate-installer-indeterminate: installer-indeterminate 1.4s ease-in-out infinite;
+  @keyframes installer-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+}
+
 @layer components {
   @keyframes heartbeat-pulse {
     0%, 28%, 100% { transform: scale(1); }
