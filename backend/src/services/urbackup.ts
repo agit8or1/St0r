@@ -1400,6 +1400,55 @@ export class UrBackupService {
     }
   }
 
+  /** POSTs to UrBackup's settings action (ses is needed in the URL and the body). */
+  private async settingsPost(params: Record<string, string>): Promise<any> {
+    const session = await this.login();
+    const response = await fetch(`${URBACKUP_API_URL}?a=settings&ses=${session}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'st0r' },
+      body: new URLSearchParams({ ...params, ses: session }).toString(),
+    });
+    return response.json();
+  }
+
+  /**
+   * UrBackup's client groups and which group each client is in. Group 0 is
+   * "Default", whose settings are the server-wide defaults. A named group's
+   * settings live under clientid = -groupid (serverinterface/settings.cpp).
+   */
+  async getGroups(): Promise<{ groups: { id: number; name: string }[]; members: { id: number; name: string; group: number; override: boolean }[] }> {
+    const result = await this.settingsPost({ sa: 'navitems' });
+    const nav = result?.navitems || {};
+    const groups = (Array.isArray(nav.groups) ? nav.groups : []).map((g: any) => ({
+      id: Number(g.id),
+      name: Number(g.id) === 0 ? 'Default' : String(g.name ?? ''),
+    }));
+    const members = (Array.isArray(nav.clients) ? nav.clients : []).map((c: any) => ({
+      id: Number(c.id), name: String(c.name ?? ''), group: Number(c.group) || 0, override: c.override === true,
+    }));
+    return { groups, members };
+  }
+
+  /** Creates a group; its settings start as a copy of the Default group's. */
+  async addGroup(name: string): Promise<{ id: number; name: string } | { exists: true }> {
+    const result = await this.settingsPost({ sa: 'groupadd', name });
+    if (result?.already_exists) return { exists: true };
+    if (!result?.add_ok || !result?.added_group) throw new Error(`UrBackup did not create the group: ${JSON.stringify(result)}`);
+    return { id: Number(result.added_group.id), name: String(result.added_group.name) };
+  }
+
+  /** Deletes a group. Its clients move back to the Default group. */
+  async removeGroup(groupId: number): Promise<void> {
+    const result = await this.settingsPost({ sa: 'groupremove', id: String(groupId) });
+    if (result?.delete_ok !== true) throw new Error(`UrBackup did not delete the group: ${JSON.stringify(result)}`);
+  }
+
+  /** Moves a client into a group (0 = Default). Its other settings are untouched. */
+  async setClientGroup(clientId: string, groupId: number): Promise<void> {
+    const result = await this.settingsPost({ sa: 'clientsettings_save', t_clientid: clientId, memberof: String(groupId) });
+    if (result?.saved_ok !== true) throw new Error(`UrBackup did not change the group: ${JSON.stringify(result)}`);
+  }
+
   async browseClientFilesystem(clientId: string, backupId: string, path: string = '/') {
     try {
       const session = await this.login();

@@ -458,8 +458,8 @@ export function Settings() {
               <div className="grid gap-6 md:grid-cols-2">
                 {renderSettingField('Default Max Full Backups', 'max_file_full', 'number', 'Default max full file backups to keep')}
                 {renderSettingField('Default Max Incremental Backups', 'max_file_incr', 'number', 'Default max incremental file backups')}
-                {renderSettingField('Min Full Backups Kept', 'min_file_full', 'number', 'Floor that even an out-of-space cleanup will not delete below. Must be lower than the max above.')}
-                {renderSettingField('Min Incremental Backups Kept', 'min_file_incr', 'number', 'Floor that even an out-of-space cleanup will not delete below. Must be lower than the max above.')}
+                {renderSettingField('Min Full Backups Kept', 'min_file_full', 'number', 'Floor that even an out-of-space cleanup will not delete below. Cannot be more than the max above.')}
+                {renderSettingField('Min Incremental Backups Kept', 'min_file_incr', 'number', 'Floor that even an out-of-space cleanup will not delete below. Cannot be more than the max above.')}
                 {renderSettingField('Default Full Backup Interval (days)', 'interval_full', 'number', 'How often to run full file backups')}
                 {renderSettingField('Default Incremental Interval (hours)', 'interval_incr', 'number', 'How often to run incremental backups')}
                 {renderSettingField('Min Full Backup Age (days)', 'min_file_full_age', 'number', 'Minimum age before deleting full backups')}
@@ -472,8 +472,8 @@ export function Settings() {
               <div className="grid gap-6 md:grid-cols-2">
                 {renderSettingField('Default Max Full Images', 'max_image_full', 'number', 'Default max full image backups to keep. Images are the largest consumer of storage — keep this tight.')}
                 {renderSettingField('Default Max Incremental Images', 'max_image_incr', 'number', 'Default max incremental image backups')}
-                {renderSettingField('Min Full Images Kept', 'min_image_full', 'number', 'Floor that even an out-of-space cleanup will not delete below. Must be lower than the max above.')}
-                {renderSettingField('Min Incremental Images Kept', 'min_image_incr', 'number', 'Floor that even an out-of-space cleanup will not delete below. Must be lower than the max above.')}
+                {renderSettingField('Min Full Images Kept', 'min_image_full', 'number', 'Floor that even an out-of-space cleanup will not delete below. Cannot be more than the max above.')}
+                {renderSettingField('Min Incremental Images Kept', 'min_image_incr', 'number', 'Floor that even an out-of-space cleanup will not delete below. Cannot be more than the max above.')}
                 {renderSettingField('Default Full Image Interval (days)', 'interval_full_image', 'number', 'How often to run full image backups')}
                 {renderSettingField('Default Incremental Interval (days)', 'interval_incr_image', 'number', 'How often to run incremental image backups')}
                 {renderSettingField('Min Full Image Age (days)', 'min_image_full_age', 'number', 'Minimum age before deleting full images')}

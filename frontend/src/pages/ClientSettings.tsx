@@ -197,12 +197,30 @@ const getDefaults = (): ClientSettings => ({
   startup_backup_delay: 0,
 });
 
+interface GroupRef { id: number; name: string }
+
+/** Keys the settings API returns that describe the endpoint, not settings to save. */
+const NOT_SETTINGS = new Set(['clientid', 'groupid', 'groupname', 'memberof', 'clientname', 'main_client', 'overwrite', 'can_edit_scripts', 'client_set_settings']);
+
+const sameValue = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Endpoint settings, or a UrBackup group's settings when the route has a
+ * :groupId (issue #57). Only the fields changed here are saved, so everything
+ * else stays inherited from the group.
+ */
 export function ClientSettings() {
-  const { clientName } = useParams<{ clientName: string }>();
+  const { clientName, groupId } = useParams<{ clientName?: string; groupId?: string }>();
+  const isGroup = groupId !== undefined;
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<ClientSettings>({});
+  // The settings as loaded, to work out what changed.
+  const [loaded, setLoaded] = useState<ClientSettings>({});
+  const [group, setGroup] = useState<GroupRef | null>(null);
+  const [groups, setGroups] = useState<GroupRef[]>([]);
+  const [groupSaving, setGroupSaving] = useState(false);
   const [clientId, setClientId] = useState<string>('');
   const [tab, setTab] = useState<'paths' | 'schedule' | 'transfer' | 'image' | 'permissions' | 'storage'>('paths');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -227,6 +245,18 @@ export function ClientSettings() {
   const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
+      if (isGroup) {
+        const resp = await fetch(`/api/groups/${encodeURIComponent(groupId!)}/settings`, { credentials: 'include' });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Failed to load group settings');
+        const cleanRaw = Object.fromEntries(Object.entries(data.settings || {}).filter(([, v]) => v !== null && v !== undefined));
+        const merged = { ...getDefaults(), ...cleanRaw };
+        setSettings(merged);
+        setLoaded(merged);
+        setGroup(data.group ?? null);
+        setGroups(data.groups ?? []);
+        return;
+      }
       const clients = await (await fetch('/api/urbackup/clients', { credentials: 'include' })).json();
       const foundClient = clients.find((c: any) => c.name === clientName);
       if (!foundClient?.id) throw new Error('Client not found');
@@ -237,13 +267,17 @@ export function ClientSettings() {
         fetch(`/api/client-settings/${foundClient.id}`, { credentials: 'include' }),
         fetch(`/api/storage-limits`, { credentials: 'include' }),
       ]);
-      if (settingsResp.status === 404) { setSettings(getDefaults()); }
+      if (settingsResp.status === 404) { setSettings(getDefaults()); setLoaded(getDefaults()); }
       else if (!settingsResp.ok) throw new Error('Failed to load settings');
       else {
         const data = await settingsResp.json();
         const raw = data.settings || data;
         const cleanRaw = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== null && v !== undefined));
-        setSettings({ ...getDefaults(), ...cleanRaw });
+        const merged = { ...getDefaults(), ...cleanRaw };
+        setSettings(merged);
+        setLoaded(merged);
+        setGroup(data.group ?? null);
+        setGroups(data.groups ?? []);
       }
 
       if (limitResp.ok) {
@@ -262,12 +296,13 @@ export function ClientSettings() {
       }
     } catch (err) {
       console.error('Failed to load settings:', err);
-      setMessage({ type: 'error', text: 'Failed to load settings' });
+      setMessage({ type: 'error', text: err instanceof Error && isGroup ? err.message : 'Failed to load settings' });
       setSettings(getDefaults());
+      setLoaded(getDefaults());
     } finally {
       setLoading(false);
     }
-  }, [clientName]);
+  }, [clientName, groupId, isGroup]);
 
   useEffect(() => { loadSettings(); }, [loadSettings]);
 
@@ -397,18 +432,52 @@ export function ClientSettings() {
     }
   };
 
+  const changeGroup = async (newGroupId: number) => {
+    setGroupSaving(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/groups/endpoints/${clientId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ groupId: newGroupId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not change the group');
+      await loadSettings();
+      const name = groups.find(g => g.id === newGroupId)?.name ?? 'the new group';
+      setMessage({ type: 'success', text: `Moved to ${name}. Settings not set on this endpoint now come from that group.` });
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Could not change the group' });
+    } finally {
+      setGroupSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
       setMessage(null);
-      const response = await fetch(`/api/client-settings/${clientId}`, {
+      // Only what changed: sending every field would turn each inherited
+      // setting into an override of this endpoint (issue #57).
+      const changed = Object.fromEntries(
+        Object.entries(settings).filter(([k, v]) => !NOT_SETTINGS.has(k) && !sameValue(v, loaded[k]))
+      );
+      if (Object.keys(changed).length === 0) {
+        setMessage({ type: 'success', text: 'No changes to save.' });
+        setTimeout(() => setMessage(null), 3000);
+        return;
+      }
+      const url = isGroup ? `/api/groups/${encodeURIComponent(groupId!)}/settings` : `/api/client-settings/${clientId}`;
+      const response = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(settings),
+        body: JSON.stringify(changed),
       });
       const data = await response.json();
       if (!response.ok || data.success === false) throw new Error(data.error || 'Save failed');
+      setLoaded(settings);
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
       setTimeout(() => setMessage(null), 3000);
     } catch (err: any) {
@@ -426,6 +495,7 @@ export function ClientSettings() {
     { id: 'permissions', label: 'Permissions' },
     { id: 'storage', label: 'Storage Limit' },
   ] as const;
+  const visibleTabs = isGroup ? tabs.filter(t => t.id !== 'storage') : tabs;
 
   if (loading) return <Layout><Loading /></Layout>;
 
@@ -435,16 +505,16 @@ export function ClientSettings() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <Tooltip text="Return to the endpoint detail page">
+            <Tooltip text={isGroup ? 'Return to the list of groups' : 'Return to the endpoint detail page'}>
               <button
-                onClick={() => navigate(`/clients/${encodeURIComponent(clientName!)}`)}
+                onClick={() => navigate(isGroup ? '/groups' : `/clients/${encodeURIComponent(clientName!)}`)}
                 className="mb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
               >
-                <ArrowLeft className="h-4 w-4" /> Back to Endpoint
+                <ArrowLeft className="h-4 w-4" /> {isGroup ? 'Back to Groups' : 'Back to Endpoint'}
               </button>
             </Tooltip>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-              <SettingsIcon className="h-8 w-8" /> Endpoint Settings — {clientName}
+              <SettingsIcon className="h-8 w-8" /> {isGroup ? `Group Settings — ${group?.name ?? ''}` : `Endpoint Settings — ${clientName}`}
             </h1>
           </div>
           <Tooltip text="Save all setting changes to the UrBackup server for this endpoint">
@@ -460,8 +530,41 @@ export function ClientSettings() {
           </div>
         )}
 
+        {/* Group */}
+        {isGroup ? (
+          <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-800 dark:text-blue-200">
+            {group?.id === 0
+              ? 'These are the server-wide defaults. Endpoints in the Default group use them, and new groups start as a copy of them. An endpoint that sets a value itself keeps its own.'
+              : 'Endpoints in this group use these settings. An endpoint that sets a value itself keeps its own.'}
+          </div>
+        ) : group && (
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Group</p>
+              <p className="text-xs mt-0.5 text-gray-600 dark:text-gray-400">
+                Settings not changed on this page come from the group's settings.{' '}
+                <button type="button" onClick={() => navigate(`/groups/${group.id}/settings`)} className="text-primary-600 dark:text-primary-400 hover:underline">
+                  Edit {group.name} group settings
+                </button>
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {groupSaving && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+              <select
+                className="input w-auto"
+                aria-label="Group"
+                value={group.id}
+                disabled={groupSaving}
+                onChange={e => changeGroup(Number(e.target.value))}
+              >
+                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
         {/* Server-managed mode banner */}
-        <div className={`rounded-lg border p-4 flex items-center justify-between gap-4 ${
+        {!isGroup && <div className={`rounded-lg border p-4 flex items-center justify-between gap-4 ${
           !bool('client_set_settings')
             ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
             : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700'
@@ -493,12 +596,12 @@ export function ClientSettings() {
               <Toggle checked={!bool('client_set_settings')} onChange={v => toggleManaged(v)} />
             </Tooltip>
           </div>
-        </div>
+        </div>}
 
         {/* Tabs */}
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex gap-6 overflow-x-auto">
-            {tabs.map(t => {
+            {visibleTabs.map(t => {
               const tabTooltips: Record<string, string> = {
                 paths: 'Which folders and files on this client to include or exclude from backups',
                 schedule: 'How often backups run and how many snapshots to keep',
@@ -529,7 +632,7 @@ export function ClientSettings() {
           {/* ── BACKUP PATHS ─────────────────────────────────────── */}
           {tab === 'paths' && (
             <>
-              {noBackupPaths && bool('allow_config_paths') && (
+              {!isGroup && noBackupPaths && bool('allow_config_paths') && (
                 <div className="rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4">
                   <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">No backup paths on client</p>
                   <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
@@ -574,11 +677,11 @@ export function ClientSettings() {
                   <Tooltip text="Add this path to the backup list">
                     <button onClick={addPath} className="btn btn-primary flex items-center gap-1"><Plus className="h-4 w-4" /> Add</button>
                   </Tooltip>
-                  <Tooltip text="Browse the client's live filesystem to pick a folder">
+                  {!isGroup && <Tooltip text="Browse the client's live filesystem to pick a folder">
                     <button onClick={() => setShowFileBrowser(true)} className="btn btn-secondary flex items-center gap-1">
                       <FolderSearch className="h-4 w-4" /> Browse
                     </button>
-                  </Tooltip>
+                  </Tooltip>}
                 </div>
                 {showFileBrowser && (
                   <ClientFileBrowser
@@ -669,7 +772,7 @@ export function ClientSettings() {
                     Apply default Windows exclusions (junction points, temp files, Windows dir)
                   </button>
                 </Tooltip>
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-1">
+                {!isGroup && <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-1">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Detect from last backup</p>
                     <Tooltip text="Scan the last backup log for paths that caused errors">
@@ -723,7 +826,7 @@ export function ClientSettings() {
                           )}
                         </>
                   )}
-                </div>
+                </div>}
                 <div className="pt-2">
                   <Row label="Backup paths are optional" hint="If enabled, the backup will succeed even if backup paths don't exist on the client.">
                     <Tooltip text="Allow backup to succeed even when configured paths don't exist on the client">

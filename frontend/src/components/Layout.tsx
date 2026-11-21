@@ -17,6 +17,7 @@ import {
   Bug,
   Usb,
   GitBranch,
+  FolderTree,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -64,6 +65,7 @@ export function Layout({ children }: LayoutProps) {
     { path: '/bare-metal-restore', label: 'Bare Metal Restore', icon: Usb, tip: 'Restore a full system image to bare metal' },
     { path: '/activities', label: 'Activities', icon: Activity, tip: 'View running and recent backup jobs' },
     { path: '/logs', label: 'Logs', icon: FileText, tip: 'Browse backup and system log entries', adminOnly: true },
+    { path: '/groups', label: 'Groups', icon: FolderTree, tip: 'UrBackup client groups and the settings their endpoints use', adminOnly: true },
     { path: '/customers', label: 'Customers', icon: Users, tip: 'Manage customer accounts and endpoint assignments' },
     { path: '/alerts', label: 'Alerts', icon: Bell, tip: 'View and manage backup alerts' },
     { path: '/reports', label: 'Reports', icon: FileText, tip: 'Generate and view backup reports' },
