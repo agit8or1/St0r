@@ -27,6 +27,11 @@ import type {
 
 // Must match the filename the Linux installer route builds, so the instructions we
 // show the user name the file they actually downloaded
+export type InstallerProgress =
+  | { phase: 'building' }
+  | { phase: 'downloading'; received: number; total?: number };
+export type InstallerProgressFn = (p: InstallerProgress) => void;
+
 export function linuxInstallerFilename(clientId?: string, clientName?: string): string {
   const safeName = (clientName || '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 64);
   return `urbackup-client-${safeName || clientId || 'linux'}.sh`;
@@ -444,8 +449,10 @@ class ApiService {
     return response.data;
   }
 
-  // Downloads an installer, surfacing the backend's JSON error instead of saving it as a file
-  private async downloadInstaller(path: string, filename: string, params: Record<string, string>): Promise<void> {
+  // Downloads an installer, surfacing the backend's JSON error instead of saving it as a file.
+  // UrBackup builds the installer before the first byte arrives, so `onProgress` reports
+  // 'building' until the response starts, then the bytes received (total when known).
+  private async downloadInstaller(path: string, filename: string, params: Record<string, string>, onProgress?: InstallerProgressFn): Promise<void> {
     const url = new URL(path, window.location.origin);
     for (const [key, value] of Object.entries(params)) {
       if (value) {
@@ -453,6 +460,7 @@ class ApiService {
       }
     }
 
+    onProgress?.({ phase: 'building' });
     const response = await fetch(url.toString(), { credentials: 'include' });
 
     if (!response.ok) {
@@ -466,7 +474,24 @@ class ApiService {
       throw new Error(message);
     }
 
-    const blob = await response.blob();
+    const total = Number(response.headers.get('content-length')) || undefined;
+    let blob: Blob;
+    if (response.body && onProgress) {
+      const reader = response.body.getReader();
+      const chunks: BlobPart[] = [];
+      let received = 0;
+      onProgress({ phase: 'downloading', received, total });
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        onProgress({ phase: 'downloading', received, total });
+      }
+      blob = new Blob(chunks);
+    } else {
+      blob = await response.blob();
+    }
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = objectUrl;
@@ -475,19 +500,21 @@ class ApiService {
     URL.revokeObjectURL(objectUrl);
   }
 
-  async downloadWindowsInstaller(authKey?: string, clientId?: string): Promise<void> {
+  async downloadWindowsInstaller(authKey?: string, clientId?: string, onProgress?: InstallerProgressFn): Promise<void> {
     await this.downloadInstaller(
       '/api/client-installer/windows',
       `UrBackupClient-${clientId || 'windows'}.exe`,
-      { authkey: authKey || '', clientid: clientId || '' }
+      { authkey: authKey || '', clientid: clientId || '' },
+      onProgress
     );
   }
 
-  async downloadLinuxInstaller(authKey?: string, clientId?: string, clientName?: string): Promise<void> {
+  async downloadLinuxInstaller(authKey?: string, clientId?: string, clientName?: string, onProgress?: InstallerProgressFn): Promise<void> {
     await this.downloadInstaller(
       '/api/client-installer/linux',
       linuxInstallerFilename(clientId, clientName),
-      { authkey: authKey || '', clientid: clientId || '' }
+      { authkey: authKey || '', clientid: clientId || '' },
+      onProgress
     );
   }
 

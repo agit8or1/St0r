@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Progress while an installer is built.** UrBackup builds the Windows and Linux installers when you ask for them, which can take a while, and nothing showed until the file was ready. The endpoint page now shows "Building Windows installer…" with an animated bar, then the download progress, and disables the buttons so the installer isn't requested several times. After a Windows download it says how to install it.
+
 ## [3.2.141] - 2026-11-21
 
 ### Fixed
