@@ -28,7 +28,7 @@ import { Loading } from '../components/Loading';
 import { BackupSchedule } from '../components/BackupSchedule';
 import { Tooltip } from '../components/Tooltip';
 import { DeleteEndpointDialog, DisableEndpointDialog } from '../components/EndpointDialogs';
-import { api, linuxInstallerFilename } from '../services/api';
+import { api, linuxInstallerFilename, type InstallerProgress } from '../services/api';
 import type { Client, Backup } from '../types';
 import { formatBytes, formatTimeAgo, formatTimestamp, formatDuration } from '../utils/format';
 import { useAuth } from '../hooks/useAuth';
@@ -49,6 +49,7 @@ export function ClientDetail() {
   const [loadingAuthKey, setLoadingAuthKey] = useState(false);
   const [serverInfo, setServerInfo] = useState<{ serverIP: string; serverPort: string; serverUrl: string } | null>(null);
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [installerBuild, setInstallerBuild] = useState<{ platform: 'windows' | 'linux'; progress: InstallerProgress } | null>(null);
   const [installerMessage, setInstallerMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [deletingBackupId, setDeletingBackupId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -176,7 +177,9 @@ export function ClientDetail() {
   };
 
   const handleDownloadInstaller = async (platform: 'windows' | 'linux') => {
+    if (installerBuild) return;
     setInstallerMessage(null);
+    const onProgress = (progress: InstallerProgress) => setInstallerBuild({ platform, progress });
     try {
       if (!client?.id) {
         setInstallerMessage({ type: 'error', text: 'Client ID not available.' });
@@ -187,9 +190,13 @@ export function ClientDetail() {
       // installer, so nothing here needs to read the key — which is what lets a
       // read-only account install an agent on its own endpoint.
       if (platform === 'windows') {
-        await api.downloadWindowsInstaller(undefined, client.id.toString());
+        await api.downloadWindowsInstaller(undefined, client.id.toString(), onProgress);
+        setInstallerMessage({
+          type: 'success',
+          text: `Installer downloaded. Run UrBackupClient-${client.id}.exe on the Windows computer. If UrBackup was installed there before, uninstall it and delete C:\\Program Files\\UrBackup first.`,
+        });
       } else {
-        await api.downloadLinuxInstaller(undefined, client.id.toString(), clientName);
+        await api.downloadLinuxInstaller(undefined, client.id.toString(), clientName, onProgress);
         setInstallerMessage({
           type: 'success',
           text: `Installer downloaded. Copy it to the Linux machine and run:  sudo sh ${linuxInstallerFilename(client.id.toString(), clientName)}`,
@@ -201,6 +208,8 @@ export function ClientDetail() {
         type: 'error',
         text: error instanceof Error ? error.message : 'Failed to prepare download. Please try again.',
       });
+    } finally {
+      setInstallerBuild(null);
     }
   };
 
@@ -414,6 +423,8 @@ export function ClientDetail() {
             </div>
           )}
 
+          {installerBuild && <InstallerBuildStatus {...installerBuild} />}
+
           {installerMessage && (
             <div className={`mb-4 p-3 rounded-lg border ${
               installerMessage.type === 'success'
@@ -427,9 +438,13 @@ export function ClientDetail() {
           <div className="grid gap-3 md:grid-cols-3">
             <button
               onClick={() => handleDownloadInstaller('windows')}
-              className="flex items-center gap-3 p-4 rounded-lg bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group"
+              disabled={!!installerBuild}
+              aria-busy={installerBuild?.platform === 'windows'}
+              className="flex items-center gap-3 p-4 rounded-lg bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:hover:bg-white dark:disabled:hover:bg-gray-800 disabled:opacity-60 disabled:cursor-wait transition-colors group"
             >
-              <Monitor className="h-8 w-8 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />
+              {installerBuild?.platform === 'windows'
+                ? <Loader2 className="h-8 w-8 text-green-600 dark:text-green-400 animate-spin" />
+                : <Monitor className="h-8 w-8 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />}
               <div className="text-left">
                 <p className="font-semibold text-gray-900 dark:text-gray-100">Windows Client</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Preconfigured .exe installer</p>
@@ -437,9 +452,13 @@ export function ClientDetail() {
             </button>
             <button
               onClick={() => handleDownloadInstaller('linux')}
-              className="flex items-center gap-3 p-4 rounded-lg bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group"
+              disabled={!!installerBuild}
+              aria-busy={installerBuild?.platform === 'linux'}
+              className="flex items-center gap-3 p-4 rounded-lg bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:hover:bg-white dark:disabled:hover:bg-gray-800 disabled:opacity-60 disabled:cursor-wait transition-colors group"
             >
-              <ServerIcon className="h-8 w-8 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />
+              {installerBuild?.platform === 'linux'
+                ? <Loader2 className="h-8 w-8 text-green-600 dark:text-green-400 animate-spin" />
+                : <ServerIcon className="h-8 w-8 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />}
               <div className="text-left">
                 <p className="font-semibold text-gray-900 dark:text-gray-100">Linux Client</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Preconfigured installer script</p>
@@ -848,5 +867,43 @@ export function ClientDetail() {
         />
       )}
     </Layout>
+  );
+}
+
+function formatMB(bytes: number): string {
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+/** Shown while UrBackup builds the installer (which can take a while) and while it downloads. */
+function InstallerBuildStatus({ platform, progress }: { platform: 'windows' | 'linux'; progress: InstallerProgress }) {
+  const name = platform === 'windows' ? 'Windows' : 'Linux';
+  const pct = progress.phase === 'downloading' && progress.total
+    ? Math.min(100, Math.round((progress.received / progress.total) * 100))
+    : null;
+  return (
+    <div className="mb-4 p-4 rounded-lg border bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" role="status" aria-live="polite">
+      <div className="flex items-center gap-3">
+        <Loader2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400 animate-spin" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-green-800 dark:text-green-200">
+            {progress.phase === 'building'
+              ? `Building ${name} installer…`
+              : `Downloading ${name} installer… ${formatMB(progress.received)}${progress.total ? ` of ${formatMB(progress.total)}` : ''}`}
+          </p>
+          <p className="text-xs text-green-700 dark:text-green-300">
+            {progress.phase === 'building'
+              ? 'UrBackup is packaging the installer with this endpoint\'s settings. This can take up to a minute.'
+              : 'Your browser saves the file when the download finishes.'}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-green-200 dark:bg-green-900/60">
+        {pct === null ? (
+          <div className="h-full w-1/3 rounded-full bg-green-600 dark:bg-green-400 animate-installer-indeterminate" />
+        ) : (
+          <div className="h-full rounded-full bg-green-600 dark:bg-green-400 transition-[width] duration-200" style={{ width: `${pct}%` }} />
+        )}
+      </div>
+    </div>
   );
 }
