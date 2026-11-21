@@ -61,7 +61,7 @@ jobs:
       - name: Install test tools
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends gdisk qemu-utils openssh-server
+          sudo apt-get install -y --no-install-recommends gdisk qemu-utils openssh-server nsis
 
       # Runs every node:test file in backend/tests, agent/tests and frontend/tests, if any.
       - name: Test
