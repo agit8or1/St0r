@@ -4,6 +4,7 @@ import { UrBackupService } from '../services/urbackup.js';
 import { logger } from '../utils/logger.js';
 import { query } from '../config/database.js';
 import { assertClientAccess } from '../middleware/scope.js';
+import { flattenClientSettings } from '../utils/urbackupSettings.js';
 
 const urbackupService = new UrBackupService();
 
@@ -11,7 +12,8 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
   try {
     const { clientId } = req.params;
 
-    if (!clientId) {
+    // Endpoints only: UrBackup keeps group settings under clientid <= 0.
+    if (!clientId || !/^[1-9]\d*$/.test(clientId)) {
       res.status(400).json({ error: 'Client ID is required' });
       return;
     }
@@ -19,26 +21,9 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
     if (!(await assertClientAccess(req, res, { id: clientId }))) return;
 
     const result = await urbackupService.getClientSettings(clientId);
-    // UrBackup returns settings as {key: {use, value, value_client, value_group}}
-    // use=1: client-specific override (use 'value')
-    // use=2: group/global default (use 'value', which UrBackup resolves to group/global)
-    // 'value' is always the resolved effective value regardless of use
-    const rawSettings = result?.settings || result || {};
-    const settings: Record<string, any> = {};
-    const useValues: Record<string, number> = {};
-    for (const [key, val] of Object.entries(rawSettings)) {
-      if (val && typeof val === 'object' && !Array.isArray(val)) {
-        const v = val as any;
-        if ('value' in v) {
-          settings[key] = v.value;
-        }
-        if ('use' in v) {
-          useValues[key] = v.use;
-        }
-      } else if (typeof val !== 'object') {
-        settings[key] = val;
-      }
-    }
+    // Inherited settings come back with value_group only (issue #57: the page
+    // showed St0r's built-in defaults instead of the group's values).
+    const { settings, useValues, inherited } = flattenClientSettings(result?.settings || result || {});
 
     // Read managed mode state from MariaDB (reliable — UrBackup does not return custom keys via API).
     // Fall back to tray password check if no MariaDB record exists yet.
@@ -61,7 +46,17 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
       settings['client_set_settings'] = !(typeof trayPw === 'string' && trayPw.length > 0);
     }
 
-    res.json({ settings, useValues });
+    let group: { id: number; name: string } | null = null;
+    let groups: { id: number; name: string }[] = [];
+    try {
+      groups = (await urbackupService.getGroups()).groups;
+      const memberof = Number(settings.memberof ?? 0);
+      group = groups.find(g => g.id === memberof) ?? { id: memberof, name: memberof === 0 ? 'Default' : `Group ${memberof}` };
+    } catch (err) {
+      logger.warn('Could not read UrBackup groups:', err);
+    }
+
+    res.json({ settings, useValues, inherited, group, groups });
   } catch (error: any) {
     // UrBackup API "error: 1" means unknown client or unauthenticated — not a server crash
     if (error?.message?.includes('UrBackup API error: 1')) {
@@ -78,7 +73,8 @@ export async function setClientSettings(req: AuthRequest, res: Response): Promis
     const { clientId } = req.params;
     const settings = req.body;
 
-    if (!clientId) {
+    // Endpoints only: UrBackup keeps group settings under clientid <= 0.
+    if (!clientId || !/^[1-9]\d*$/.test(clientId)) {
       res.status(400).json({ error: 'Client ID is required' });
       return;
     }

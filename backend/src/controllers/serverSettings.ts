@@ -41,8 +41,8 @@ const DEFAULT_URBACKUP_SETTINGS: Record<string, any> = {
   no_file_backups: false,
 
   // File backup retention. max_* is the normal ceiling; min_* is the floor that
-  // even an out-of-space emergency cleanup will not delete below, so every min_*
-  // must stay strictly under its max_* or retention silently stops pruning.
+  // even an out-of-space emergency cleanup will not delete below. A min_* above
+  // its max_* leaves an emergency cleanup nothing it may delete.
   max_file_full: 3,
   max_file_incr: 20,
   min_file_full: 2,
@@ -132,10 +132,12 @@ function validateRetention(
     if (minVal < 0 || maxVal < 0) {
       return `Retention counts for ${label} cannot be negative`;
     }
-    if (minVal >= maxVal) {
-      return `Minimum ${label} (${min}=${minVal}) must be less than the maximum ` +
-        `(${max}=${maxVal}), otherwise old backups are never pruned and the ` +
-        `storage volume will fill up.`;
+    // Equal is fine: UrBackup's emergency cleanup uses min_* in place of max_*
+    // (server_cleanup.cpp), so min = max = 1 keeps exactly one (issue #57).
+    if (minVal > maxVal) {
+      return `Minimum ${label} (${min}=${minVal}) cannot be more than the maximum ` +
+        `(${max}=${maxVal}), otherwise an out-of-space cleanup cannot free ` +
+        `any space and the storage volume will fill up.`;
     }
   }
   return null;

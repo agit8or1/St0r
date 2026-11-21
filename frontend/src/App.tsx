@@ -13,6 +13,7 @@ import { Activities } from './pages/Activities';
 import { Logs } from './pages/Logs';
 import { Settings } from './pages/Settings';
 import { Customers } from './pages/Customers';
+import { Groups } from './pages/Groups';
 import { Alerts } from './pages/Alerts';
 import { Reports } from './pages/Reports';
 import { Users } from './pages/Users';
@@ -101,6 +102,22 @@ function App() {
           />
           <Route
             path="/clients/:clientName/settings"
+            element={
+              <AdminRoute>
+                <ClientSettings />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/groups"
+            element={
+              <AdminRoute>
+                <Groups />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/groups/:groupId/settings"
             element={
               <AdminRoute>
                 <ClientSettings />

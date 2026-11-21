@@ -106,6 +106,9 @@ const serializeBackupPaths = (paths: BackupPath[]): string => {
 
 export function BackupSchedule({ clientId }: BackupScheduleProps) {
   const [settings, setSettings] = useState<ScheduleSettings | null>(null);
+  // As loaded, so only changed fields are saved and the rest stay inherited
+  // from the endpoint's group (issue #57).
+  const [loaded, setLoaded] = useState<{ settings: ScheduleSettings; dirs: string; letters: string }>({ settings: {}, dirs: '', letters: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,10 +152,11 @@ export function BackupSchedule({ clientId }: BackupScheduleProps) {
         setSettings(normalized);
 
         // Parse backup paths
+        const paths = data.settings.default_dirs ? parseBackupPaths(data.settings.default_dirs) : [];
         if (data.settings.default_dirs) {
-          const paths = parseBackupPaths(data.settings.default_dirs);
           setBackupPaths(paths);
         }
+        let loadedLetters = '';
 
         // Parse image volumes - handle corrupted values
         if (data.settings.image_letters &&
@@ -166,9 +170,11 @@ export function BackupSchedule({ clientId }: BackupScheduleProps) {
             .filter((v: string) => v.trim())
             .filter((v: string) => v !== '[object Object]' && v !== 'NaN' && v !== 'undefined');
           setImageVolumes(volumes);
+          loadedLetters = volumes.join(';');
         } else {
           setImageVolumes([]);
         }
+        setLoaded({ settings: normalized, dirs: serializeBackupPaths(paths), letters: loadedLetters });
       } else {
         console.warn('No settings in response:', data);
         setSettings({});
@@ -204,14 +210,25 @@ export function BackupSchedule({ clientId }: BackupScheduleProps) {
       setError(null);
       setSuccessMessage(null);
 
-      // Serialize backup paths and image volumes before saving
-      const updatedSettings = {
-        ...settings,
-        default_dirs: serializeBackupPaths(backupPaths),
-        image_letters: imageVolumes.join(';')
-      };
+      // Only what changed: sending every field would make each setting the
+      // endpoint inherits from its group an override of its own.
+      const updatedSettings: Record<string, any> = {};
+      for (const [k, v] of Object.entries(settings)) {
+        if (k === 'default_dirs' || k === 'image_letters' || k === 'client_set_settings') continue;
+        if (JSON.stringify(v) !== JSON.stringify((loaded.settings as Record<string, any>)[k])) updatedSettings[k] = v;
+      }
+      const dirs = serializeBackupPaths(backupPaths);
+      if (dirs !== loaded.dirs) updatedSettings.default_dirs = dirs;
+      const letters = imageVolumes.join(';');
+      if (letters !== loaded.letters) updatedSettings.image_letters = letters;
 
+      if (Object.keys(updatedSettings).length === 0) {
+        setSuccessMessage('No changes to save.');
+        setTimeout(() => setSuccessMessage(null), 3000);
+        return;
+      }
       await api.updateClientSettings(clientId, updatedSettings);
+      setLoaded({ settings, dirs, letters });
       setSuccessMessage('Backup schedule updated successfully!');
 
       // Clear success message after 3 seconds

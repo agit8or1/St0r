@@ -32,6 +32,7 @@ import replicationRoutes from './routes/replication.js';
 import storageLimitsRoutes from './routes/storageLimits.js';
 import diskGuardRoutes from './routes/diskGuard.js';
 import serversRoutes from './routes/servers.js';
+import groupsRoutes from './routes/groups.js';
 import recoveryRoutes from './routes/recovery.js';
 import alertsRoutes from './routes/alerts.js';
 import { serveArtifact } from './services/drills/artifacts.js';
@@ -154,6 +155,7 @@ app.use('/api/replication', replicationRoutes);
 app.use('/api/recovery', recoveryRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/storage-limits', storageLimitsRoutes);
+app.use('/api/groups', groupsRoutes);
 app.use('/api/disk-guard', diskGuardRoutes);
 // Public agent install endpoints (no auth — token-protected)
 app.get('/api/agent-install/:token', serveInstallScript);
