@@ -654,7 +654,6 @@ function removeVhdWorkDir(dir: string): void {
 export async function convertAndDownloadImageBackup(req: AuthRequest, res: Response): Promise<void> {
   const { clientId, backupId } = req.params;
   let tmpDir: string | null = null;
-  let tmpFile: string | null = null;
 
   try {
     if (!(await assertClientAccess(req, res, { id: clientId }))) return;
@@ -723,7 +722,7 @@ export async function convertAndDownloadImageBackup(req: AuthRequest, res: Respo
     const m = /^(\/tmp\/st0r-vhd-[A-Za-z0-9]{10})\/[^/]+$/.exec(produced);
     if (!m) throw new Error('Unexpected output from the decompress step');
     tmpDir = m[1];
-    tmpFile = produced;
+    const tmpFile = produced;
     const fileName = path.basename(srcPath);
 
     const vhdStat = fs.statSync(tmpFile);

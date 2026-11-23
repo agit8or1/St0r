@@ -331,7 +331,7 @@ export function Dashboard() {
                   margin or they are clipped at the container edge. */}
               <PieChart margin={{ top: 4, right: 62, bottom: 4, left: 62 }}>
                 <Pie data={statusData} cx="50%" cy="50%" labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={58} dataKey="value">
                   {statusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>

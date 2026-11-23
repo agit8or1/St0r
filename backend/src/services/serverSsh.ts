@@ -205,7 +205,7 @@ export async function installAgentViaSsh(
       const { stdout } = await execFileAsync('bash', ['-c', tarCmd]);
       agentTarB64 = stdout;
     } catch (e: any) {
-      throw new Error(`Failed to pack agent: ${e.message}`);
+      throw new Error(`Failed to pack agent: ${e.message}`, { cause: e });
     }
 
     // Upload and extract on remote
