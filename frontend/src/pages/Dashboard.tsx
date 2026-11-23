@@ -7,7 +7,7 @@ import {
   CheckCircle,
   GitBranch,
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ChartTooltip } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip as ChartTooltip } from 'recharts';
 import { Layout } from '../components/Layout';
 import { Loading } from '../components/Loading';
 import { Tooltip } from '../components/Tooltip';
@@ -326,18 +326,30 @@ export function Dashboard() {
             <Tooltip text="Proportion of endpoints that are currently online vs offline">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 cursor-default inline-block">Endpoint Status</h2>
             </Tooltip>
-            <ResponsiveContainer width="100%" height={160}>
-              {/* Labels render outside the arc, so the chart needs horizontal
-                  margin or they are clipped at the container edge. */}
-              <PieChart margin={{ top: 4, right: 62, bottom: 4, left: 62 }}>
-                <Pie data={statusData} cx="50%" cy="50%" labelLine={false}
-                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                  outerRadius={58} dataKey="value">
-                  {statusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+            {/* The legend sits beside the pie: labels drawn outside the arc were
+                clipped at the card edge. Empty slices are left out, or they
+                draw a stray separator line. */}
+            <div className="flex items-center justify-center gap-6 h-[160px]">
+              <PieChart width={130} height={130}>
+                <Pie data={statusData.filter(d => d.value > 0)} cx="50%" cy="50%"
+                  outerRadius={60} dataKey="value" stroke="none" isAnimationActive={false}>
+                  {statusData.filter(d => d.value > 0).map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                 </Pie>
                 <ChartTooltip />
               </PieChart>
-            </ResponsiveContainer>
+              <ul className="space-y-2 text-sm">
+                {statusData.map(entry => (
+                  <li key={entry.name} className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                    <span>{entry.name}</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{entry.value}</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      ({onlineClients + offlineClients ? Math.round((entry.value / (onlineClients + offlineClients)) * 100) : 0}%)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {/* Backup Job Stats */}
