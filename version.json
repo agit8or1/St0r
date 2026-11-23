@@ -1,7 +1,7 @@
 {
-  "version": "3.2.145",
+  "version": "3.2.146",
   "releaseDate": "2026-11-23",
   "changelog": [
-    "Two-factor authentication can be turned on from the Profile page again, and turned off from Profile or Settings (it now asks for a current code) (issue #60)."
+    "Dependency updates: ESLint 10, recharts 3, express-rate-limit 8, nodemailer 10.6.1, lucide-react 1.77.0, react-router-dom 7.18.6."
   ]
 }

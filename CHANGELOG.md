@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.146] - 2026-11-23
+
+### Changed
+- **Dependency updates** ([#69](https://github.com/agit8or1/St0r/pull/69)): ESLint 10 and `@eslint/js` 10, recharts 3, express-rate-limit 8, nodemailer 10.6.1, lucide-react 1.77.0 and react-router-dom 7.18.6. Errors rethrown by the backend now keep the original error as their `cause`.
+
 ## [3.2.145] - 2026-11-23
 
 ### Fixed
