@@ -35,7 +35,7 @@ export async function openUrBackupDb(): Promise<Database> {
   } catch (error) {
     db = null;
     logger.error(`Failed to connect to UrBackup database at ${URBACKUP_DB_PATH}:`, error);
-    throw new Error(`Cannot open UrBackup database at ${URBACKUP_DB_PATH}: ${(error as any)?.message || error}. Check file exists and is readable by the service user.`);
+    throw new Error(`Cannot open UrBackup database at ${URBACKUP_DB_PATH}: ${(error as any)?.message || error}. Check file exists and is readable by the service user.`, { cause: error });
   }
 }
 
@@ -106,7 +106,7 @@ export async function openUrBackupSettingsDbReadWrite(): Promise<Database> {
     return rwDb;
   } catch (error) {
     logger.error('Failed to open read-write connection to UrBackup settings database:', error);
-    throw new Error(`Failed to open settings DB: ${error}`);
+    throw new Error(`Failed to open settings DB: ${error}`, { cause: error });
   }
 }
 
@@ -129,6 +129,6 @@ export async function openUrBackupDbReadWrite(): Promise<Database> {
     return rwDb;
   } catch (error) {
     logger.error('Failed to open read-write connection to UrBackup database:', error);
-    throw new Error(`Failed to open read-write connection: ${error}`);
+    throw new Error(`Failed to open read-write connection: ${error}`, { cause: error });
   }
 }

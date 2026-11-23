@@ -314,7 +314,7 @@ export class UrBackupDbService {
       // Note: UrBackup doesn't provide real-time progress via database or API in version 2.5.34
       const mappedActivities = allActivities.map((activity) => {
         // Determine action based on activity state
-        let action = '';
+        let action: string;
         if (activity.preparing) {
           action = 'Preparing backup (indexing)';
         } else if (activity.size_calculated === 0) {

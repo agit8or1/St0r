@@ -95,7 +95,7 @@ export class DrillRunner {
     let result: Partial<RunRecord> = {};
     let failure: DrillError | null = null;
     let evidence = run.evidence;
-    let attempt = 0;
+    let attempt: number;
     let inFlight: Promise<void> = Promise.resolve();
     try {
       for (attempt = 1; attempt <= maxAttempts; attempt++) {

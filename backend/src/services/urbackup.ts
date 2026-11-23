@@ -219,7 +219,7 @@ export class UrBackupService {
       // Preserve the underlying reason (wrong password, missing password, network,
       // etc.) so the UI shows something actionable instead of a generic message.
       const detail = error?.message ? `: ${error.message}` : '';
-      throw new Error(`Failed to login to UrBackup server${detail}`);
+      throw new Error(`Failed to login to UrBackup server${detail}`, { cause: error });
     }
   }
 
@@ -353,7 +353,7 @@ export class UrBackupService {
           logger.info(`[UrBackup API] <== Empty response, treating as success`);
           return { success: true };
         }
-        throw new Error(`Invalid JSON response: ${responseText}`);
+        throw new Error(`Invalid JSON response: ${responseText}`, { cause: parseError });
       }
 
       // If a session-required action returns error:1, our cached session is stale — re-login and retry once
@@ -416,7 +416,7 @@ export class UrBackupService {
               logger.info(`[UrBackup API] <== Retry empty response, treating as success`);
               return { success: true };
             }
-            throw new Error(`Invalid JSON response: ${authResponseText}`);
+            throw new Error(`Invalid JSON response: ${authResponseText}`, { cause: parseError });
           }
         } catch (authError) {
           logger.warn('[UrBackup API] Authentication failed, using unauthenticated request:', authError);
@@ -605,7 +605,7 @@ export class UrBackupService {
       } catch (apiErr) {
         logger.error('Both SQLite DB and UrBackup API failed for getClients:', apiErr);
         // Re-throw the original DB error with context
-        throw new Error(`Cannot read clients: DB error (${(dbError as any)?.message || dbError}). UrBackup API also unavailable: ${(apiErr as any)?.message || apiErr}`);
+        throw new Error(`Cannot read clients: DB error (${(dbError as any)?.message || dbError}). UrBackup API also unavailable: ${(apiErr as any)?.message || apiErr}`, { cause: apiErr });
       }
     }
 
@@ -885,7 +885,7 @@ export class UrBackupService {
       return result;
     } catch (error: any) {
       logger.error(`Failed to start full file backup for ${clientName}:`, error.message);
-      throw new Error(`Failed to start full file backup: ${error.message}`);
+      throw new Error(`Failed to start full file backup: ${error.message}`, { cause: error });
     }
   }
 
@@ -910,7 +910,7 @@ export class UrBackupService {
       return result;
     } catch (error: any) {
       logger.error(`Failed to start incremental file backup for ${clientName}:`, error.message);
-      throw new Error(`Failed to start incremental file backup: ${error.message}`);
+      throw new Error(`Failed to start incremental file backup: ${error.message}`, { cause: error });
     }
   }
 
@@ -933,7 +933,7 @@ export class UrBackupService {
       return result;
     } catch (error: any) {
       logger.error(`Failed to start full image backup for ${clientName}:`, error.message);
-      throw new Error(`Failed to start full image backup: ${error.message}`);
+      throw new Error(`Failed to start full image backup: ${error.message}`, { cause: error });
     }
   }
 
@@ -956,7 +956,7 @@ export class UrBackupService {
       return result;
     } catch (error: any) {
       logger.error(`Failed to start incremental image backup for ${clientName}:`, error.message);
-      throw new Error(`Failed to start incremental image backup: ${error.message}`);
+      throw new Error(`Failed to start incremental image backup: ${error.message}`, { cause: error });
     }
   }
 
@@ -1519,7 +1519,7 @@ export class UrBackupService {
       };
     } catch (error: any) {
       logger.error(`Failed to add client ${clientName}:`, error.message);
-      throw new Error(`Failed to add client: ${error.message}`);
+      throw new Error(`Failed to add client: ${error.message}`, { cause: error });
     }
   }
 
@@ -1559,7 +1559,7 @@ export class UrBackupService {
       return authkey;
     } catch (error: any) {
       logger.error(`Failed to get auth key for client ${clientId}:`, error.message);
-      throw new Error(`Failed to get client authentication key: ${error.message}`);
+      throw new Error(`Failed to get client authentication key: ${error.message}`, { cause: error });
     }
   }
 
@@ -1571,7 +1571,7 @@ export class UrBackupService {
       return { success: true };
     } catch (error: any) {
       logger.error(`Failed to update client name:`, error.message);
-      throw new Error(`Failed to update client name: ${error.message}`);
+      throw new Error(`Failed to update client name: ${error.message}`, { cause: error });
     }
   }
 
@@ -1591,7 +1591,7 @@ export class UrBackupService {
       return newAuthkey;
     } catch (error: any) {
       logger.error(`Failed to regenerate auth key for client ${clientId}:`, error.message);
-      throw new Error(`Failed to regenerate client authentication key: ${error.message}`);
+      throw new Error(`Failed to regenerate client authentication key: ${error.message}`, { cause: error });
     }
   }
 }
