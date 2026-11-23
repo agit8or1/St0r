@@ -1,17 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   User,
   Mail,
   Lock,
   Shield,
-  Smartphone,
-  Key,
   Check,
   X,
-  Copy
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { Tooltip } from '../components/Tooltip';
+import { TwoFactorSection } from '../components/TwoFactorSection';
 import { useAuth } from '../hooks/useAuth';
 
 export function Profile() {
@@ -23,34 +21,6 @@ export function Profile() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  // 2FA
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [showQRCode, setShowQRCode] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const [secret, setSecret] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-
-  useEffect(() => {
-    loadTwoFactorStatus();
-  }, []);
-
-  const loadTwoFactorStatus = async () => {
-    try {
-      const response = await fetch('/api/profile/2fa/status', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTwoFactorEnabled(data.enabled);
-      }
-    } catch (err) {
-      console.error('Failed to load 2FA status:', err);
-    }
-  };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,91 +63,6 @@ export function Profile() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEnable2FA = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/profile/2fa/enable', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to enable 2FA');
-      }
-
-      const data = await response.json();
-      setQrCodeUrl(data.qrCode);
-      setSecret(data.secret);
-      setShowQRCode(true);
-      setMessage({ type: 'success', text: 'Scan the QR code with your authenticator app' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerify2FA = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/profile/2fa/verify', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ code: verificationCode })
-      });
-
-      if (!response.ok) {
-        throw new Error('Invalid verification code');
-      }
-
-      setTwoFactorEnabled(true);
-      setShowQRCode(false);
-      setVerificationCode('');
-      setMessage({ type: 'success', text: '2FA enabled successfully!' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDisable2FA = async () => {
-    if (!confirm('Are you sure you want to disable two-factor authentication?')) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch('/api/profile/2fa/disable', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to disable 2FA');
-      }
-
-      setTwoFactorEnabled(false);
-      setMessage({ type: 'success', text: '2FA disabled successfully' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const copySecret = () => {
-    navigator.clipboard.writeText(secret);
-    setMessage({ type: 'success', text: 'Secret copied to clipboard' });
   };
 
   return (
@@ -330,126 +215,7 @@ export function Profile() {
 
         {/* Two-Factor Authentication */}
         <div className="card">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-            <Smartphone className="h-5 w-5" />
-            Two-Factor Authentication (2FA)
-          </h2>
-
-          {!twoFactorEnabled && !showQRCode && (
-            <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-400">
-                Add an extra layer of security to your account by enabling two-factor authentication.
-                You'll need an authenticator app like Google Authenticator, Authy, or Microsoft Authenticator.
-              </p>
-
-              <Tooltip text="Begin 2FA setup — you will scan a QR code with your authenticator app">
-                <button
-                  onClick={handleEnable2FA}
-                  disabled={loading}
-                  className="btn btn-primary"
-                >
-                  <Key className="h-4 w-4 mr-2" />
-                  {loading ? 'Setting up...' : 'Enable 2FA'}
-                </button>
-              </Tooltip>
-            </div>
-          )}
-
-          {showQRCode && (
-            <div className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Step 1: Scan QR Code</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Open your authenticator app and scan this QR code:
-                </p>
-
-                <Tooltip text="Scan with Google Authenticator, Authy, or any TOTP app">
-                  <div className="bg-white p-4 rounded-lg inline-block">
-                    <img src={qrCodeUrl} alt="2FA QR Code" className="w-48 h-48" />
-                  </div>
-                </Tooltip>
-
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    Or manually enter this secret key:
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Tooltip text="TOTP secret — paste into your authenticator app manually" className="flex-1">
-                      <code className="flex-1 p-2 bg-gray-900 text-green-400 rounded-sm font-mono text-sm break-all">
-                        {secret}
-                      </code>
-                    </Tooltip>
-                    <Tooltip text="Copy the secret key to clipboard">
-                      <button
-                        onClick={copySecret}
-                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-sm"
-                        title="Copy secret"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Step 2: Verify Code</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Enter the 6-digit code from your authenticator app:
-                </p>
-
-                <div className="flex items-center gap-2">
-                  <Tooltip text="6-digit one-time code shown in your authenticator app">
-                    <input
-                      type="text"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="input w-32 text-center text-lg font-mono"
-                      placeholder="000000"
-                      maxLength={6}
-                    />
-                  </Tooltip>
-                  <Tooltip text="Confirm the code and activate 2FA on your account">
-                    <button
-                      onClick={handleVerify2FA}
-                      disabled={loading || verificationCode.length !== 6}
-                      className="btn btn-primary"
-                    >
-                      {loading ? 'Verifying...' : 'Verify & Enable'}
-                    </button>
-                  </Tooltip>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {twoFactorEnabled && (
-            <div className="space-y-4">
-              <Tooltip text="2FA is active — a code is required on every login" className="block">
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">2FA is Enabled</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Your account is protected with two-factor authentication
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Tooltip>
-
-              <Tooltip text="Remove 2FA from your account — login will require only password">
-                <button
-                  onClick={handleDisable2FA}
-                  disabled={loading}
-                  className="btn bg-red-600 hover:bg-red-700 text-white"
-                >
-                  {loading ? 'Disabling...' : 'Disable 2FA'}
-                </button>
-              </Tooltip>
-            </div>
-          )}
+          <TwoFactorSection />
         </div>
       </div>
     </Layout>

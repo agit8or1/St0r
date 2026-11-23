@@ -85,13 +85,13 @@ export async function setup2FA(req: AuthRequest, res: Response): Promise<void> {
 export async function verify2FA(req: AuthRequest, res: Response): Promise<void> {
   try {
     const userId = (req.user as any)?.userId;
-    const { token } = req.body;
+    const { token } = req.body ?? {};
 
     logger.info(`verify2FA: userId=${userId}, token=${token ? token.substring(0, 2) + '****' : 'undefined'}`);
 
     if (!token) {
       logger.warn('verify2FA: Token is missing from request body');
-      res.status(400).json({ error: 'Token is required' });
+      res.status(400).json({ error: 'Enter the 6-digit code from your authenticator app' });
       return;
     }
 
@@ -122,7 +122,7 @@ export async function verify2FA(req: AuthRequest, res: Response): Promise<void> 
 
     if (!verified) {
       logger.warn('verify2FA: Invalid token provided');
-      res.status(400).json({ error: 'Invalid token' });
+      res.status(400).json({ error: 'That code is not valid. Enter the current 6-digit code from your authenticator app.' });
       return;
     }
 
@@ -145,10 +145,10 @@ export async function verify2FA(req: AuthRequest, res: Response): Promise<void> 
 export async function enable2FA(req: AuthRequest, res: Response): Promise<void> {
   try {
     const userId = (req.user as any)?.userId;
-    const { token } = req.body;
+    const { token } = req.body ?? {};
 
     if (!token) {
-      res.status(400).json({ error: 'Token is required' });
+      res.status(400).json({ error: 'Enter the 6-digit code from your authenticator app' });
       return;
     }
 
@@ -173,7 +173,7 @@ export async function enable2FA(req: AuthRequest, res: Response): Promise<void> 
     });
 
     if (!verified) {
-      res.status(400).json({ error: 'Invalid token' });
+      res.status(400).json({ error: 'That code is not valid. Enter the current 6-digit code from your authenticator app.' });
       return;
     }
 
@@ -193,10 +193,10 @@ export async function enable2FA(req: AuthRequest, res: Response): Promise<void> 
 export async function disable2FA(req: AuthRequest, res: Response): Promise<void> {
   try {
     const userId = (req.user as any)?.userId;
-    const { token } = req.body;
+    const { token } = req.body ?? {};
 
     if (!token) {
-      res.status(400).json({ error: 'Token is required' });
+      res.status(400).json({ error: 'Enter the 6-digit code from your authenticator app' });
       return;
     }
 
@@ -221,7 +221,7 @@ export async function disable2FA(req: AuthRequest, res: Response): Promise<void>
     });
 
     if (!verified) {
-      res.status(400).json({ error: 'Invalid token' });
+      res.status(400).json({ error: 'That code is not valid. Enter the current 6-digit code from your authenticator app.' });
       return;
     }
 
