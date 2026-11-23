@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.147] - 2026-11-23
+
+### Fixed
+- **Dashboard Endpoint Status chart** ([#70](https://github.com/agit8or1/St0r/pull/70)). After the recharts 3 update in 3.2.146, its label was clipped at the card edge ("line 100%") and an empty slice drew a stray line. The counts and percentages are now in a legend beside the pie.
+
 ## [3.2.146] - 2026-11-23
 
 ### Changed

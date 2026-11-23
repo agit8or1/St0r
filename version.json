@@ -1,7 +1,7 @@
 {
-  "version": "3.2.146",
+  "version": "3.2.147",
   "releaseDate": "2026-11-23",
   "changelog": [
-    "Dependency updates: ESLint 10, recharts 3, express-rate-limit 8, nodemailer 10.6.1, lucide-react 1.77.0, react-router-dom 7.18.6."
+    "Dashboard: the Endpoint Status chart's counts are shown in a legend beside the pie; the recharts 3 update clipped its label."
   ]
 }
