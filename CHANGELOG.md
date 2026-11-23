@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.145] - 2026-11-23
+
+### Fixed
+- **Two-factor authentication can be turned on from the Profile page** ([#60](https://github.com/agit8or1/St0r/issues/60)). The page called `/api/profile/2fa/*`, which does not exist (the API is at `/api/2fa/*`), skipped the setup step and sent the code in the wrong field.
+- **Two-factor authentication can be turned off.** The API needs a current code to turn it off, and neither the Profile nor the Settings page sent one. Both pages now share one 2FA section, which asks for the code.
+- The 2FA API answers a request without a body with a clear 400 error instead of a 500.
+
 ## [3.2.144] - 2026-11-21
 
 ### Added
