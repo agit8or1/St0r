@@ -1,7 +1,7 @@
 {
-  "version": "3.2.147",
-  "releaseDate": "2026-11-23",
+  "version": "3.2.148",
+  "releaseDate": "2026-11-26",
   "changelog": [
-    "Dashboard: the Endpoint Status chart's counts are shown in a legend beside the pie; the recharts 3 update clipped its label."
+    "Server exclusions now always apply to every endpoint. Windows clients report their own exclusion list and UrBackup used only that, ignoring exclusions set on the server or group; St0r now sends server exclusions plus the endpoint's own. On the endpoint page server exclusions are shown locked."
   ]
 }

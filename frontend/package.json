@@ -1,6 +1,6 @@
 {
   "name": "urbackup-gui-frontend",
-  "version": "3.2.147",
+  "version": "3.2.148",
   "license": "MIT",
   "type": "module",
   "scripts": {

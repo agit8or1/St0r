@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.148] - 2026-11-26
+
+### Fixed
+- Server exclusions now always apply to every endpoint. Windows clients report their own exclusion list and UrBackup used only that, ignoring exclusions set on the server or group; St0r now sends server exclusions plus the endpoint's own. On the endpoint page server exclusions are shown locked.
+
 ## [3.2.147] - 2026-11-23
 
 ### Fixed
