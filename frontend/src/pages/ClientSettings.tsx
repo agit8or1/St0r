@@ -222,6 +222,7 @@ export function ClientSettings() {
   const [groups, setGroups] = useState<GroupRef[]>([]);
   const [groupSaving, setGroupSaving] = useState(false);
   const [clientId, setClientId] = useState<string>('');
+  const [serverExclusions, setServerExclusions] = useState<string[]>([]);
   const [tab, setTab] = useState<'paths' | 'schedule' | 'transfer' | 'image' | 'permissions' | 'storage'>('paths');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [noBackupPaths, setNoBackupPaths] = useState(false);
@@ -278,6 +279,7 @@ export function ClientSettings() {
         setLoaded(merged);
         setGroup(data.group ?? null);
         setGroups(data.groups ?? []);
+        setServerExclusions(Array.isArray(data.serverExclusions) ? data.serverExclusions : []);
       }
 
       if (limitResp.ok) {
@@ -324,6 +326,8 @@ export function ClientSettings() {
 
   // Exclude helpers
   const getExcludes = () => String(s('exclude_files') || '').split(';').map(p => p.trim()).filter(Boolean);
+  // Server (group) exclusions always apply to an endpoint; they're edited on the group, not here.
+  const isServerExclusion = (pat: string) => !isGroup && serverExclusions.some(p => p.toLowerCase() === pat.toLowerCase());
   const setExcludes = (arr: string[]) => set('exclude_files', arr.join(';'));
   const addExclude = () => {
     const t = newExcludePattern.trim();
@@ -695,6 +699,9 @@ export function ClientSettings() {
 
               <Section title="Exclude Patterns" collapsible>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Files/folders matching these patterns will be skipped. Semicolon-separated wildcards (e.g. <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded-sm">*.tmp</code>, <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded-sm">C:\Windows\Temp</code>).</p>
+                {!isGroup && serverExclusions.length > 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"><Lock className="h-3 w-3" /> Patterns marked Server come from this endpoint's group and always apply.</p>
+                )}
                 <div className="space-y-1 max-h-48 overflow-y-auto">
                   {getExcludes().length === 0
                     ? <p className="text-sm text-gray-400 italic">No exclusions configured.</p>
@@ -732,6 +739,13 @@ export function ClientSettings() {
                               <button onClick={() => setEditingExcludeIdx(null)} className="text-gray-400 hover:text-gray-600 shrink-0">
                                 <X className="h-3.5 w-3.5" />
                               </button>
+                            </Tooltip>
+                          </>
+                        ) : isServerExclusion(pat) ? (
+                          <>
+                            <span className="flex-1 font-mono text-xs truncate">{pat}</span>
+                            <Tooltip text="Set on the server (group settings) — always applies to this endpoint. Change it on the Groups page.">
+                              <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 shrink-0"><Lock className="h-3 w-3" /> Server</span>
                             </Tooltip>
                           </>
                         ) : (

@@ -4,7 +4,8 @@ import { UrBackupService } from '../services/urbackup.js';
 import { logger } from '../utils/logger.js';
 import { query } from '../config/database.js';
 import { assertClientAccess } from '../middleware/scope.js';
-import { flattenClientSettings } from '../utils/urbackupSettings.js';
+import { flattenClientSettings, splitPatterns } from '../utils/urbackupSettings.js';
+import { setEndpointExclusions } from '../services/exclusionSync.js';
 
 const urbackupService = new UrBackupService();
 
@@ -56,7 +57,10 @@ export async function getClientSettings(req: AuthRequest, res: Response): Promis
       logger.warn('Could not read UrBackup groups:', err);
     }
 
-    res.json({ settings, useValues, inherited, group, groups });
+    // Server exclusions always apply (services/exclusionSync.ts); the page shows them locked.
+    const serverExclusions = splitPatterns(result?.settings?.exclude_files?.value_group);
+
+    res.json({ settings, useValues, inherited, group, groups, serverExclusions });
   } catch (error: any) {
     // UrBackup API "error: 1" means unknown client or unauthenticated — not a server crash
     if (error?.message?.includes('UrBackup API error: 1')) {
@@ -82,6 +86,10 @@ export async function setClientSettings(req: AuthRequest, res: Response): Promis
     if (!settings || Object.keys(settings).length === 0) {
       res.status(400).json({ error: 'Settings are required' });
       return;
+    }
+
+    if ('exclude_files' in settings) {
+      settings.exclude_files = await setEndpointExclusions(urbackupService, Number(clientId), settings.exclude_files);
     }
 
     const result = await urbackupService.setClientSettings(clientId, settings);

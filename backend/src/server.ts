@@ -250,6 +250,8 @@ async function ensureTables() {
   await ensureSettingsTable();
   const { ensureEndpointStateTables } = await import('./services/endpointDisabledStore.js');
   await ensureEndpointStateTables();
+  const { ensureExclusionTable } = await import('./services/exclusionSync.js');
+  await ensureExclusionTable();
 }
 
 // Where the generated first-run password is written for the installer to read.
@@ -356,6 +358,11 @@ async function startServer() {
 
     // Start automatic stale job cleanup (runs every hour)
     startAutomaticStaleJobCleanup();
+
+    // Keep server exclusions applied on every endpoint (clients report their own list)
+    const { startExclusionSync } = await import('./services/exclusionSync.js');
+    const { UrBackupService } = await import('./services/urbackup.js');
+    startExclusionSync(new UrBackupService());
 
     // Start disk space guard — stops backups before the storage volume fills
     const { diskGuard } = await import('./services/diskGuard.js');
