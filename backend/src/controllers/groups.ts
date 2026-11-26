@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth.js';
 import { UrBackupService } from '../services/urbackup.js';
 import { logger } from '../utils/logger.js';
 import { flattenClientSettings, validateGroupName } from '../utils/urbackupSettings.js';
+import { syncAllExclusionsSoon, syncEndpointExclusions } from '../services/exclusionSync.js';
 
 /**
  * UrBackup client groups (issue #57). Group 0 is "Default": its settings are
@@ -117,6 +118,7 @@ export async function setGroupSettings(req: AuthRequest, res: Response): Promise
     }
     const result = await urbackupService.setClientSettings(String(-id), updates);
     logger.info(`Group ${id} settings changed by ${req.user?.username}: ${Object.keys(updates).join(', ')}`);
+    if ('exclude_files' in updates) syncAllExclusionsSoon(urbackupService);
     res.json(result);
   } catch (error) {
     logger.error('Failed to set group settings:', error);
@@ -143,6 +145,9 @@ export async function setEndpointGroup(req: AuthRequest, res: Response): Promise
     }
     await urbackupService.setClientGroup(clientId, groupId);
     logger.info(`Endpoint ${clientId} moved to group ${groupId} by ${req.user?.username}`);
+    // The new group's exclusions replace the old group's on this endpoint.
+    await syncEndpointExclusions(urbackupService, Number(clientId))
+      .catch(err => logger.warn(`Could not sync exclusions for endpoint ${clientId}:`, err));
     res.json({ success: true });
   } catch (error) {
     logger.error('Failed to change endpoint group:', error);

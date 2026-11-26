@@ -43,3 +43,32 @@ export function validateGroupName(raw: unknown): { name: string } | { error: str
   if (/[\u0000-\u001f\u007f'"`\\]/.test(name)) return { error: 'Group names cannot contain quotes, backslashes or control characters' };
   return { name };
 }
+
+/**
+ * UrBackup pattern lists (exclude_files and friends) are `;`-separated.
+ * Windows paths are case-insensitive, so duplicates are compared that way.
+ */
+export function splitPatterns(raw: unknown): string[] {
+  if (typeof raw !== 'string') return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const p of raw.split(';').map(s => s.trim())) {
+    if (p && !seen.has(p.toLowerCase())) { seen.add(p.toLowerCase()); out.push(p); }
+  }
+  return out;
+}
+
+/** Every pattern of each list in turn, without duplicates. */
+export function mergePatterns(...lists: string[][]): string[] {
+  return splitPatterns(lists.flat().join(';'));
+}
+
+/** The patterns of `list` that are not in `remove`. */
+export function subtractPatterns(list: string[], remove: string[]): string[] {
+  const drop = new Set(remove.map(p => p.toLowerCase()));
+  return list.filter(p => !drop.has(p.toLowerCase()));
+}
+
+export function samePatterns(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((p, i) => p.toLowerCase() === b[i].toLowerCase());
+}

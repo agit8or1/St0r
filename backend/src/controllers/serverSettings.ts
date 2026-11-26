@@ -6,6 +6,7 @@ import { logger } from '../utils/logger.js';
 import { readFile, writeFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import { syncAllExclusionsSoon } from '../services/exclusionSync.js';
 
 const dbService = new UrBackupDbService();
 const urbackupService = new UrBackupService();
@@ -372,6 +373,7 @@ export async function setServerSettings(req: AuthRequest, res: Response): Promis
       try {
         await urbackupService.setSettings(settingsToSave);
         logger.info(`UrBackup settings updated by ${user?.username || 'unknown'}: ${urbackupKeys.join(', ')}`);
+        if (urbackupKeys.includes('exclude_files')) syncAllExclusionsSoon(urbackupService);
       } catch (urbackupError) {
         // Non-fatal: env file changes already saved above. UrBackup API may be
         // unavailable or reject the setting — log and continue.
